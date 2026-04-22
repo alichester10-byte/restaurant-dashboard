@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { updateSettingsAction } from "@/actions/settings-actions";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
@@ -110,6 +111,10 @@ export default async function SettingsPage() {
           <p className="mt-2 text-sm leading-6 text-sage">
             MVP kapsamında entegrasyonlar placeholder bırakıldı; yapı gelecekte POS, telephony ve Google rezervasyon senaryolarına açık.
           </p>
+
+          <Link href="/billing" className="btn-secondary mt-6">
+            Billing ve Plan Yönetimi
+          </Link>
 
           <div className="mt-6 space-y-4">
             {[

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedPaths = ["/dashboard", "/reservations", "/tables", "/customers", "/reports", "/settings", "/super-admin"];
+const protectedPaths = ["/dashboard", "/reservations", "/tables", "/customers", "/reports", "/settings", "/billing", "/super-admin"];
 
 export function middleware(request: NextRequest) {
   const session = request.cookies.get("restaurant_ops_session")?.value;

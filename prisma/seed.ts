@@ -204,7 +204,7 @@ async function main() {
       name: "Limon Masa Platform",
       slug: "platform-ops",
       status: BusinessStatus.ACTIVE,
-      subscriptionPlan: SubscriptionPlan.SCALE,
+      subscriptionPlan: SubscriptionPlan.ENTERPRISE,
       subscriptionStatus: SubscriptionStatus.ACTIVE,
       onboardingCompletedAt: new Date(),
       notes: "Internal platform workspace for super admin users."
@@ -249,7 +249,7 @@ async function main() {
     adminPasswordHash,
     adminName: "Demo Business Admin",
     status: BusinessStatus.ACTIVE,
-    subscriptionPlan: SubscriptionPlan.GROWTH,
+    subscriptionPlan: SubscriptionPlan.PRO,
     subscriptionStatus: SubscriptionStatus.ACTIVE,
     trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     createDemoOpsData: true

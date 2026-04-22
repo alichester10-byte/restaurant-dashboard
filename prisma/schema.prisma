@@ -21,8 +21,8 @@ enum BusinessStatus {
 
 enum SubscriptionPlan {
   STARTER
-  GROWTH
-  SCALE
+  PRO
+  ENTERPRISE
 }
 
 enum SubscriptionStatus {
@@ -94,8 +94,11 @@ model Business {
   subscriptionStatus    SubscriptionStatus   @default(TRIALING)
   stripeCustomerId      String?              @unique
   stripeSubscriptionId  String?              @unique
+  stripePriceId         String?
   trialStartsAt         DateTime?            @default(now())
   trialEndsAt           DateTime?
+  subscriptionCurrentPeriodEndsAt DateTime?
+  lastPaymentFailedAt   DateTime?
   suspendedAt           DateTime?
   onboardingCompletedAt DateTime?
   notes                 String?

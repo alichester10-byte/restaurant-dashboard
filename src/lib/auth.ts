@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { hasBusinessAccess } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validation";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
@@ -115,7 +116,7 @@ export async function requireRole(...roles: UserRole[]) {
 }
 
 export async function requireBusinessUser() {
-  return requireRole(UserRole.BUSINESS_ADMIN, UserRole.STAFF);
+  return requireBusinessAccess();
 }
 
 export function isSuperAdmin(role: UserRole) {
@@ -128,6 +129,17 @@ export function getBusinessScope(session: Awaited<ReturnType<typeof requireAuth>
     role: session.user.role,
     isSuperAdmin: isSuperAdmin(session.user.role)
   };
+}
+
+export async function requireBusinessAccess(options?: { allowInactive?: boolean; roles?: UserRole[] }) {
+  const roles = options?.roles ?? [UserRole.BUSINESS_ADMIN, UserRole.STAFF];
+  const session = await requireRole(...roles);
+
+  if (!options?.allowInactive && !hasBusinessAccess(session.user.business, session.user.role)) {
+    redirect("/billing");
+  }
+
+  return session;
 }
 
 export async function authenticate(formData: FormData) {

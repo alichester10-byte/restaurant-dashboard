@@ -25,7 +25,7 @@ Next.js, TypeScript, Tailwind CSS, Prisma ve PostgreSQL ile hazırlanmış multi
 Temel enumlar:
 - `UserRole`: `SUPER_ADMIN`, `BUSINESS_ADMIN`, `STAFF`
 - `BusinessStatus`: `ACTIVE`, `SUSPENDED`
-- `SubscriptionPlan`: `STARTER`, `GROWTH`, `SCALE`
+- `SubscriptionPlan`: `STARTER`, `PRO`, `ENTERPRISE`
 - `SubscriptionStatus`: `TRIALING`, `ACTIVE`, `PAST_DUE`, `CANCELED`
 - `ReservationStatus`: `CONFIRMED`, `PENDING`, `CANCELLED`, `COMPLETED`, `NO_SHOW`
 - `TableStatus`: `EMPTY`, `OCCUPIED`, `RESERVED`, `MAINTENANCE`
@@ -85,6 +85,15 @@ pnpm prisma:generate
 pnpm exec prisma migrate deploy
 pnpm prisma:seed
 pnpm dev
+```
+
+## Stripe Env Vars
+
+```bash
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_PRICE_PRO="price_..."
+NEXT_PUBLIC_APP_URL="https://your-app-domain.vercel.app"
 ```
 
 ## Varsayılan Demo Hesapları

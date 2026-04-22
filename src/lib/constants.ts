@@ -50,8 +50,8 @@ export const businessStatusLabels: Record<BusinessStatus, string> = {
 
 export const subscriptionPlanLabels: Record<SubscriptionPlan, string> = {
   STARTER: "Starter",
-  GROWTH: "Growth",
-  SCALE: "Scale"
+  PRO: "Pro",
+  ENTERPRISE: "Enterprise"
 };
 
 export const subscriptionStatusLabels: Record<SubscriptionStatus, string> = {

@@ -12,6 +12,7 @@ const businessItems = [
   { href: "/tables" as Route, label: "Masa Planı", short: "MP" },
   { href: "/customers" as Route, label: "Müşteriler", short: "MS" },
   { href: "/reports" as Route, label: "Raporlar", short: "RP" },
+  { href: "/billing" as Route, label: "Faturalama", short: "BL" },
   { href: "/settings" as Route, label: "Ayarlar", short: "AY" }
 ];
 
