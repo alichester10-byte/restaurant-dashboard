@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { requireBusinessUser } from "@/lib/auth";
 import { getCustomersPageData } from "@/lib/data";
 import { formatDateTime, formatPhone } from "@/lib/utils";
 
@@ -10,11 +11,17 @@ export default async function CustomersPage({
 }: {
   searchParams: { customerId?: string };
 }) {
-  const data = await getCustomersPageData(searchParams.customerId);
+  const session = await requireBusinessUser();
+  const data = await getCustomersPageData(session.user.businessId, searchParams.customerId);
 
   return (
     <div className="space-y-6">
-      <AppHeader title="Müşteriler" subtitle="VIP, düzenli ve yeni misafirleri davranış geçmişiyle birlikte takip edin." />
+      <AppHeader
+        title="Müşteriler"
+        subtitle="VIP, düzenli ve yeni misafirleri davranış geçmişiyle birlikte takip edin."
+        businessName={session.user.business.name}
+        role={session.user.role}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Panel>

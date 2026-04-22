@@ -1,15 +1,22 @@
 import { updateSettingsAction } from "@/actions/settings-actions";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
+import { requireBusinessUser } from "@/lib/auth";
 import { getSettingsData } from "@/lib/data";
 
 export default async function SettingsPage() {
-  const settings = await getSettingsData();
+  const session = await requireBusinessUser();
+  const settings = await getSettingsData(session.user.businessId);
   const openingHours = settings.openingHours as Record<string, string>;
 
   return (
     <div className="space-y-6">
-      <AppHeader title="Ayarlar" subtitle="Restoran profilini, çalışma saatlerini ve rezervasyon kurallarını merkezi olarak yönetin." />
+      <AppHeader
+        title="Ayarlar"
+        subtitle="Restoran profilini, çalışma saatlerini ve rezervasyon kurallarını merkezi olarak yönetin."
+        businessName={session.user.business.name}
+        role={session.user.role}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>

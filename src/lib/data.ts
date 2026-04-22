@@ -20,6 +20,10 @@ const reservationInclude = {
 } satisfies Prisma.ReservationInclude;
 
 export async function getDashboardData() {
+  throw new Error("businessId is required. Use getDashboardDataForBusiness instead.");
+}
+
+export async function getDashboardDataForBusiness(businessId: string) {
   const now = new Date();
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
@@ -27,27 +31,35 @@ export async function getDashboardData() {
   const yesterdayEnd = endOfDay(new Date(now.getTime() - 86400000));
 
   const [settings, reservationsToday, reservationsYesterday, callsToday, callsYesterday, tables, upcomingReservations] = await Promise.all([
-    prisma.restaurantSettings.findFirstOrThrow(),
+    prisma.restaurantSettings.findFirstOrThrow({
+      where: {
+        businessId
+      }
+    }),
     prisma.reservation.findMany({
-      where: { startAt: { gte: todayStart, lte: todayEnd } },
+      where: { businessId, startAt: { gte: todayStart, lte: todayEnd } },
       include: reservationInclude,
       orderBy: { startAt: "asc" }
     }),
     prisma.reservation.findMany({
-      where: { startAt: { gte: yesterdayStart, lte: yesterdayEnd } }
+      where: { businessId, startAt: { gte: yesterdayStart, lte: yesterdayEnd } }
     }),
     prisma.callLog.findMany({
-      where: { startedAt: { gte: todayStart, lte: todayEnd } },
+      where: { businessId, startedAt: { gte: todayStart, lte: todayEnd } },
       orderBy: { startedAt: "desc" }
     }),
     prisma.callLog.findMany({
-      where: { startedAt: { gte: yesterdayStart, lte: yesterdayEnd } }
+      where: { businessId, startedAt: { gte: yesterdayStart, lte: yesterdayEnd } }
     }),
     prisma.diningTable.findMany({
+      where: {
+        businessId
+      },
       orderBy: { number: "asc" }
     }),
     prisma.reservation.findMany({
       where: {
+        businessId,
         startAt: { gte: now },
         status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] }
       },
@@ -77,6 +89,7 @@ export async function getDashboardData() {
       const next = endOfDay(date);
       const total = await prisma.reservation.count({
         where: {
+          businessId,
           startAt: { gte: date, lte: next },
           status: { not: ReservationStatus.CANCELLED }
         }
@@ -93,6 +106,7 @@ export async function getDashboardData() {
     by: ["source"],
     _count: { _all: true },
     where: {
+      businessId,
       startAt: { gte: startOfDay(new Date(now.getTime() - 6 * 86400000)), lte: todayEnd }
     }
   });
@@ -131,21 +145,30 @@ export async function getDashboardData() {
   };
 }
 
-export async function getReservationsPageData(selectedId?: string) {
+export async function getReservationsPageData(businessId: string, selectedId?: string) {
   const [reservations, tables, customers, selectedReservation] = await Promise.all([
     prisma.reservation.findMany({
+      where: {
+        businessId
+      },
       include: reservationInclude,
       orderBy: { startAt: "asc" }
     }),
     prisma.diningTable.findMany({
+      where: {
+        businessId
+      },
       orderBy: { number: "asc" }
     }),
     prisma.customer.findMany({
+      where: {
+        businessId
+      },
       orderBy: { name: "asc" }
     }),
     selectedId
-      ? prisma.reservation.findUnique({
-          where: { id: selectedId },
+      ? prisma.reservation.findFirst({
+          where: { id: selectedId, businessId },
           include: reservationInclude
         })
       : Promise.resolve(null)
@@ -154,12 +177,16 @@ export async function getReservationsPageData(selectedId?: string) {
   return { reservations, tables, customers, selectedReservation };
 }
 
-export async function getTablesPageData(selectedId?: string) {
+export async function getTablesPageData(businessId: string, selectedId?: string) {
   const [tables, reservations, selectedTable] = await Promise.all([
     prisma.diningTable.findMany({
+      where: {
+        businessId
+      },
       include: {
         reservations: {
           where: {
+            businessId,
             status: {
               in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED]
             }
@@ -172,6 +199,7 @@ export async function getTablesPageData(selectedId?: string) {
     }),
     prisma.reservation.findMany({
       where: {
+        businessId,
         status: {
           in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED]
         }
@@ -180,10 +208,13 @@ export async function getTablesPageData(selectedId?: string) {
       orderBy: { startAt: "asc" }
     }),
     selectedId
-      ? prisma.diningTable.findUnique({
-          where: { id: selectedId },
+      ? prisma.diningTable.findFirst({
+          where: { id: selectedId, businessId },
           include: {
             reservations: {
+              where: {
+                businessId
+              },
               include: { customer: true },
               orderBy: { startAt: "desc" }
             }
@@ -202,9 +233,12 @@ export async function getTablesPageData(selectedId?: string) {
   return { tables, reservations, selectedTable, summary };
 }
 
-export async function getCustomersPageData(selectedId?: string) {
+export async function getCustomersPageData(businessId: string, selectedId?: string) {
   const [customers, selectedCustomer] = await Promise.all([
     prisma.customer.findMany({
+      where: {
+        businessId
+      },
       include: {
         reservations: {
           orderBy: { startAt: "desc" },
@@ -214,16 +248,22 @@ export async function getCustomersPageData(selectedId?: string) {
       orderBy: [{ tag: "asc" }, { name: "asc" }]
     }),
     selectedId
-      ? prisma.customer.findUnique({
-          where: { id: selectedId },
+      ? prisma.customer.findFirst({
+          where: { id: selectedId, businessId },
           include: {
             reservations: {
+              where: {
+                businessId
+              },
               include: {
                 assignedTable: true
               },
               orderBy: { startAt: "desc" }
             },
             callLogs: {
+              where: {
+                businessId
+              },
               orderBy: { startedAt: "desc" },
               take: 6
             }
@@ -235,11 +275,12 @@ export async function getCustomersPageData(selectedId?: string) {
   return { customers, selectedCustomer };
 }
 
-export async function getReportsPageData() {
+export async function getReportsPageData(businessId: string) {
   const now = new Date();
   const start = startOfDay(new Date(now.getTime() - 13 * 86400000));
   const reservations = await prisma.reservation.findMany({
     where: {
+      businessId,
       startAt: {
         gte: start
       }
@@ -250,12 +291,17 @@ export async function getReportsPageData() {
   });
   const calls = await prisma.callLog.findMany({
     where: {
+      businessId,
       startedAt: {
         gte: start
       }
     }
   });
-  const settings = await prisma.restaurantSettings.findFirstOrThrow();
+  const settings = await prisma.restaurantSettings.findFirstOrThrow({
+    where: {
+      businessId
+    }
+  });
 
   const reservationsByDay = Array.from({ length: 14 }).map((_, index) => {
     const date = startOfDay(new Date(start.getTime() + index * 86400000));
@@ -301,6 +347,37 @@ export async function getReportsPageData() {
   };
 }
 
-export async function getSettingsData() {
-  return prisma.restaurantSettings.findFirstOrThrow();
+export async function getSettingsData(businessId: string) {
+  return prisma.restaurantSettings.findFirstOrThrow({
+    where: {
+      businessId
+    }
+  });
+}
+
+export async function getSuperAdminData() {
+  const businesses = await prisma.business.findMany({
+    include: {
+      _count: {
+        select: {
+          users: true,
+          reservations: true,
+          customers: true
+        }
+      },
+      users: {
+        orderBy: {
+          createdAt: "asc"
+        },
+        take: 3
+      }
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
+
+  return {
+    businesses
+  };
 }

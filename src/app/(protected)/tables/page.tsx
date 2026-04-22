@@ -3,6 +3,7 @@ import { assignReservationToTableAction, updateTableStatusAction } from "@/actio
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { requireBusinessUser } from "@/lib/auth";
 import { tableStatusLabels } from "@/lib/constants";
 import { getTablesPageData } from "@/lib/data";
 import { formatDateTime } from "@/lib/utils";
@@ -12,11 +13,17 @@ export default async function TablesPage({
 }: {
   searchParams: { tableId?: string };
 }) {
-  const data = await getTablesPageData(searchParams.tableId);
+  const session = await requireBusinessUser();
+  const data = await getTablesPageData(session.user.businessId, searchParams.tableId);
 
   return (
     <div className="space-y-6">
-      <AppHeader title="Masa Planı" subtitle="Salon akışını görsel masa planı üzerinden yönetin ve rezervasyonları doğru kapasiteye atayın." />
+      <AppHeader
+        title="Masa Planı"
+        subtitle="Salon akışını görsel masa planı üzerinden yönetin ve rezervasyonları doğru kapasiteye atayın."
+        businessName={session.user.business.name}
+        role={session.user.role}
+      />
 
       <section className="grid gap-4 md:grid-cols-4">
         <Panel><div className="text-sm text-sage">Boş</div><div className="mt-2 text-3xl font-bold">{data.summary.empty}</div></Panel>

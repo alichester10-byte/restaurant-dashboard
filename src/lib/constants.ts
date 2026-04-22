@@ -1,4 +1,4 @@
-import { CallOutcome, CustomerTag, ReservationSource, ReservationStatus, TableStatus } from "@prisma/client";
+import { BusinessStatus, CallOutcome, CustomerTag, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableStatus, UserRole } from "@prisma/client";
 
 export const reservationStatusLabels: Record<ReservationStatus, string> = {
   CONFIRMED: "Onaylandı",
@@ -35,4 +35,28 @@ export const reservationSourceLabels: Record<ReservationSource, string> = {
   WEBSITE: "Web",
   GOOGLE: "Google",
   WHATSAPP: "WhatsApp"
+};
+
+export const userRoleLabels: Record<UserRole, string> = {
+  SUPER_ADMIN: "Süper Admin",
+  BUSINESS_ADMIN: "İşletme Yöneticisi",
+  STAFF: "Personel"
+};
+
+export const businessStatusLabels: Record<BusinessStatus, string> = {
+  ACTIVE: "Aktif",
+  SUSPENDED: "Askıda"
+};
+
+export const subscriptionPlanLabels: Record<SubscriptionPlan, string> = {
+  STARTER: "Starter",
+  GROWTH: "Growth",
+  SCALE: "Scale"
+};
+
+export const subscriptionStatusLabels: Record<SubscriptionStatus, string> = {
+  TRIALING: "Deneme",
+  ACTIVE: "Aktif",
+  PAST_DUE: "Gecikmiş",
+  CANCELED: "İptal"
 };

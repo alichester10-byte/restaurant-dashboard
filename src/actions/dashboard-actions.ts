@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAuth } from "@/lib/auth";
+import { requireBusinessUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { callSchema } from "@/lib/validation";
 
 export async function createCallAction(formData: FormData) {
-  await requireAuth();
+  const session = await requireBusinessUser();
+  const businessId = session.user.businessId;
 
   const redirectTo = String(formData.get("redirectTo") ?? "/dashboard");
   const parsed = callSchema.safeParse({
@@ -27,6 +28,7 @@ export async function createCallAction(formData: FormData) {
 
   await prisma.callLog.create({
     data: {
+      businessId,
       callerName: parsed.data.callerName || undefined,
       phone: parsed.data.phone,
       outcome: parsed.data.outcome,

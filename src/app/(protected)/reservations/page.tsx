@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { Panel } from "@/components/ui/panel";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { requireBusinessUser } from "@/lib/auth";
 import { getReservationsPageData } from "@/lib/data";
 import { formatDateTime, formatPhone } from "@/lib/utils";
 
@@ -13,11 +14,17 @@ export default async function ReservationsPage({
 }: {
   searchParams: { reservationId?: string };
 }) {
-  const data = await getReservationsPageData(searchParams.reservationId);
+  const session = await requireBusinessUser();
+  const data = await getReservationsPageData(session.user.businessId, searchParams.reservationId);
 
   return (
     <div className="space-y-6">
-      <AppHeader title="Rezervasyon Yönetimi" subtitle="Rezervasyonları oluşturun, güncelleyin, onaylayın ve servis akışını kontrol altında tutun." />
+      <AppHeader
+        title="Rezervasyon Yönetimi"
+        subtitle="Rezervasyonları oluşturun, güncelleyin, onaylayın ve servis akışını kontrol altında tutun."
+        businessName={session.user.business.name}
+        role={session.user.role}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Panel>

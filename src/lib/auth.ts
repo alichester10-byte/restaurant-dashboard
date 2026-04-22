@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
+import { UserRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -73,7 +74,11 @@ export async function getCurrentSession() {
       tokenHash: hashToken(token)
     },
     include: {
-      user: true
+      user: {
+        include: {
+          business: true
+        }
+      }
     }
   });
 
@@ -99,6 +104,30 @@ export async function requireAuth() {
     redirect("/login");
   }
   return session;
+}
+
+export async function requireRole(...roles: UserRole[]) {
+  const session = await requireAuth();
+  if (!roles.includes(session.user.role)) {
+    redirect(session.user.role === UserRole.SUPER_ADMIN ? "/super-admin" : "/dashboard");
+  }
+  return session;
+}
+
+export async function requireBusinessUser() {
+  return requireRole(UserRole.BUSINESS_ADMIN, UserRole.STAFF);
+}
+
+export function isSuperAdmin(role: UserRole) {
+  return role === UserRole.SUPER_ADMIN;
+}
+
+export function getBusinessScope(session: Awaited<ReturnType<typeof requireAuth>>) {
+  return {
+    businessId: session.user.businessId,
+    role: session.user.role,
+    isSuperAdmin: isSuperAdmin(session.user.role)
+  };
 }
 
 export async function authenticate(formData: FormData) {
@@ -133,5 +162,5 @@ export async function authenticate(formData: FormData) {
   }
 
   await createSession(user.id);
-  return { ok: true };
+  return { ok: true, role: user.role };
 }

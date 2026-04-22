@@ -1,24 +1,35 @@
-import { PrismaClient, ReservationSource, ReservationStatus, TableStatus, CallOutcome, CustomerTag, UserRole } from "@prisma/client";
+import {
+  BusinessStatus,
+  CallOutcome,
+  CustomerTag,
+  PrismaClient,
+  ReservationSource,
+  ReservationStatus,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  TableStatus,
+  UserRole
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 const adminEmail = process.env.ADMIN_EMAIL ?? "admin@limonmasa.com";
 const adminPassword = process.env.ADMIN_PASSWORD ?? "Admin12345!";
+const superAdminEmail = process.env.SUPER_ADMIN_EMAIL ?? "superadmin@limonmasa.com";
+const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD ?? "SuperAdmin123!";
 
-const names = [
-  ["Ece Demir", "VIP"],
-  ["Mert Yalçın", "REGULAR"],
-  ["Selin Kaya", "NEW"],
-  ["Deniz Çetin", "REGULAR"],
-  ["Burak Şahin", "VIP"],
-  ["Zeynep Arslan", "NEW"],
-  ["Emre Aksoy", "REGULAR"],
-  ["Buse Aydın", "NEW"],
-  ["Can Koç", "REGULAR"],
-  ["Elif Özkan", "VIP"],
-  ["Okan Yıldız", "REGULAR"],
-  ["Aslı Korkmaz", "NEW"]
+const customerSeeds = [
+  ["Ece Demir", CustomerTag.VIP],
+  ["Mert Yalçın", CustomerTag.REGULAR],
+  ["Selin Kaya", CustomerTag.NEW],
+  ["Deniz Çetin", CustomerTag.REGULAR],
+  ["Burak Şahin", CustomerTag.VIP],
+  ["Zeynep Arslan", CustomerTag.NEW],
+  ["Emre Aksoy", CustomerTag.REGULAR],
+  ["Buse Aydın", CustomerTag.NEW],
+  ["Can Koç", CustomerTag.REGULAR],
+  ["Elif Özkan", CustomerTag.VIP]
 ] as const;
 
 function atTime(base: Date, hour: number, minute: number) {
@@ -27,29 +38,52 @@ function atTime(base: Date, hour: number, minute: number) {
   return value;
 }
 
-async function main() {
-  await prisma.session.deleteMany();
-  await prisma.callLog.deleteMany();
-  await prisma.reservation.deleteMany();
-  await prisma.diningTable.deleteMany();
-  await prisma.customer.deleteMany();
-  await prisma.restaurantSettings.deleteMany();
-  await prisma.user.deleteMany();
+async function createBusinessWorkspace(input: {
+  businessName: string;
+  slug: string;
+  phone: string;
+  seatingCapacity: number;
+  adminEmail: string;
+  adminPasswordHash: string;
+  adminName: string;
+  status: BusinessStatus;
+  subscriptionPlan: SubscriptionPlan;
+  subscriptionStatus: SubscriptionStatus;
+  trialEndsAt: Date;
+  createDemoOpsData?: boolean;
+}) {
+  const business = await prisma.business.create({
+    data: {
+      name: input.businessName,
+      slug: input.slug,
+      status: input.status,
+      subscriptionPlan: input.subscriptionPlan,
+      subscriptionStatus: input.subscriptionStatus,
+      trialStartsAt: new Date(),
+      trialEndsAt: input.trialEndsAt,
+      onboardingCompletedAt: new Date()
+    }
+  });
+
+  const admin = await prisma.user.create({
+    data: {
+      businessId: business.id,
+      email: input.adminEmail,
+      name: input.adminName,
+      passwordHash: input.adminPasswordHash,
+      role: UserRole.BUSINESS_ADMIN
+    }
+  });
 
   await prisma.restaurantSettings.create({
     data: {
-      restaurantName: "Limon Masa",
-      slug: "limon-masa",
-      phone: "+90 212 555 10 20",
-      email: "hello@limonmasa.com",
-      address: "Asmalımescit Mah. İstiklal Cad. No: 145, Beyoğlu / İstanbul",
-      seatingCapacity: 96,
+      businessId: business.id,
+      restaurantName: input.businessName,
+      slug: input.slug,
+      phone: input.phone,
+      seatingCapacity: input.seatingCapacity,
       averageDiningDurationMin: 100,
-      maxPartySize: 10,
-      allowWalkIns: true,
-      requirePhoneVerification: false,
       reservationLeadTimeDays: 21,
-      notes: "Akşam servisi için öncelik teras masalarında.",
       openingHours: {
         monday: "12:00 - 23:00",
         tuesday: "12:00 - 23:00",
@@ -62,105 +96,179 @@ async function main() {
     }
   });
 
-  const passwordHash = await bcrypt.hash(adminPassword, 12);
+  const tables = await Promise.all(
+    [
+      { number: "T1", label: "Pencere 1", zone: "Salon", seatCapacity: 2, status: TableStatus.RESERVED },
+      { number: "T2", label: "Pencere 2", zone: "Salon", seatCapacity: 2, status: TableStatus.EMPTY },
+      { number: "T3", label: "Orta 1", zone: "Salon", seatCapacity: 4, status: TableStatus.OCCUPIED },
+      { number: "T4", label: "Orta 2", zone: "Salon", seatCapacity: 4, status: TableStatus.RESERVED },
+      { number: "T5", label: "Chef's Table", zone: "Özel Alan", seatCapacity: 6, status: TableStatus.EMPTY },
+      { number: "T6", label: "Teras 1", zone: "Teras", seatCapacity: 4, status: TableStatus.RESERVED }
+    ].map((table) =>
+      prisma.diningTable.create({
+        data: {
+          ...table,
+          businessId: business.id
+        }
+      })
+    )
+  );
 
-  await prisma.user.create({
+  if (!input.createDemoOpsData) {
+    return { business, admin, tables };
+  }
+
+  const customers = await Promise.all(
+    customerSeeds.map(([name, tag], index) =>
+      prisma.customer.create({
+        data: {
+          businessId: business.id,
+          name,
+          phone: `+90 555 ${business.slug === "limon-masa" ? "100" : "200"} ${String(10 + index).padStart(2, "0")} ${String(20 + index).padStart(2, "0")}`,
+          email: `${input.slug}.${index + 1}@example.com`,
+          notes: index % 2 === 0 ? "Pencere kenarı tercih ediyor." : "Rezervasyon teyidi araması bekleniyor.",
+          tag
+        }
+      })
+    )
+  );
+
+  const now = new Date();
+  const reservations = await Promise.all(
+    [
+      { customer: 0, start: atTime(now, 18, 30), guests: 2, table: 0, status: ReservationStatus.CONFIRMED, source: ReservationSource.PHONE },
+      { customer: 1, start: atTime(now, 19, 0), guests: 4, table: 3, status: ReservationStatus.PENDING, source: ReservationSource.WHATSAPP },
+      { customer: 2, start: atTime(now, 19, 30), guests: 3, table: 5, status: ReservationStatus.CONFIRMED, source: ReservationSource.INSTAGRAM },
+      { customer: 3, start: atTime(now, 20, 0), guests: 2, table: 2, status: ReservationStatus.COMPLETED, source: ReservationSource.WEBSITE },
+      { customer: 4, start: atTime(now, 20, 30), guests: 6, table: 4, status: ReservationStatus.CONFIRMED, source: ReservationSource.GOOGLE },
+      { customer: 5, start: atTime(new Date(now.getTime() + 86400000), 19, 0), guests: 4, table: 1, status: ReservationStatus.PENDING, source: ReservationSource.PHONE }
+    ].map((reservation) =>
+      prisma.reservation.create({
+        data: {
+          businessId: business.id,
+          customerId: customers[reservation.customer].id,
+          assignedTableId: tables[reservation.table].id,
+          status: reservation.status,
+          source: reservation.source,
+          startAt: reservation.start,
+          endAt: new Date(reservation.start.getTime() + 100 * 60000),
+          guestCount: reservation.guests,
+          notes: "Operasyon notu: demo seed kaydı",
+          createdBy: admin.name
+        }
+      })
+    )
+  );
+
+  await Promise.all(
+    [
+      { customer: 0, reservation: 0, outcome: CallOutcome.RESERVATION_INQUIRY, minutesAgo: 15, duration: 300, notes: "Teras müsaitliği soruldu." },
+      { customer: 2, reservation: 2, outcome: CallOutcome.ANSWERED, minutesAgo: 35, duration: 180, notes: "Rezervasyon teyidi alındı." },
+      { customer: 4, reservation: 4, outcome: CallOutcome.INFO_REQUEST, minutesAgo: 60, duration: 120, notes: "Vale hizmeti soruldu." },
+      { customer: null, reservation: null, outcome: CallOutcome.MISSED, minutesAgo: 80, duration: 0, notes: "Yoğun servis saati." }
+    ].map((call, index) =>
+      prisma.callLog.create({
+        data: {
+          businessId: business.id,
+          customerId: call.customer === null ? undefined : customers[call.customer].id,
+          reservationId: call.reservation === null ? undefined : reservations[call.reservation].id,
+          phone: call.customer === null ? `+90 555 909 0${index} 0${index}` : customers[call.customer].phone,
+          callerName: call.customer === null ? `Anonim Arayan ${index + 1}` : customers[call.customer].name,
+          outcome: call.outcome,
+          durationSeconds: call.duration,
+          notes: call.notes,
+          startedAt: new Date(now.getTime() - call.minutesAgo * 60000)
+        }
+      })
+    )
+  );
+
+  return { business, admin, tables, customers, reservations };
+}
+
+async function main() {
+  await prisma.session.deleteMany();
+  await prisma.callLog.deleteMany();
+  await prisma.reservation.deleteMany();
+  await prisma.diningTable.deleteMany();
+  await prisma.customer.deleteMany();
+  await prisma.restaurantSettings.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.business.deleteMany();
+
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 12);
+  const superAdminPasswordHash = await bcrypt.hash(superAdminPassword, 12);
+
+  const platformBusiness = await prisma.business.create({
     data: {
-      email: adminEmail,
-      name: "Demo Admin",
-      passwordHash,
-      role: UserRole.ADMIN
+      name: "Limon Masa Platform",
+      slug: "platform-ops",
+      status: BusinessStatus.ACTIVE,
+      subscriptionPlan: SubscriptionPlan.SCALE,
+      subscriptionStatus: SubscriptionStatus.ACTIVE,
+      onboardingCompletedAt: new Date(),
+      notes: "Internal platform workspace for super admin users."
     }
   });
 
-  const tables = await prisma.$transaction([
-    prisma.diningTable.create({ data: { number: "T1", label: "Pencere 1", zone: "Salon", seatCapacity: 2, status: TableStatus.RESERVED } }),
-    prisma.diningTable.create({ data: { number: "T2", label: "Pencere 2", zone: "Salon", seatCapacity: 2, status: TableStatus.EMPTY } }),
-    prisma.diningTable.create({ data: { number: "T3", label: "Orta 1", zone: "Salon", seatCapacity: 4, status: TableStatus.OCCUPIED } }),
-    prisma.diningTable.create({ data: { number: "T4", label: "Orta 2", zone: "Salon", seatCapacity: 4, status: TableStatus.RESERVED } }),
-    prisma.diningTable.create({ data: { number: "T5", label: "Chef's Table", zone: "Özel Alan", seatCapacity: 6, status: TableStatus.EMPTY } }),
-    prisma.diningTable.create({ data: { number: "T6", label: "Teras 1", zone: "Teras", seatCapacity: 4, status: TableStatus.RESERVED } }),
-    prisma.diningTable.create({ data: { number: "T7", label: "Teras 2", zone: "Teras", seatCapacity: 4, status: TableStatus.EMPTY } }),
-    prisma.diningTable.create({ data: { number: "T8", label: "Teras 3", zone: "Teras", seatCapacity: 6, status: TableStatus.MAINTENANCE } }),
-    prisma.diningTable.create({ data: { number: "T9", label: "Bar 1", zone: "Bar", seatCapacity: 2, status: TableStatus.EMPTY } }),
-    prisma.diningTable.create({ data: { number: "T10", label: "Bar 2", zone: "Bar", seatCapacity: 2, status: TableStatus.EMPTY } })
-  ]);
+  await prisma.user.create({
+    data: {
+      businessId: platformBusiness.id,
+      email: superAdminEmail,
+      name: "Platform Super Admin",
+      passwordHash: superAdminPasswordHash,
+      role: UserRole.SUPER_ADMIN
+    }
+  });
 
-  const customers = await Promise.all(
-    names.map(([name, tag], index) =>
-      prisma.customer.create({
-        data: {
-          name,
-          phone: `+90 555 100 ${String(10 + index).padStart(2, "0")} ${String(20 + index).padStart(2, "0")}`,
-          email: `${name.toLocaleLowerCase("tr-TR").replace(/[^a-z0-9]+/g, ".")}@example.com`,
-          notes: index % 3 === 0 ? "Pencere kenarı tercih ediyor." : index % 4 === 0 ? "Doğum günü rezervasyonlarında tatlı servisi notu var." : "Önceden arayarak teyit veriyor.",
-          tag: CustomerTag[tag as keyof typeof CustomerTag]
-        }
-      })
-    )
-  );
+  await prisma.restaurantSettings.create({
+    data: {
+      businessId: platformBusiness.id,
+      restaurantName: "Platform Ops",
+      slug: "platform-ops",
+      phone: "+90 212 000 00 00",
+      seatingCapacity: 0,
+      openingHours: {
+        monday: "09:00 - 18:00",
+        tuesday: "09:00 - 18:00",
+        wednesday: "09:00 - 18:00",
+        thursday: "09:00 - 18:00",
+        friday: "09:00 - 18:00",
+        saturday: "Kapalı",
+        sunday: "Kapalı"
+      }
+    }
+  });
 
-  const today = new Date();
-  const reservationsData = [
-    { customer: 0, start: atTime(today, 18, 30), guests: 2, table: 0, status: ReservationStatus.CONFIRMED, source: ReservationSource.PHONE, occasion: "Yıldönümü" },
-    { customer: 1, start: atTime(today, 19, 0), guests: 4, table: 3, status: ReservationStatus.PENDING, source: ReservationSource.WHATSAPP, occasion: null },
-    { customer: 2, start: atTime(today, 19, 30), guests: 3, table: 5, status: ReservationStatus.CONFIRMED, source: ReservationSource.INSTAGRAM, occasion: "Arkadaş buluşması" },
-    { customer: 3, start: atTime(today, 20, 0), guests: 2, table: 2, status: ReservationStatus.COMPLETED, source: ReservationSource.WEBSITE, occasion: null },
-    { customer: 4, start: atTime(today, 20, 15), guests: 6, table: 4, status: ReservationStatus.CONFIRMED, source: ReservationSource.GOOGLE, occasion: "İş yemeği" },
-    { customer: 5, start: atTime(today, 21, 0), guests: 4, table: 6, status: ReservationStatus.CANCELLED, source: ReservationSource.PHONE, occasion: null },
-    { customer: 6, start: atTime(today, 21, 30), guests: 2, table: 8, status: ReservationStatus.NO_SHOW, source: ReservationSource.PHONE, occasion: null },
-    { customer: 7, start: atTime(new Date(today.getTime() + 86400000), 19, 30), guests: 5, table: 4, status: ReservationStatus.CONFIRMED, source: ReservationSource.WEBSITE, occasion: "Aile yemeği" },
-    { customer: 8, start: atTime(new Date(today.getTime() + 86400000), 20, 0), guests: 2, table: 1, status: ReservationStatus.PENDING, source: ReservationSource.PHONE, occasion: null },
-    { customer: 9, start: atTime(new Date(today.getTime() + 2 * 86400000), 18, 45), guests: 4, table: 5, status: ReservationStatus.CONFIRMED, source: ReservationSource.INSTAGRAM, occasion: "Doğum günü" },
-    { customer: 10, start: atTime(new Date(today.getTime() - 86400000), 20, 15), guests: 3, table: 9, status: ReservationStatus.COMPLETED, source: ReservationSource.WALK_IN, occasion: null },
-    { customer: 11, start: atTime(new Date(today.getTime() - 2 * 86400000), 19, 15), guests: 2, table: 0, status: ReservationStatus.COMPLETED, source: ReservationSource.PHONE, occasion: null }
-  ];
+  await createBusinessWorkspace({
+    businessName: "Limon Masa",
+    slug: "limon-masa",
+    phone: "+90 212 555 10 20",
+    seatingCapacity: 96,
+    adminEmail,
+    adminPasswordHash,
+    adminName: "Demo Business Admin",
+    status: BusinessStatus.ACTIVE,
+    subscriptionPlan: SubscriptionPlan.GROWTH,
+    subscriptionStatus: SubscriptionStatus.ACTIVE,
+    trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    createDemoOpsData: true
+  });
 
-  const reservations = await Promise.all(
-    reservationsData.map((entry) =>
-      prisma.reservation.create({
-        data: {
-          customerId: customers[entry.customer].id,
-          assignedTableId: tables[entry.table].id,
-          status: entry.status,
-          source: entry.source,
-          startAt: entry.start,
-          endAt: new Date(entry.start.getTime() + 100 * 60000),
-          guestCount: entry.guests,
-          occasion: entry.occasion,
-          notes: entry.status === ReservationStatus.CANCELLED ? "Misafir aynı gün iptal etti." : "Servis notu: karşılama ekibi bilgilendirildi.",
-          createdBy: "Demo Admin"
-        }
-      })
-    )
-  );
-
-  const callBase = new Date();
-  const callData = [
-    { customer: 0, reservation: 0, outcome: CallOutcome.RESERVATION_INQUIRY, minutesAgo: 15, duration: 320, notes: "Teras müsaitliği soruldu." },
-    { customer: 2, reservation: 2, outcome: CallOutcome.ANSWERED, minutesAgo: 32, duration: 180, notes: "Rezervasyon teyidi alındı." },
-    { customer: 7, reservation: 7, outcome: CallOutcome.INFO_REQUEST, minutesAgo: 60, duration: 120, notes: "Vale hizmeti soruldu." },
-    { customer: 4, reservation: 4, outcome: CallOutcome.ANSWERED, minutesAgo: 85, duration: 260, notes: "Menüde vegan seçenekler paylaşıldı." },
-    { customer: null, reservation: null, outcome: CallOutcome.MISSED, minutesAgo: 104, duration: 0, notes: "Yoğun saat." },
-    { customer: 8, reservation: null, outcome: CallOutcome.RESERVATION_INQUIRY, minutesAgo: 145, duration: 210, notes: "Yarın için 2 kişilik masa istendi." }
-  ];
-
-  await Promise.all(
-    callData.map((entry, index) =>
-      prisma.callLog.create({
-        data: {
-          customerId: entry.customer === null ? undefined : customers[entry.customer].id,
-          reservationId: entry.reservation === null ? undefined : reservations[entry.reservation].id,
-          phone: entry.customer === null ? "+90 555 443 22 11" : customers[entry.customer].phone,
-          callerName: entry.customer === null ? `Bilinmeyen Arayan ${index + 1}` : customers[entry.customer].name,
-          outcome: entry.outcome,
-          durationSeconds: entry.duration,
-          notes: entry.notes,
-          startedAt: new Date(callBase.getTime() - entry.minutesAgo * 60000)
-        }
-      })
-    )
-  );
+  await createBusinessWorkspace({
+    businessName: "Mavi Masa Kadıköy",
+    slug: "mavi-masa-kadikoy",
+    phone: "+90 216 444 22 11",
+    seatingCapacity: 74,
+    adminEmail: "admin@mavimasa.com",
+    adminPasswordHash,
+    adminName: "Kadıköy Admin",
+    status: BusinessStatus.ACTIVE,
+    subscriptionPlan: SubscriptionPlan.STARTER,
+    subscriptionStatus: SubscriptionStatus.TRIALING,
+    trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    createDemoOpsData: false
+  });
 }
 
 main()

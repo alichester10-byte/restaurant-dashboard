@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import type { Route } from "next";
+import { UserRole } from "@prisma/client";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const items = [
+const businessItems = [
   { href: "/dashboard" as Route, label: "Panel" },
   { href: "/reservations" as Route, label: "Rezervasyon" },
   { href: "/tables" as Route, label: "Masalar" },
@@ -14,8 +15,14 @@ const items = [
   { href: "/settings" as Route, label: "Ayarlar" }
 ];
 
-export function MobileNav() {
+const superAdminItems = [
+  { href: "/super-admin" as Route, label: "İşletmeler" },
+  { href: "/onboarding" as Route, label: "Onboarding" }
+];
+
+export function MobileNav({ role }: { role: UserRole }) {
   const pathname = usePathname();
+  const items = role === UserRole.SUPER_ADMIN ? superAdminItems : businessItems;
 
   return (
     <div className="glass-panel grid grid-cols-3 gap-2 rounded-[28px] p-3 lg:hidden">

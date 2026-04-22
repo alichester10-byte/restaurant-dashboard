@@ -1,6 +1,6 @@
 # Limon Masa Ops
 
-Next.js, TypeScript, Tailwind CSS, Prisma ve PostgreSQL ile hazırlanmış demo-ready restoran rezervasyon ve operasyon yönetim paneli.
+Next.js, TypeScript, Tailwind CSS, Prisma ve PostgreSQL ile hazırlanmış multi-tenant restoran rezervasyon ve operasyon SaaS ürünü.
 
 ## Mimari Plan
 
@@ -9,10 +9,12 @@ Next.js, TypeScript, Tailwind CSS, Prisma ve PostgreSQL ile hazırlanmış demo-
 - Backend: Aynı Next.js uygulaması içinde server actions ve veri servisleri
 - ORM / DB: Prisma + PostgreSQL
 - Auth: Güvenli cookie tabanlı, veritabanında saklanan session yapısı
+- Multi-tenant: `Business` tenant modeli, rol bazlı erişim ve tenant-scope veri erişimi
 - Validation: Zod ile sunucu tarafı doğrulama
 
 ## Prisma Şema Özeti
 
+- `Business`
 - `User`, `Session`
 - `RestaurantSettings`
 - `Customer`
@@ -21,6 +23,10 @@ Next.js, TypeScript, Tailwind CSS, Prisma ve PostgreSQL ile hazırlanmış demo-
 - `CallLog`
 
 Temel enumlar:
+- `UserRole`: `SUPER_ADMIN`, `BUSINESS_ADMIN`, `STAFF`
+- `BusinessStatus`: `ACTIVE`, `SUSPENDED`
+- `SubscriptionPlan`: `STARTER`, `GROWTH`, `SCALE`
+- `SubscriptionStatus`: `TRIALING`, `ACTIVE`, `PAST_DUE`, `CANCELED`
 - `ReservationStatus`: `CONFIRMED`, `PENDING`, `CANCELLED`, `COMPLETED`, `NO_SHOW`
 - `TableStatus`: `EMPTY`, `OCCUPIED`, `RESERVED`, `MAINTENANCE`
 - `CustomerTag`: `VIP`, `REGULAR`, `NEW`
@@ -59,6 +65,8 @@ Temel enumlar:
 - Müşteri Kartları
 - Raporlar
 - Ayarlar ve entegrasyon placeholder alanları
+- Super admin paneli
+- Public onboarding akışı
 
 ## Kurulum
 
@@ -79,10 +87,14 @@ pnpm prisma:seed
 pnpm dev
 ```
 
-## Varsayılan Demo Hesabı
+## Varsayılan Demo Hesapları
 
-- E-posta: `.env` içindeki `ADMIN_EMAIL`
-- Şifre: `.env` içindeki `ADMIN_PASSWORD`
+- Business admin
+  - E-posta: `.env` içindeki `ADMIN_EMAIL`
+  - Şifre: `.env` içindeki `ADMIN_PASSWORD`
+- Super admin
+  - E-posta: `.env` içindeki `SUPER_ADMIN_EMAIL`
+  - Şifre: `.env` içindeki `SUPER_ADMIN_PASSWORD`
 
 ## Production Hardening Sonrası İçin
 

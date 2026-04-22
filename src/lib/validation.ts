@@ -1,9 +1,35 @@
-import { CallOutcome, ReservationSource, ReservationStatus, TableStatus } from "@prisma/client";
+import { BusinessStatus, CallOutcome, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const loginSchema = z.object({
   email: z.string().email("Geçerli bir e-posta girin."),
   password: z.string().min(8, "Şifre en az 8 karakter olmalı.")
+});
+
+export const businessOnboardingSchema = z.object({
+  businessName: z.string().min(2).max(100),
+  slug: z.string().min(2).max(60).regex(/^[a-z0-9-]+$/),
+  restaurantName: z.string().min(2).max(100),
+  phone: z.string().min(10).max(30),
+  adminName: z.string().min(2).max(80),
+  adminEmail: z.string().email(),
+  adminPassword: z.string().min(8).max(100),
+  seatingCapacity: z.coerce.number().int().min(1).max(500),
+  createDefaultTables: z.enum(["true", "false"]).default("true"),
+  redirectTo: z.string().default("/login")
+});
+
+export const businessAdminCreateSchema = businessOnboardingSchema.extend({
+  plan: z.nativeEnum(SubscriptionPlan).default(SubscriptionPlan.STARTER),
+  subscriptionStatus: z.nativeEnum(SubscriptionStatus).default(SubscriptionStatus.TRIALING)
+});
+
+export const businessStatusSchema = z.object({
+  businessId: z.string(),
+  status: z.nativeEnum(BusinessStatus),
+  plan: z.nativeEnum(SubscriptionPlan).optional(),
+  subscriptionStatus: z.nativeEnum(SubscriptionStatus).optional(),
+  redirectTo: z.string().default("/super-admin")
 });
 
 export const reservationSchema = z.object({

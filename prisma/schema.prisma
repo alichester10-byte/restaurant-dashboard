@@ -9,8 +9,27 @@ datasource db {
 }
 
 enum UserRole {
-  ADMIN
-  MANAGER
+  SUPER_ADMIN
+  BUSINESS_ADMIN
+  STAFF
+}
+
+enum BusinessStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SubscriptionPlan {
+  STARTER
+  GROWTH
+  SCALE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
 }
 
 enum ReservationStatus {
@@ -53,12 +72,44 @@ enum ReservationSource {
 model User {
   id           String      @id @default(cuid())
   email        String      @unique
+  businessId   String
   name         String
   passwordHash String
-  role         UserRole    @default(ADMIN)
+  role         UserRole    @default(BUSINESS_ADMIN)
+  business     Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   sessions     Session[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+
+  @@index([businessId])
+  @@index([role])
+}
+
+model Business {
+  id                    String               @id @default(cuid())
+  name                  String
+  slug                  String               @unique
+  status                BusinessStatus       @default(ACTIVE)
+  subscriptionPlan      SubscriptionPlan     @default(STARTER)
+  subscriptionStatus    SubscriptionStatus   @default(TRIALING)
+  stripeCustomerId      String?              @unique
+  stripeSubscriptionId  String?              @unique
+  trialStartsAt         DateTime?            @default(now())
+  trialEndsAt           DateTime?
+  suspendedAt           DateTime?
+  onboardingCompletedAt DateTime?
+  notes                 String?
+  users                 User[]
+  settings              RestaurantSettings[]
+  customers             Customer[]
+  tables                DiningTable[]
+  reservations          Reservation[]
+  callLogs              CallLog[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@index([status])
+  @@index([subscriptionStatus])
 }
 
 model Session {
@@ -76,6 +127,7 @@ model Session {
 
 model RestaurantSettings {
   id                       String   @id @default(cuid())
+  businessId               String
   restaurantName           String
   slug                     String   @unique
   phone                    String
@@ -89,43 +141,56 @@ model RestaurantSettings {
   requirePhoneVerification Boolean  @default(false)
   reservationLeadTimeDays  Int      @default(30)
   notes                    String?
+  business                 Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+
+  @@unique([businessId])
+  @@index([businessId])
 }
 
 model Customer {
   id            String        @id @default(cuid())
+  businessId    String
   name          String
-  phone         String        @unique
+  phone         String
   email         String?
   notes         String?
   tag           CustomerTag   @default(NEW)
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   reservations  Reservation[]
   callLogs      CallLog[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  @@unique([businessId, phone])
   @@index([name])
   @@index([tag])
+  @@index([businessId])
 }
 
 model DiningTable {
   id           String        @id @default(cuid())
-  number       String        @unique
+  businessId   String
+  number       String
   label        String
   zone         String
   seatCapacity Int
   status       TableStatus   @default(EMPTY)
   notes        String?
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   reservations Reservation[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  @@unique([businessId, number])
   @@index([status])
+  @@index([businessId])
 }
 
 model Reservation {
   id               String             @id @default(cuid())
+  businessId       String
   customerId       String
   assignedTableId  String?
   source           ReservationSource  @default(PHONE)
@@ -136,6 +201,7 @@ model Reservation {
   occasion         String?
   notes            String?
   createdBy        String?
+  business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   customer         Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -146,10 +212,12 @@ model Reservation {
   @@index([status])
   @@index([assignedTableId])
   @@index([customerId])
+  @@index([businessId])
 }
 
 model CallLog {
   id              String        @id @default(cuid())
+  businessId      String
   customerId      String?
   reservationId   String?
   phone           String
@@ -159,9 +227,11 @@ model CallLog {
   notes           String?
   startedAt       DateTime
   createdAt       DateTime      @default(now())
+  business        Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer        Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   reservation     Reservation?  @relation(fields: [reservationId], references: [id], onDelete: SetNull)
 
   @@index([startedAt])
   @@index([outcome])
+  @@index([businessId])
 }

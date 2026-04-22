@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAuth } from "@/lib/auth";
+import { requireBusinessUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { settingsSchema } from "@/lib/validation";
 
 export async function updateSettingsAction(formData: FormData) {
-  await requireAuth();
+  const session = await requireBusinessUser();
+  const businessId = session.user.businessId;
 
   const parsed = settingsSchema.safeParse({
     restaurantName: formData.get("restaurantName"),
@@ -34,7 +35,11 @@ export async function updateSettingsAction(formData: FormData) {
     redirect("/settings?error=settings_validation");
   }
 
-  const settings = await prisma.restaurantSettings.findFirstOrThrow();
+  const settings = await prisma.restaurantSettings.findFirstOrThrow({
+    where: {
+      businessId
+    }
+  });
 
   await prisma.restaurantSettings.update({
     where: { id: settings.id },

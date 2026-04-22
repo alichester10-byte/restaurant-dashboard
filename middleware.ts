@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedPaths = ["/dashboard", "/reservations", "/tables", "/customers", "/reports", "/settings"];
+const protectedPaths = ["/dashboard", "/reservations", "/tables", "/customers", "/reports", "/settings", "/super-admin"];
 
 export function middleware(request: NextRequest) {
   const session = request.cookies.get("restaurant_ops_session")?.value;
@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname === "/login" && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();

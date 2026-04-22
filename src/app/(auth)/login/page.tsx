@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
@@ -38,6 +39,9 @@ export default function LoginPage() {
           <div className="mt-8">
             <LoginForm />
           </div>
+          <Link href="/onboarding" className="btn-secondary mt-4 w-full">
+            Yeni İşletme Oluştur
+          </Link>
           <div className="mt-6 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4 text-sm text-sage">
             Varsayılan demo hesabı `.env` içindeki `ADMIN_EMAIL` ve `ADMIN_PASSWORD` değerlerinden üretilir.
           </div>

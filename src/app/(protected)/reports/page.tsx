@@ -1,16 +1,23 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { MiniBarChart } from "@/components/ui/mini-bar-chart";
 import { Panel } from "@/components/ui/panel";
+import { requireBusinessUser } from "@/lib/auth";
 import { reservationSourceLabels, callOutcomeLabels } from "@/lib/constants";
 import { getReportsPageData } from "@/lib/data";
 import { formatPercent } from "@/lib/utils";
 
 export default async function ReportsPage() {
-  const data = await getReportsPageData();
+  const session = await requireBusinessUser();
+  const data = await getReportsPageData(session.user.businessId);
 
   return (
     <div className="space-y-6">
-      <AppHeader title="Raporlar" subtitle="Rezervasyon kaynakları, çağrı etkisi ve kapasite kullanımını operasyonel metriklerle analiz edin." />
+      <AppHeader
+        title="Raporlar"
+        subtitle="Rezervasyon kaynakları, çağrı etkisi ve kapasite kullanımını operasyonel metriklerle analiz edin."
+        businessName={session.user.business.name}
+        role={session.user.role}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
 import { authenticate, destroySession } from "@/lib/auth";
 
 export async function loginAction(formData: FormData) {
@@ -9,7 +10,7 @@ export async function loginAction(formData: FormData) {
     redirect("/login?error=invalid_credentials");
   }
 
-  redirect("/dashboard");
+  redirect(result.role === UserRole.SUPER_ADMIN ? "/super-admin" : "/dashboard");
 }
 
 export async function logoutAction() {
