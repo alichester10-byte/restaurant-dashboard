@@ -1,0 +1,137 @@
+import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { loginSchema } from "@/lib/validation";
+import { rateLimitPlaceholder } from "@/lib/rate-limit";
+
+const SESSION_COOKIE = "restaurant_ops_session";
+const SESSION_TTL_DAYS = 7;
+
+function hashToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function getSessionSecret() {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error("SESSION_SECRET is not configured.");
+  }
+  return secret;
+}
+
+export async function createSession(userId: string) {
+  getSessionSecret();
+  const token = crypto.randomBytes(32).toString("hex");
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+
+  await prisma.session.create({
+    data: {
+      userId,
+      tokenHash,
+      expiresAt
+    }
+  });
+
+  cookies().set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: expiresAt
+  });
+}
+
+export async function destroySession() {
+  const token = cookies().get(SESSION_COOKIE)?.value;
+
+  if (token) {
+    await prisma.session.deleteMany({
+      where: {
+        tokenHash: hashToken(token)
+      }
+    });
+  }
+
+  cookies().set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    path: "/",
+    expires: new Date(0)
+  });
+}
+
+export async function getCurrentSession() {
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  if (!token) {
+    return null;
+  }
+
+  const session = await prisma.session.findUnique({
+    where: {
+      tokenHash: hashToken(token)
+    },
+    include: {
+      user: true
+    }
+  });
+
+  if (!session || session.expiresAt < new Date()) {
+    return null;
+  }
+
+  await prisma.session.update({
+    where: {
+      id: session.id
+    },
+    data: {
+      lastSeenAt: new Date()
+    }
+  });
+
+  return session;
+}
+
+export async function requireAuth() {
+  const session = await getCurrentSession();
+  if (!session) {
+    redirect("/login");
+  }
+  return session;
+}
+
+export async function authenticate(formData: FormData) {
+  const parsed = loginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password")
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.flatten().formErrors[0] ?? "Giriş bilgileri geçersiz." };
+  }
+
+  const limiter = await rateLimitPlaceholder(parsed.data.email, "login");
+  if (!limiter.allowed) {
+    return { ok: false, error: "Çok fazla deneme yapıldı. Lütfen tekrar deneyin." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      email: parsed.data.email
+    }
+  });
+
+  if (!user) {
+    return { ok: false, error: "E-posta veya şifre hatalı." };
+  }
+
+  const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
+
+  if (!isValid) {
+    return { ok: false, error: "E-posta veya şifre hatalı." };
+  }
+
+  await createSession(user.id);
+  return { ok: true };
+}

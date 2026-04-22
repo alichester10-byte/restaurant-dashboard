@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f8f4ed;
+  --bg-strong: #f0e8dc;
+  --surface: rgba(255, 255, 255, 0.84);
+  --surface-strong: #ffffff;
+  --text: #14211b;
+  --muted: #607268;
+  --border: rgba(20, 33, 27, 0.1);
+  --accent: #214c3d;
+  --accent-soft: rgba(33, 76, 61, 0.1);
+  --gold: #c99839;
+  --danger: #ae4f3d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(201, 152, 57, 0.12), transparent 28%),
+    radial-gradient(circle at top right, rgba(33, 76, 61, 0.14), transparent 32%),
+    linear-gradient(180deg, #fbf8f2 0%, #f4efe6 100%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(20, 33, 27, 0.04) 1px, transparent 0);
+  background-size: 18px 18px;
+}
+
+.glass-panel {
+  background: var(--surface);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 50px rgba(27, 36, 31, 0.08);
+}
+
+.section-title {
+  @apply text-sm font-semibold uppercase tracking-[0.24em] text-sage;
+}
+
+.field {
+  @apply w-full rounded-2xl border border-[color:var(--border)] bg-white/90 px-4 py-3 text-sm text-ink outline-none transition focus:border-moss focus:ring-4 focus:ring-moss/10;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-2xl bg-moss px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center rounded-2xl border border-[color:var(--border)] bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss;
+}
+
+.btn-danger {
+  @apply inline-flex items-center justify-center rounded-2xl bg-danger px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90;
+}
+
+.badge {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold;
+}
