@@ -92,9 +92,9 @@ export default async function CustomersPage({
                     <div key={reservation.id} className="rounded-2xl border border-[color:var(--border)] bg-white/80 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="font-semibold text-ink">{formatDateTime(reservation.startAt)}</div>
+                          <div className="font-semibold text-ink">{reservation.guestName}</div>
                           <div className="mt-1 text-sm text-sage">
-                            {reservation.guestCount} kişi • {reservation.assignedTable?.number ?? "Masa yok"}
+                            {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi • {reservation.assignedTable?.number ?? "Masa yok"}
                           </div>
                         </div>
                         <StatusBadge value={reservation.status} />

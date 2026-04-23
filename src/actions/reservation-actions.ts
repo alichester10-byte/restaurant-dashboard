@@ -129,6 +129,8 @@ export async function saveReservationAction(formData: FormData) {
       where: { id: existing.id },
       data: {
         customerId: customer.id,
+        guestName: parsed.data.customerName,
+        guestPhone: parsed.data.phone,
         assignedTableId: parsed.data.tableId || null,
         status: parsed.data.status,
         source: parsed.data.source,
@@ -163,6 +165,8 @@ export async function saveReservationAction(formData: FormData) {
       data: {
         businessId,
         customerId: customer.id,
+        guestName: parsed.data.customerName,
+        guestPhone: parsed.data.phone,
         assignedTableId: parsed.data.tableId || null,
         status: parsed.data.status,
         source: parsed.data.source,

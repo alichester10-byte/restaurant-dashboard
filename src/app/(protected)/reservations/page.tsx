@@ -93,13 +93,13 @@ export default async function ReservationsPage({
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <div className="text-lg font-semibold text-ink">{reservation.customer.name}</div>
+                      <div className="text-lg font-semibold text-ink">{reservation.guestName}</div>
                       <StatusBadge value={reservation.status} />
                     </div>
                     <div className="mt-2 text-sm text-sage">
                       {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi • {reservation.assignedTable?.number ?? "Masa bekliyor"}
                     </div>
-                    <div className="mt-1 text-sm text-sage">{formatPhone(reservation.customer.phone)}</div>
+                    <div className="mt-1 text-sm text-sage">{formatPhone(reservation.guestPhone)}</div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -158,7 +158,8 @@ export default async function ReservationsPage({
               reservation={data.selectedReservation
                 ? {
                     id: data.selectedReservation.id,
-                    customer: data.selectedReservation.customer,
+                    guestName: data.selectedReservation.guestName,
+                    guestPhone: data.selectedReservation.guestPhone,
                     startAt: data.selectedReservation.startAt,
                     guestCount: data.selectedReservation.guestCount,
                     status: data.selectedReservation.status,

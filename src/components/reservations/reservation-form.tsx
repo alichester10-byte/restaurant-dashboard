@@ -9,7 +9,8 @@ type ReservationFormProps = {
   tables: Array<{ id: string; label: string; number: string }>;
   reservation?: {
     id: string;
-    customer: { name: string; phone: string };
+    guestName: string;
+    guestPhone: string;
     startAt: Date;
     guestCount: number;
     status: ReservationStatus;
@@ -33,11 +34,11 @@ export function ReservationForm({ tables, reservation, locked = false }: Reserva
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2">
             <span className="text-sm font-semibold text-ink">Misafir Adı</span>
-            <input className="field cursor-not-allowed opacity-70" defaultValue={reservation?.customer.name ?? "Elif Kaya"} disabled />
+            <input className="field cursor-not-allowed opacity-70" defaultValue={reservation?.guestName ?? "Elif Kaya"} disabled />
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold text-ink">Telefon</span>
-            <input className="field cursor-not-allowed opacity-70" defaultValue={reservation?.customer.phone ?? "+90 555 820 14 00"} disabled />
+            <input className="field cursor-not-allowed opacity-70" defaultValue={reservation?.guestPhone ?? "+90 555 820 14 00"} disabled />
           </label>
         </div>
 
@@ -69,11 +70,11 @@ export function ReservationForm({ tables, reservation, locked = false }: Reserva
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">Misafir Adı</span>
-          <input className="field" name="customerName" defaultValue={reservation?.customer.name} required />
+          <input className="field" name="customerName" defaultValue={reservation?.guestName} required />
         </label>
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">Telefon</span>
-          <input className="field" name="phone" defaultValue={reservation?.customer.phone} required />
+          <input className="field" name="phone" defaultValue={reservation?.guestPhone} required />
         </label>
       </div>
 

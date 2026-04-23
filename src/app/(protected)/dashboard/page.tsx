@@ -113,7 +113,7 @@ export default async function DashboardPage() {
               <div key={reservation.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="font-semibold text-ink">{reservation.customer.name}</div>
+                    <div className="font-semibold text-ink">{reservation.guestName}</div>
                     <div className="mt-1 text-sm text-sage">
                       {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
                     </div>
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="mt-4 flex items-center justify-between text-sm text-sage">
                   <span>{reservation.assignedTable ? reservation.assignedTable.number : "Masa ataması bekliyor"}</span>
-                  <span>{reservation.customer.phone}</span>
+                  <span>{reservation.guestPhone}</span>
                 </div>
               </div>
             ))}

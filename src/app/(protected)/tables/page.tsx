@@ -122,7 +122,7 @@ export default async function TablesPage({
                 <div className="mt-3 space-y-3">
                   {data.selectedTable.reservations.map((reservation) => (
                     <div key={reservation.id} className="rounded-2xl border border-[color:var(--border)] bg-white/80 p-4">
-                      <div className="font-semibold text-ink">{reservation.customer.name}</div>
+                      <div className="font-semibold text-ink">{reservation.guestName}</div>
                       <div className="mt-1 text-sm text-sage">
                         {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
                       </div>
@@ -152,7 +152,7 @@ export default async function TablesPage({
                       </option>
                       {data.reservations.map((reservation) => (
                         <option key={reservation.id} value={reservation.id}>
-                          {reservation.customer.name} • {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
+                          {reservation.guestName} • {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
                         </option>
                       ))}
                     </select>

@@ -148,6 +148,8 @@ async function createBusinessWorkspace(input: {
         data: {
           businessId: business.id,
           customerId: customers[reservation.customer].id,
+          guestName: customers[reservation.customer].name,
+          guestPhone: customers[reservation.customer].phone,
           assignedTableId: tables[reservation.table].id,
           status: reservation.status,
           source: reservation.source,

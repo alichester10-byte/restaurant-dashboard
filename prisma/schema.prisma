@@ -237,6 +237,8 @@ model Reservation {
   id               String             @id @default(cuid())
   businessId       String
   customerId       String
+  guestName        String
+  guestPhone       String
   assignedTableId  String?
   source           ReservationSource  @default(PHONE)
   status           ReservationStatus  @default(PENDING)
