@@ -17,8 +17,8 @@ export function getPaytrConfig() {
     merchantId: getRequiredEnv("PAYTR_MERCHANT_ID"),
     merchantKey: getRequiredEnv("PAYTR_MERCHANT_KEY"),
     merchantSalt: getRequiredEnv("PAYTR_MERCHANT_SALT"),
-    okUrl: process.env.PAYTR_OK_URL ?? `${getAppBaseUrl()}/billing/result/success`,
-    failUrl: process.env.PAYTR_FAIL_URL ?? `${getAppBaseUrl()}/billing/result/fail`,
+    okUrl: process.env.PAYTR_OK_URL ?? `${getAppBaseUrl()}/billing/success`,
+    failUrl: process.env.PAYTR_FAIL_URL ?? `${getAppBaseUrl()}/billing/fail`,
     callbackUrl: process.env.PAYTR_CALLBACK_URL ?? `${getAppBaseUrl()}/api/paytr/callback`
   };
 }

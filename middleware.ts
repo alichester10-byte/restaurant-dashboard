@@ -2,12 +2,19 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const protectedPaths = ["/dashboard", "/reservations", "/tables", "/customers", "/reports", "/settings", "/billing", "/super-admin"];
+const publicBillingPaths = new Set([
+  "/billing/success",
+  "/billing/fail",
+  "/billing/result/success",
+  "/billing/result/fail"
+]);
 
 export function middleware(request: NextRequest) {
   const session = request.cookies.get("restaurant_ops_session")?.value;
   const { pathname } = request.nextUrl;
 
-  const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
+  const isPublicBillingPath = publicBillingPaths.has(pathname);
+  const isProtected = !isPublicBillingPath && protectedPaths.some((path) => pathname.startsWith(path));
 
   if (isProtected && !session) {
     return NextResponse.redirect(new URL("/login", request.url));
