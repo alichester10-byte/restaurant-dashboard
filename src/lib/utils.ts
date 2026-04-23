@@ -35,6 +35,13 @@ export function formatPercent(value: number) {
   return `${Math.round(value)}%`;
 }
 
+export function formatCurrency(amount: number, currency = "TRY") {
+  return new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency
+  }).format(amount);
+}
+
 export function formatPhone(phone: string) {
   return phone.replace(/(\+90)(\d{3})(\d{3})(\d{2})(\d{2})/, "$1 $2 $3 $4 $5");
 }

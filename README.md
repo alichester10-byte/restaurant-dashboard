@@ -87,13 +87,16 @@ pnpm prisma:seed
 pnpm dev
 ```
 
-## Stripe Env Vars
+## PAYTR Env Vars
 
 ```bash
-STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-STRIPE_PRICE_PRO="price_..."
 NEXT_PUBLIC_APP_URL="https://your-app-domain.vercel.app"
+PAYTR_MERCHANT_ID="your-merchant-id"
+PAYTR_MERCHANT_KEY="your-merchant-key"
+PAYTR_MERCHANT_SALT="your-merchant-salt"
+PAYTR_OK_URL="https://your-app-domain.vercel.app/billing/result/success"
+PAYTR_FAIL_URL="https://your-app-domain.vercel.app/billing/result/fail"
+PAYTR_CALLBACK_URL="https://your-app-domain.vercel.app/api/paytr/callback"
 ```
 
 ## Varsayılan Demo Hesapları

@@ -1,4 +1,4 @@
-import { BusinessStatus, CallOutcome, CustomerTag, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableStatus, UserRole } from "@prisma/client";
+import { BillingPaymentStatus, BusinessStatus, CallOutcome, CustomerTag, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableStatus, UserRole } from "@prisma/client";
 
 export const reservationStatusLabels: Record<ReservationStatus, string> = {
   CONFIRMED: "Onaylandı",
@@ -59,4 +59,11 @@ export const subscriptionStatusLabels: Record<SubscriptionStatus, string> = {
   ACTIVE: "Aktif",
   PAST_DUE: "Gecikmiş",
   CANCELED: "İptal"
+};
+
+export const billingPaymentStatusLabels: Record<BillingPaymentStatus, string> = {
+  PENDING: "Bekliyor",
+  SUCCEEDED: "Başarılı",
+  FAILED: "Başarısız",
+  EXPIRED: "Süresi Doldu"
 };

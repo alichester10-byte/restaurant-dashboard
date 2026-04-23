@@ -1,12 +1,12 @@
-import { SubscriptionPlan, SubscriptionStatus, UserRole } from "@prisma/client";
-import { createBillingPortalAction, createCheckoutSessionAction, openEnterpriseContactAction } from "@/actions/billing-actions";
+import { BillingPaymentStatus, SubscriptionPlan, UserRole } from "@prisma/client";
+import { openEnterpriseContactAction } from "@/actions/billing-actions";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
-import { hasActiveSubscription, hasBusinessAccess, isTrialActive } from "@/lib/billing";
+import { getPlanPricing, hasActiveSubscription, hasBusinessAccess, isTrialActive } from "@/lib/billing";
 import { requireBusinessAccess } from "@/lib/auth";
-import { subscriptionPlanLabels, subscriptionStatusLabels } from "@/lib/constants";
+import { billingPaymentStatusLabels, subscriptionPlanLabels, subscriptionStatusLabels } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { formatDateTime } from "@/lib/utils";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 export default async function BillingPage() {
   const session = await requireBusinessAccess({
@@ -17,18 +17,28 @@ export default async function BillingPage() {
   const business = await prisma.business.findUniqueOrThrow({
     where: {
       id: session.user.businessId
+    },
+    include: {
+      billingPayments: {
+        orderBy: {
+          createdAt: "desc"
+        },
+        take: 6
+      }
     }
   });
 
   const accessActive = hasBusinessAccess(business, session.user.role);
   const trialLive = isTrialActive(business);
   const paidActive = hasActiveSubscription(business);
+  const latestPayment = business.billingPayments[0] ?? null;
+  const proPlan = getPlanPricing(SubscriptionPlan.PRO);
 
   return (
     <div className="space-y-6">
       <AppHeader
         title="Faturalama"
-        subtitle="Planınızı yönetin, Stripe Checkout ile yükseltin ve abonelik durumunu takip edin."
+        subtitle="PAYTR ile planınızı yönetin, güvenli ödeme akışını başlatın ve callback sonrası abonelik durumunu izleyin."
         businessName={session.user.business.name}
         role={session.user.role}
       />
@@ -69,18 +79,10 @@ export default async function BillingPage() {
             </div>
 
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
-              Stripe müşteri: {business.stripeCustomerId ?? "Henüz oluşmadı"}
+              Son ödeme: {latestPayment ? billingPaymentStatusLabels[latestPayment.status] : "Henüz yok"}
               <br />
-              Stripe abonelik: {business.stripeSubscriptionId ?? "Henüz oluşmadı"}
+              Son plan tahsilatı: {latestPayment ? formatCurrency((latestPayment.amountMinor ?? 0) / 100) : "Yok"}
             </div>
-
-            {business.stripeCustomerId ? (
-              <form action={createBillingPortalAction}>
-                <button className="btn-secondary w-full" type="submit">
-                  Stripe Billing Portal
-                </button>
-              </form>
-            ) : null}
           </div>
         </Panel>
 
@@ -100,14 +102,14 @@ export default async function BillingPage() {
 
             <div className="rounded-[24px] border border-moss bg-white p-5 shadow-soft">
               <div className="text-sm uppercase tracking-[0.2em] text-moss">Pro</div>
-              <div className="mt-3 text-3xl font-bold text-ink">Stripe Checkout</div>
+              <div className="mt-3 text-3xl font-bold text-ink">{proPlan.amountLabel}</div>
               <p className="mt-3 text-sm leading-6 text-sage">
-                Üretim işletmeleri için aktif abonelik, ödeme takibi ve self-serve billing portal desteği.
+                PAYTR iFrame ödeme akışı ile güvenli tahsilat, callback ile tenant plan aktivasyonu ve ödeme kaydı desteği.
               </p>
-              <form action={createCheckoutSessionAction} className="mt-6">
+              <form action="/api/paytr/initiate" method="post" className="mt-6">
                 <input type="hidden" name="plan" value={SubscriptionPlan.PRO} />
                 <button className="btn-primary w-full" type="submit" disabled={paidActive && business.subscriptionPlan === SubscriptionPlan.PRO}>
-                  {paidActive && business.subscriptionPlan === SubscriptionPlan.PRO ? "Aktif Plan" : "Pro'ya Yükselt"}
+                  {paidActive && business.subscriptionPlan === SubscriptionPlan.PRO ? "Aktif Plan" : "PAYTR ile Pro'ya Geç"}
                 </button>
               </form>
             </div>
@@ -127,10 +129,35 @@ export default async function BillingPage() {
           </div>
 
           <div className="mt-6 rounded-2xl bg-[color:var(--bg-strong)] p-5 text-sm leading-6 text-sage">
-            Webhook olayları: <code>checkout.session.completed</code>, <code>customer.subscription.updated</code>, <code>customer.subscription.deleted</code>, <code>invoice.payment_failed</code>.
+            Callback akışı: PAYTR ödeme sonucu <code>merchant_oid</code> üzerinden doğrulanır, ödeme kaydı güncellenir ve Pro planı başarılı callback sonrası aktive edilir.
           </div>
         </Panel>
       </section>
+
+      <Panel>
+        <div className="section-title">Son Tahsilatlar</div>
+        <div className="mt-5 space-y-3">
+          {business.billingPayments.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-white/80 p-5 text-sm text-sage">
+              Henüz PAYTR üzerinden başlatılmış bir ödeme bulunmuyor.
+            </div>
+          ) : (
+            business.billingPayments.map((payment) => (
+              <div key={payment.id} className="grid gap-3 rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 md:grid-cols-[1.2fr_1fr_1fr_1fr] md:items-center">
+                <div>
+                  <div className="text-sm font-semibold text-ink">{subscriptionPlanLabels[payment.plan]}</div>
+                  <div className="mt-1 text-xs uppercase tracking-[0.18em] text-sage">{payment.merchantOid}</div>
+                </div>
+                <div className="text-sm text-sage">{formatCurrency(payment.amountMinor / 100)}</div>
+                <div className="text-sm font-semibold text-ink">{billingPaymentStatusLabels[payment.status]}</div>
+                <div className="text-sm text-sage">
+                  {payment.status === BillingPaymentStatus.PENDING ? "İşlem bekliyor" : formatDateTime(payment.updatedAt)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Panel>
     </div>
   );
 }
