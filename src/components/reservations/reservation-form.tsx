@@ -1,6 +1,7 @@
 import { ReservationSource, ReservationStatus } from "@prisma/client";
 import { saveReservationAction } from "@/actions/reservation-actions";
 import { LockedAction } from "@/components/demo/locked-action";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { reservationSourceLabels, reservationStatusLabels } from "@/lib/constants";
 import { createTimeSlots } from "@/lib/utils";
 
@@ -144,9 +145,11 @@ export function ReservationForm({ tables, reservation, locked = false }: Reserva
         <textarea className="field min-h-28" name="notes" defaultValue={reservation?.notes ?? ""} />
       </label>
 
-      <button className="btn-primary w-full" type="submit">
-        {reservation ? "Rezervasyonu Güncelle" : "Rezervasyon Oluştur"}
-      </button>
+      <FormSubmitButton
+        className="w-full"
+        idleLabel={reservation ? "Rezervasyonu Güncelle" : "Rezervasyonu Oluştur"}
+        pendingLabel={reservation ? "Rezervasyon Güncelleniyor..." : "Rezervasyon Oluşturuluyor..."}
+      />
     </form>
   );
 }

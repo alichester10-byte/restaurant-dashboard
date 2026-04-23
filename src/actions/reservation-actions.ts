@@ -11,6 +11,14 @@ function buildReservationDateTime(date: string, time: string) {
   return new Date(`${date}T${time}:00`);
 }
 
+function withQueryParam(pathname: string, key: string, value: string) {
+  const [base, search = ""] = pathname.split("?");
+  const params = new URLSearchParams(search);
+  params.set(key, value);
+  const nextSearch = params.toString();
+  return nextSearch ? `${base}?${nextSearch}` : base;
+}
+
 async function syncTableStatus(businessId: string, tableId?: string | null, status?: ReservationStatus) {
   if (!tableId) {
     return;
@@ -21,9 +29,36 @@ async function syncTableStatus(businessId: string, tableId?: string | null, stat
       ? TableStatus.EMPTY
       : TableStatus.RESERVED;
 
-  await prisma.diningTable.update({
-    where: { id: tableId },
+  await prisma.diningTable.updateMany({
+    where: { id: tableId, businessId },
     data: { status: tableStatus }
+  });
+}
+
+async function findOrCreateCustomerForReservation(input: {
+  businessId: string;
+  customerName: string;
+  phone: string;
+}) {
+  const existingCustomer = await prisma.customer.findUnique({
+    where: {
+      businessId_phone: {
+        businessId: input.businessId,
+        phone: input.phone
+      }
+    }
+  });
+
+  if (existingCustomer) {
+    return existingCustomer;
+  }
+
+  return prisma.customer.create({
+    data: {
+      businessId: input.businessId,
+      name: input.customerName,
+      phone: input.phone
+    }
   });
 }
 
@@ -69,31 +104,26 @@ export async function saveReservationAction(formData: FormData) {
     }
   }
 
-  const customer = await prisma.customer.upsert({
-    where: {
-      businessId_phone: {
-        businessId,
-        phone: parsed.data.phone
-      }
-    },
-    update: {
-      name: parsed.data.customerName
-    },
-    create: {
-      businessId,
-      name: parsed.data.customerName,
-      phone: parsed.data.phone
-    }
-  });
-
   if (parsed.data.id) {
     const existing = await prisma.reservation.findFirst({
-      where: { id: parsed.data.id, businessId }
+      where: { id: parsed.data.id, businessId },
+      include: {
+        customer: true
+      }
     });
 
     if (!existing) {
       redirect(`${redirectTo}?error=reservation_missing`);
     }
+
+    const customer =
+      existing.customer.phone === parsed.data.phone
+        ? existing.customer
+        : await findOrCreateCustomerForReservation({
+            businessId,
+            customerName: parsed.data.customerName,
+            phone: parsed.data.phone
+          });
 
     const reservation = await prisma.reservation.update({
       where: { id: existing.id },
@@ -111,14 +141,24 @@ export async function saveReservationAction(formData: FormData) {
     });
 
     if (existing?.assignedTableId && existing.assignedTableId !== reservation.assignedTableId) {
-      await prisma.diningTable.update({
-        where: { id: existing.assignedTableId },
+      await prisma.diningTable.updateMany({
+        where: { id: existing.assignedTableId, businessId },
         data: { status: TableStatus.EMPTY }
       });
     }
 
     await syncTableStatus(businessId, reservation.assignedTableId, reservation.status);
+    revalidatePath("/dashboard");
+    revalidatePath("/reservations");
+    revalidatePath("/tables");
+    redirect(withQueryParam(redirectTo, "saved", "updated"));
   } else {
+    const customer = await findOrCreateCustomerForReservation({
+      businessId,
+      customerName: parsed.data.customerName,
+      phone: parsed.data.phone
+    });
+
     const reservation = await prisma.reservation.create({
       data: {
         businessId,
@@ -135,12 +175,11 @@ export async function saveReservationAction(formData: FormData) {
     });
 
     await syncTableStatus(businessId, reservation.assignedTableId, reservation.status);
+    revalidatePath("/dashboard");
+    revalidatePath("/reservations");
+    revalidatePath("/tables");
+    redirect(withQueryParam(`/reservations?reservationId=${reservation.id}`, "saved", "created"));
   }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/reservations");
-  revalidatePath("/tables");
-  redirect(redirectTo);
 }
 
 export async function updateReservationStatusAction(formData: FormData) {
@@ -174,7 +213,7 @@ export async function updateReservationStatusAction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/reservations");
   revalidatePath("/tables");
-  redirect(redirectTo);
+  redirect(withQueryParam(redirectTo, "saved", "status"));
 }
 
 export async function updateTableStatusAction(formData: FormData) {
@@ -204,8 +243,8 @@ export async function updateTableStatusAction(formData: FormData) {
     redirect(`${parsed.data.redirectTo}?error=table_missing`);
   }
 
-  await prisma.diningTable.update({
-    where: { id: table.id },
+  await prisma.diningTable.updateMany({
+    where: { id: table.id, businessId },
     data: { status: parsed.data.status }
   });
 
@@ -260,8 +299,8 @@ export async function assignReservationToTableAction(formData: FormData) {
     }
   });
 
-  await prisma.diningTable.update({
-    where: { id: table.id },
+  await prisma.diningTable.updateMany({
+    where: { id: table.id, businessId },
     data: {
       status: TableStatus.RESERVED
     }

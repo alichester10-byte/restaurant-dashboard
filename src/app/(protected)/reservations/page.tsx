@@ -6,7 +6,9 @@ import { LockedAction } from "@/components/demo/locked-action";
 import { UpgradeButton } from "@/components/demo/upgrade-button";
 import { AppHeader } from "@/components/layout/app-header";
 import { ReservationForm } from "@/components/reservations/reservation-form";
+import { ReservationPrimaryCta } from "@/components/reservations/reservation-primary-cta";
 import { Panel } from "@/components/ui/panel";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireBusinessUser } from "@/lib/auth";
 import { getBusinessEntitlement } from "@/lib/billing";
@@ -16,11 +18,37 @@ import { formatDateTime, formatPhone } from "@/lib/utils";
 export default async function ReservationsPage({
   searchParams
 }: {
-  searchParams: { reservationId?: string };
+  searchParams: { reservationId?: string; saved?: string; error?: string; compose?: string };
 }) {
   const session = await requireBusinessUser();
   const data = await getReservationsPageData(session.user.businessId, searchParams.reservationId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
+  const feedback =
+    searchParams.saved === "created"
+      ? {
+          tone: "success",
+          title: "Rezervasyon oluşturuldu",
+          description: "Yeni rezervasyon kaydı başarıyla eklendi."
+        }
+      : searchParams.saved === "updated"
+        ? {
+            tone: "success",
+            title: "Rezervasyon güncellendi",
+            description: "Seçili rezervasyon başarıyla güncellendi."
+          }
+        : searchParams.saved === "status"
+          ? {
+              tone: "success",
+              title: "Rezervasyon durumu güncellendi",
+              description: "Durum değişikliği yalnızca seçili kayıt için uygulandı."
+            }
+          : searchParams.error
+            ? {
+                tone: "error",
+                title: "Rezervasyon işlemi tamamlanamadı",
+                description: "Lütfen form alanlarını kontrol edip tekrar deneyin."
+              }
+            : null;
 
   return (
     <div className="space-y-6">
@@ -42,6 +70,13 @@ export default async function ReservationsPage({
         />
       ) : null}
 
+      {feedback ? (
+        <Panel className={feedback.tone === "error" ? "border-rose-200 bg-rose-50/80" : "border-emerald-200 bg-emerald-50/80"}>
+          <div className={`section-title ${feedback.tone === "error" ? "text-rose-600" : "text-emerald-700"}`}>{feedback.title}</div>
+          <p className={`mt-2 text-sm leading-6 ${feedback.tone === "error" ? "text-rose-700" : "text-emerald-700"}`}>{feedback.description}</p>
+        </Panel>
+      ) : null}
+
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Panel>
           <div className="flex items-center justify-between">
@@ -49,18 +84,7 @@ export default async function ReservationsPage({
               <div className="section-title">Yaklaşan ve Geçmiş Kayıtlar</div>
               <h2 className="mt-2 text-xl font-semibold text-ink">Rezervasyon listesi</h2>
             </div>
-            {entitlement.isDemo ? (
-              <UpgradeButton
-                href="/billing?upgrade=reservations"
-                label="Pro ile Oluştur"
-                title="Yeni rezervasyon oluşturmak için Pro gerekir"
-                description="Demo modunda rezervasyon akışını keşfedebilirsiniz. Yeni kayıt eklemek için Pro planına geçin."
-              />
-            ) : (
-              <Link href="#reservation-form-panel" scroll className="btn-secondary">
-                Yeni Rezervasyon
-              </Link>
-            )}
+            <ReservationPrimaryCta locked={entitlement.isDemo} />
           </div>
 
           <div className="mt-6 space-y-3">
@@ -83,8 +107,8 @@ export default async function ReservationsPage({
                       <UpgradeButton
                         href="/billing?upgrade=reservations"
                         label="Pro ile Düzenle"
-                        title="Rezervasyon düzenlemek için Pro gerekir"
-                        description="Demo modunda kayıtları görüntüleyebilirsiniz. Durum güncellemek veya düzenleme yapmak için Pro planına geçin."
+                        title="Bu özellik Pro planı gerektirir"
+                        description="Rezervasyon düzenleme ve durum güncelleme akışları Pro ile açılır."
                       />
                     ) : (
                       <>
@@ -97,9 +121,7 @@ export default async function ReservationsPage({
                             <input type="hidden" name="id" value={reservation.id} />
                             <input type="hidden" name="status" value={ReservationStatus.CONFIRMED} />
                             <input type="hidden" name="redirectTo" value="/reservations" />
-                            <button className="btn-primary" type="submit">
-                              Onayla
-                            </button>
+                            <FormSubmitButton idleLabel="Onayla" pendingLabel="Kaydediliyor..." />
                           </form>
                         ) : null}
 
@@ -108,9 +130,7 @@ export default async function ReservationsPage({
                             <input type="hidden" name="id" value={reservation.id} />
                             <input type="hidden" name="status" value={ReservationStatus.CANCELLED} />
                             <input type="hidden" name="redirectTo" value="/reservations" />
-                            <button className="btn-danger" type="submit">
-                              İptal Et
-                            </button>
+                            <FormSubmitButton variant="danger" idleLabel="İptal Et" pendingLabel="Kaydediliyor..." />
                           </form>
                         ) : null}
                       </>
@@ -132,6 +152,7 @@ export default async function ReservationsPage({
           </p>
           <div className="mt-6">
             <ReservationForm
+              key={data.selectedReservation?.id ?? (searchParams.compose ? "compose" : "new")}
               locked={entitlement.isDemo}
               tables={data.tables}
               reservation={data.selectedReservation
