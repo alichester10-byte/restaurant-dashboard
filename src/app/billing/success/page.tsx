@@ -1,12 +1,6 @@
 import Link from "next/link";
-import { getCurrentSession } from "@/lib/auth";
-import { subscriptionPlanLabels } from "@/lib/constants";
 
 export default async function PublicBillingSuccessPage() {
-  const session = await getCurrentSession();
-  const currentPlan = session?.user.business?.subscriptionPlan;
-  const dashboardHref = session ? "/dashboard" : "/login";
-
   return (
     <main className="app-shell min-h-screen p-4 md:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -22,16 +16,14 @@ export default async function PublicBillingSuccessPage() {
             <div className="space-y-4">
               <div className="rounded-[28px] border border-[color:var(--border)] bg-white/90 p-6">
                 <div className="text-sm text-sage">Güncel Plan</div>
-                <div className="mt-2 text-2xl font-semibold text-ink">
-                  {currentPlan ? subscriptionPlanLabels[currentPlan] : "Pro"}
-                </div>
+                <div className="mt-2 text-2xl font-semibold text-ink">Pro</div>
                 <p className="mt-4 text-sm leading-7 text-sage">
                   Ödeme onayı alındı. PAYTR callback tamamlandığında abonelik durumu otomatik olarak aktive edilir.
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Link href={dashboardHref} className="btn-primary">
+                <Link href="/dashboard" className="btn-primary">
                   Dashboarda Dön
                 </Link>
                 <Link href="/billing" className="btn-secondary">

@@ -1,10 +1,6 @@
 import Link from "next/link";
-import { getCurrentSession } from "@/lib/auth";
 
 export default async function PublicBillingFailPage() {
-  const session = await getCurrentSession();
-  const dashboardHref = session ? "/dashboard" : "/login";
-
   return (
     <main className="app-shell min-h-screen p-4 md:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -29,7 +25,7 @@ export default async function PublicBillingFailPage() {
                 <Link href="/billing" className="btn-secondary">
                   Tekrar Dene
                 </Link>
-                <Link href={dashboardHref} className="btn-primary">
+                <Link href="/dashboard" className="btn-primary">
                   Dashboarda Dön
                 </Link>
               </div>
