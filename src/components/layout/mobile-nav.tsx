@@ -11,7 +11,7 @@ const businessItems = [
   { href: "/reservations" as Route, label: "Rezervasyon" },
   { href: "/tables" as Route, label: "Masalar" },
   { href: "/customers" as Route, label: "Müşteriler" },
-  { href: "/billing" as Route, label: "Billing" },
+  { href: "/billing" as Route, label: "Faturalama" },
   { href: "/reports" as Route, label: "Raporlar" },
   { href: "/settings" as Route, label: "Ayarlar" }
 ];
@@ -33,7 +33,7 @@ export function MobileNav({ role }: { role: UserRole }) {
           href={item.href}
           className={cn(
             "rounded-2xl px-3 py-2 text-center text-xs font-semibold",
-            pathname === item.href ? "bg-moss text-white" : "bg-white text-ink"
+            pathname === item.href || pathname.startsWith(`${item.href}/`) ? "bg-moss text-white" : "bg-white text-ink"
           )}
         >
           {item.label}

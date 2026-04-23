@@ -7,9 +7,23 @@ import { businessStatusLabels, subscriptionPlanLabels, subscriptionStatusLabels,
 import { getSuperAdminData } from "@/lib/data";
 import { formatDateTime } from "@/lib/utils";
 
-export default async function SuperAdminPage() {
+const superAdminErrorMessages: Record<string, string> = {
+  validation: "Yeni işletme formunda eksik veya hatalı alanlar var.",
+  slug_exists: "Bu slug zaten kullanılıyor. Farklı bir slug deneyin.",
+  admin_email_exists: "Bu yönetici e-postası zaten kullanımda.",
+  unknown: "İşletme oluşturulurken beklenmeyen bir hata oluştu.",
+  update_business: "İşletme durumu güncellenemedi. Lütfen tekrar deneyin."
+};
+
+export default async function SuperAdminPage({
+  searchParams
+}: {
+  searchParams?: { error?: string; created?: string };
+}) {
   const session = await requireRole(UserRole.SUPER_ADMIN);
   const data = await getSuperAdminData();
+  const errorMessage = searchParams?.error ? superAdminErrorMessages[searchParams.error] ?? superAdminErrorMessages.unknown : null;
+  const created = searchParams?.created === "1";
 
   return (
     <div className="space-y-6">
@@ -19,6 +33,22 @@ export default async function SuperAdminPage() {
         businessName={session.user.business.name}
         role={session.user.role}
       />
+
+      {errorMessage ? (
+        <Panel className="border-rose-200 bg-rose-50/80">
+          <div className="section-title text-rose-600">İşlem Başarısız</div>
+          <p className="mt-3 text-sm leading-6 text-rose-700">{errorMessage}</p>
+        </Panel>
+      ) : null}
+
+      {created ? (
+        <Panel className="border-emerald-200 bg-emerald-50/80">
+          <div className="section-title text-emerald-700">İşletme Oluşturuldu</div>
+          <p className="mt-3 text-sm leading-6 text-emerald-700">
+            Yeni tenant ve ilk business admin hesabı başarıyla oluşturuldu. Liste aşağıda anında güncellendi.
+          </p>
+        </Panel>
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <Panel>

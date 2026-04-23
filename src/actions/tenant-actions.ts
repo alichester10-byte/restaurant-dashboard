@@ -5,8 +5,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createBusinessWithAdmin } from "@/lib/tenant";
+import { CreateBusinessError, createBusinessWithAdmin } from "@/lib/tenant";
 import { businessAdminCreateSchema, businessOnboardingSchema, businessStatusSchema } from "@/lib/validation";
+
+function getCreateBusinessErrorRedirect(pathname: string, code: string) {
+  return `${pathname}?error=${encodeURIComponent(code)}`;
+}
 
 export async function onboardingCreateBusinessAction(formData: FormData) {
   const parsed = businessOnboardingSchema.safeParse({
@@ -23,15 +27,23 @@ export async function onboardingCreateBusinessAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirect(`/onboarding?error=validation`);
+    redirect(getCreateBusinessErrorRedirect("/onboarding", "validation"));
   }
 
-  await createBusinessWithAdmin({
-    ...parsed.data,
-    createDefaultTables: parsed.data.createDefaultTables === "true"
-  });
+  try {
+    await createBusinessWithAdmin({
+      ...parsed.data,
+      createDefaultTables: parsed.data.createDefaultTables === "true"
+    });
+  } catch (error) {
+    if (error instanceof CreateBusinessError) {
+      redirect(getCreateBusinessErrorRedirect("/onboarding", error.code));
+    }
 
-  redirect("/login?created=1");
+    redirect(getCreateBusinessErrorRedirect("/onboarding", "unknown"));
+  }
+
+  redirect(`${parsed.data.redirectTo}?created=1`);
 }
 
 export async function superAdminCreateBusinessAction(formData: FormData) {
@@ -53,13 +65,21 @@ export async function superAdminCreateBusinessAction(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirect("/super-admin?error=create_business");
+    redirect(getCreateBusinessErrorRedirect("/super-admin", "validation"));
   }
 
-  await createBusinessWithAdmin({
-    ...parsed.data,
-    createDefaultTables: parsed.data.createDefaultTables === "true"
-  });
+  try {
+    await createBusinessWithAdmin({
+      ...parsed.data,
+      createDefaultTables: parsed.data.createDefaultTables === "true"
+    });
+  } catch (error) {
+    if (error instanceof CreateBusinessError) {
+      redirect(getCreateBusinessErrorRedirect("/super-admin", error.code));
+    }
+
+    redirect(getCreateBusinessErrorRedirect("/super-admin", "unknown"));
+  }
 
   revalidatePath("/super-admin");
   redirect("/super-admin?created=1");

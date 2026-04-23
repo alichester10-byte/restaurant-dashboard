@@ -1,7 +1,21 @@
 import Link from "next/link";
 import { onboardingCreateBusinessAction } from "@/actions/tenant-actions";
 
-export default function OnboardingPage() {
+const onboardingErrorMessages: Record<string, string> = {
+  validation: "Form alanlarını kontrol edin. Bazı bilgiler eksik veya hatalı.",
+  slug_exists: "Bu slug zaten kullanılıyor. Lütfen farklı bir işletme adresi seçin.",
+  admin_email_exists: "Bu yönetici e-postası zaten kullanımda. Farklı bir e-posta girin.",
+  unknown: "İşletme oluşturulurken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+};
+
+export default function OnboardingPage({
+  searchParams
+}: {
+  searchParams?: { error?: string; created?: string };
+}) {
+  const errorMessage = searchParams?.error ? onboardingErrorMessages[searchParams.error] ?? onboardingErrorMessages.unknown : null;
+  const created = searchParams?.created === "1";
+
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
@@ -29,6 +43,16 @@ export default function OnboardingPage() {
 
         <section className="glass-panel rounded-[32px] p-8 md:p-10">
           <div className="text-xs uppercase tracking-[0.28em] text-sage">Yeni İşletme</div>
+          {errorMessage ? (
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {errorMessage}
+            </div>
+          ) : null}
+          {created ? (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              İşletme oluşturuldu. Şimdi yönetici hesabınızla giriş yapabilirsiniz.
+            </div>
+          ) : null}
           <form action={onboardingCreateBusinessAction} className="mt-6 space-y-4">
             <input type="hidden" name="redirectTo" value="/login" />
             <div className="grid gap-4 md:grid-cols-2">

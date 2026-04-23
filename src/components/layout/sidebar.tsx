@@ -45,7 +45,7 @@ export function Sidebar({
 
       <nav className="mt-6 space-y-2">
         {items.map((item) => {
-          const active = pathname === item.href;
+          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
           return (
             <Link
               key={item.href}
