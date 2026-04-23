@@ -152,7 +152,7 @@ export async function getReservationsPageData(businessId: string, selectedId?: s
         businessId
       },
       include: reservationInclude,
-      orderBy: { startAt: "asc" }
+      orderBy: [{ createdAt: "desc" }, { startAt: "asc" }]
     }),
     prisma.diningTable.findMany({
       where: {
