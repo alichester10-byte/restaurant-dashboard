@@ -6,6 +6,18 @@ export const loginSchema = z.object({
   password: z.string().min(8, "Şifre en az 8 karakter olmalı.")
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Geçerli bir e-posta girin.")
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(20, "Geçersiz sıfırlama bağlantısı."),
+  password: z
+    .string()
+    .min(8, "Şifre en az 8 karakter olmalı.")
+    .regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, "Şifre en az bir harf ve bir rakam içermeli.")
+});
+
 export const businessOnboardingSchema = z.object({
   businessName: z.string().min(2).max(100),
   slug: z.string().min(2).max(60).regex(/^[a-z0-9-]+$/),

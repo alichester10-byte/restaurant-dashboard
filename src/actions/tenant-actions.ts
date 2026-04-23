@@ -4,6 +4,7 @@ import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
+import { sendAccountLifecycleEmails } from "@/lib/auth-service";
 import { prisma } from "@/lib/prisma";
 import { CreateBusinessError, createBusinessWithAdmin } from "@/lib/tenant";
 import { businessAdminCreateSchema, businessOnboardingSchema, businessStatusSchema } from "@/lib/validation";
@@ -69,9 +70,16 @@ export async function superAdminCreateBusinessAction(formData: FormData) {
   }
 
   try {
-    await createBusinessWithAdmin({
+    const result = await createBusinessWithAdmin({
       ...parsed.data,
       createDefaultTables: parsed.data.createDefaultTables === "true"
+    });
+
+    await sendAccountLifecycleEmails({
+      userId: result.admin.id,
+      email: result.admin.email,
+      name: result.admin.name,
+      businessName: result.business.name
     });
   } catch (error) {
     if (error instanceof CreateBusinessError) {

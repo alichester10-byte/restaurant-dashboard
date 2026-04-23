@@ -1,9 +1,35 @@
 import Link from "next/link";
+import { AuthToast } from "@/components/auth/auth-toast";
 import { LoginForm } from "@/components/auth/login-form";
 
-export default function LoginPage() {
+const loginToasts: Record<string, { title: string; description: string; tone?: "success" | "info" | "error" }> = {
+  account_created: {
+    title: "Account created successfully",
+    description: "Workspace hesabınız hazır. Hoş geldiniz e-postası ve doğrulama bağlantısı gönderildi.",
+    tone: "success"
+  },
+  password_reset_success: {
+    title: "Şifre güncellendi",
+    description: "Yeni şifreniz kaydedildi. Şimdi giriş yapabilirsiniz.",
+    tone: "success"
+  },
+  email_verified: {
+    title: "E-posta doğrulandı",
+    description: "Hesabınız başarıyla doğrulandı.",
+    tone: "success"
+  }
+};
+
+export default function LoginPage({
+  searchParams
+}: {
+  searchParams?: { toast?: string };
+}) {
+  const toast = searchParams?.toast ? loginToasts[searchParams.toast] : null;
+
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
+      {toast ? <AuthToast title={toast.title} description={toast.description} tone={toast.tone} /> : null}
       <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="glass-panel rounded-[32px] p-8 md:p-10">
           <div className="text-xs uppercase tracking-[0.34em] text-sage">Restaurant Revenue OS</div>
@@ -39,9 +65,14 @@ export default function LoginPage() {
           <div className="mt-8">
             <LoginForm />
           </div>
-          <Link href="/onboarding" className="btn-secondary mt-4 w-full">
-            Yeni İşletme Oluştur
-          </Link>
+          <div className="mt-4 grid gap-3">
+            <Link href="/register" className="btn-secondary w-full">
+              Hesap Oluştur
+            </Link>
+            <Link href="/onboarding" className="text-center text-sm font-semibold text-moss transition hover:text-ink">
+              İşletme onboarding sayfasına git
+            </Link>
+          </div>
           <div className="mt-6 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4 text-sm text-sage">
             Varsayılan demo hesabı `.env` içindeki `ADMIN_EMAIL` ve `ADMIN_PASSWORD` değerlerinden üretilir.
           </div>

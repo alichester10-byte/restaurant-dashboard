@@ -71,6 +71,7 @@ async function createBusinessWorkspace(input: {
       email: input.adminEmail,
       name: input.adminName,
       passwordHash: input.adminPasswordHash,
+      emailVerifiedAt: new Date(),
       role: UserRole.BUSINESS_ADMIN
     }
   });
@@ -217,6 +218,7 @@ async function main() {
       email: superAdminEmail,
       name: "Platform Super Admin",
       passwordHash: superAdminPasswordHash,
+      emailVerifiedAt: new Date(),
       role: UserRole.SUPER_ADMIN
     }
   });
