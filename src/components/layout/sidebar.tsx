@@ -3,8 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { UserRole } from "@prisma/client";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { NavItemLink } from "@/components/layout/nav-item-link";
 
 const businessItems = [
   { href: "/dashboard" as Route, label: "Genel Bakış", short: "GB" },
@@ -23,12 +22,15 @@ const superAdminItems = [
 
 export function Sidebar({
   role,
-  businessName
+  businessName,
+  modeLabel,
+  canWrite
 }: {
   role: UserRole;
   businessName: string;
+  modeLabel: string;
+  canWrite: boolean;
 }) {
-  const pathname = usePathname();
   const items = role === UserRole.SUPER_ADMIN ? superAdminItems : businessItems;
 
   return (
@@ -44,38 +46,25 @@ export function Sidebar({
       </div>
 
       <nav className="mt-6 space-y-2">
-        {items.map((item) => {
-          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition",
-                active ? "bg-moss text-white" : "text-ink hover:bg-white"
-              )}
-            >
-              <span
-                className={cn(
-                  "grid h-10 w-10 place-items-center rounded-2xl text-xs",
-                  active ? "bg-white/15" : "bg-[color:var(--accent-soft)] text-moss"
-                )}
-              >
-                {item.short}
-              </span>
-              {item.label}
-            </Link>
-          );
-        })}
+        {items.map((item) => (
+          <NavItemLink key={item.href} href={item.href} label={item.label} short={item.short} />
+        ))}
       </nav>
 
       <div className="mt-auto rounded-[28px] bg-[color:var(--bg-strong)] p-4">
-        <div className="text-xs uppercase tracking-[0.24em] text-sage">Canlı Not</div>
+        <div className="text-xs uppercase tracking-[0.24em] text-sage">{modeLabel}</div>
         <p className="mt-3 text-sm leading-6 text-ink">
           {role === UserRole.SUPER_ADMIN
-            ? "Yeni işletme oluşturma ve abonelik geçişleri bu panelden yönetilir."
-            : "Cuma akşamı rezervasyon doluluk seviyesi yüksek. Teras blokları için teyit çağrılarını öne alın."}
+            ? "Yeni işletmeleri açın, plan geçişlerini yönetin ve tüm portföyü tek merkezden izleyin."
+            : canWrite
+              ? "Canlı rezervasyon, masa yönetimi ve ayarlar üzerinde tam kontrol sizde."
+              : "Ürünü gerçek verilerle keşfedin. Kayıt oluşturma ve güncelleme akışlarını açmak için Pro'ya geçin."}
         </p>
+        {role !== UserRole.SUPER_ADMIN && !canWrite ? (
+          <Link href="/billing?upgrade=sidebar" className="btn-primary mt-4 w-full">
+            Go Pro
+          </Link>
+        ) : null}
       </div>
     </aside>
   );

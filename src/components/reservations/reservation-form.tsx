@@ -1,5 +1,6 @@
 import { ReservationSource, ReservationStatus } from "@prisma/client";
 import { saveReservationAction } from "@/actions/reservation-actions";
+import { LockedAction } from "@/components/demo/locked-action";
 import { reservationSourceLabels, reservationStatusLabels } from "@/lib/constants";
 import { createTimeSlots } from "@/lib/utils";
 
@@ -16,13 +17,49 @@ type ReservationFormProps = {
     occasion: string | null;
     notes: string | null;
   } | null;
+  locked?: boolean;
 };
 
-export function ReservationForm({ tables, reservation }: ReservationFormProps) {
+export function ReservationForm({ tables, reservation, locked = false }: ReservationFormProps) {
   const date = reservation ? reservation.startAt.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
   const time = reservation
     ? reservation.startAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", hour12: false })
     : "19:30";
+
+  if (locked) {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-ink">Misafir Adı</span>
+            <input className="field cursor-not-allowed opacity-70" defaultValue={reservation?.customer.name ?? "Elif Kaya"} disabled />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-ink">Telefon</span>
+            <input className="field cursor-not-allowed opacity-70" defaultValue={reservation?.customer.phone ?? "+90 555 820 14 00"} disabled />
+          </label>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-ink">Tarih</span>
+            <input className="field cursor-not-allowed opacity-70" type="date" defaultValue={date} disabled />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-ink">Saat</span>
+            <input className="field cursor-not-allowed opacity-70" defaultValue={time} disabled />
+          </label>
+        </div>
+
+        <LockedAction
+          fullWidth
+          href="/billing?upgrade=reservations"
+          title={reservation ? "Rezervasyon düzenleme Pro ile açılır" : "Yeni rezervasyon oluşturma Pro ile açılır"}
+          description="Demo modunda tüm rezervasyon akışını inceleyebilirsiniz. Oluşturma, güncelleme ve iptal işlemleri için Pro planına geçin."
+        />
+      </div>
+    );
+  }
 
   return (
     <form action={saveReservationAction} className="space-y-4">

@@ -45,7 +45,7 @@ export default async function SuperAdminPage({
         <Panel className="border-emerald-200 bg-emerald-50/80">
           <div className="section-title text-emerald-700">İşletme Oluşturuldu</div>
           <p className="mt-3 text-sm leading-6 text-emerald-700">
-            Yeni tenant ve ilk business admin hesabı başarıyla oluşturuldu. Liste aşağıda anında güncellendi.
+            Yeni işletme ve ilk yönetici hesabı başarıyla oluşturuldu. Liste aşağıda anında güncellendi.
           </p>
         </Panel>
       ) : null}

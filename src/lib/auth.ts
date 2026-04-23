@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { hasBusinessAccess } from "@/lib/billing";
+import { getBusinessEntitlement, hasBusinessAccess } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validation";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
@@ -137,6 +137,28 @@ export async function requireBusinessAccess(options?: { allowInactive?: boolean;
 
   if (!options?.allowInactive && !hasBusinessAccess(session.user.business, session.user.role)) {
     redirect("/billing");
+  }
+
+  return session;
+}
+
+function buildUpgradeRedirect(feature?: string) {
+  const params = new URLSearchParams();
+  params.set("upgrade", feature ?? "pro");
+  return `/billing?${params.toString()}`;
+}
+
+export async function requireBusinessWriteAccess(options?: {
+  roles?: UserRole[];
+  feature?: string;
+}) {
+  const session = await requireBusinessAccess({
+    roles: options?.roles
+  });
+
+  const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
+  if (!entitlement.canWrite) {
+    redirect(buildUpgradeRedirect(options?.feature));
   }
 
   return session;

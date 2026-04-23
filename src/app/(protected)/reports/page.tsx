@@ -2,6 +2,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { MiniBarChart } from "@/components/ui/mini-bar-chart";
 import { Panel } from "@/components/ui/panel";
 import { requireBusinessUser } from "@/lib/auth";
+import { getBusinessEntitlement } from "@/lib/billing";
 import { reservationSourceLabels, callOutcomeLabels } from "@/lib/constants";
 import { getReportsPageData } from "@/lib/data";
 import { formatPercent } from "@/lib/utils";
@@ -9,6 +10,7 @@ import { formatPercent } from "@/lib/utils";
 export default async function ReportsPage() {
   const session = await requireBusinessUser();
   const data = await getReportsPageData(session.user.businessId);
+  const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
 
   return (
     <div className="space-y-6">
@@ -17,6 +19,9 @@ export default async function ReportsPage() {
         subtitle="Rezervasyon kaynakları, çağrı etkisi ve kapasite kullanımını operasyonel metriklerle analiz edin."
         businessName={session.user.business.name}
         role={session.user.role}
+        modeLabel={entitlement.modeLabel}
+        modeDescription={entitlement.modeDescription}
+        showUpgradeCta={entitlement.isDemo}
       />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">

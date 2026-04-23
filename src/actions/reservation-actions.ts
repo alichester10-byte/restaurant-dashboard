@@ -3,7 +3,7 @@
 import { ReservationStatus, TableStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireBusinessUser } from "@/lib/auth";
+import { requireBusinessWriteAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { reservationSchema, tableAssignSchema, tableUpdateSchema } from "@/lib/validation";
 
@@ -28,7 +28,9 @@ async function syncTableStatus(businessId: string, tableId?: string | null, stat
 }
 
 export async function saveReservationAction(formData: FormData) {
-  const session = await requireBusinessUser();
+  const session = await requireBusinessWriteAccess({
+    feature: "reservations"
+  });
   const businessId = session.user.businessId;
 
   const redirectTo = String(formData.get("redirectTo") ?? "/reservations");
@@ -142,7 +144,9 @@ export async function saveReservationAction(formData: FormData) {
 }
 
 export async function updateReservationStatusAction(formData: FormData) {
-  const session = await requireBusinessUser();
+  const session = await requireBusinessWriteAccess({
+    feature: "reservations"
+  });
   const businessId = session.user.businessId;
 
   const id = String(formData.get("id"));
@@ -174,7 +178,9 @@ export async function updateReservationStatusAction(formData: FormData) {
 }
 
 export async function updateTableStatusAction(formData: FormData) {
-  const session = await requireBusinessUser();
+  const session = await requireBusinessWriteAccess({
+    feature: "tables"
+  });
   const businessId = session.user.businessId;
 
   const parsed = tableUpdateSchema.safeParse({
@@ -209,7 +215,9 @@ export async function updateTableStatusAction(formData: FormData) {
 }
 
 export async function assignReservationToTableAction(formData: FormData) {
-  const session = await requireBusinessUser();
+  const session = await requireBusinessWriteAccess({
+    feature: "tables"
+  });
   const businessId = session.user.businessId;
 
   const parsed = tableAssignSchema.safeParse({

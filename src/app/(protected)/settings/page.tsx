@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { updateSettingsAction } from "@/actions/settings-actions";
+import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
+import { LockedAction } from "@/components/demo/locked-action";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { requireBusinessUser } from "@/lib/auth";
+import { getBusinessEntitlement } from "@/lib/billing";
 import { getSettingsData } from "@/lib/data";
 
 export default async function SettingsPage() {
   const session = await requireBusinessUser();
   const settings = await getSettingsData(session.user.businessId);
   const openingHours = settings.openingHours as Record<string, string>;
+  const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
 
   return (
     <div className="space-y-6">
@@ -17,7 +21,18 @@ export default async function SettingsPage() {
         subtitle="Restoran profilini, çalışma saatlerini ve rezervasyon kurallarını merkezi olarak yönetin."
         businessName={session.user.business.name}
         role={session.user.role}
+        modeLabel={entitlement.modeLabel}
+        modeDescription={entitlement.modeDescription}
+        showUpgradeCta={entitlement.isDemo}
       />
+
+      {entitlement.isDemo ? (
+        <DemoModeBanner
+          title="Ayarlar görünür, değişiklikler Pro ile açılır."
+          description="Restoran profilinizi, çalışma saatlerinizi ve servis kurallarınızı önizleyebilirsiniz. Kalıcı güncellemeler için Pro planını etkinleştirin."
+          href="/billing?upgrade=settings"
+        />
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>
@@ -27,55 +42,55 @@ export default async function SettingsPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Restoran Adı</span>
-                <input className="field" name="restaurantName" defaultValue={settings.restaurantName} required />
+                <input className="field" name="restaurantName" defaultValue={settings.restaurantName} required disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Telefon</span>
-                <input className="field" name="phone" defaultValue={settings.phone} required />
+                <input className="field" name="phone" defaultValue={settings.phone} required disabled={entitlement.isDemo} />
               </label>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">E-posta</span>
-                <input className="field" name="email" type="email" defaultValue={settings.email ?? ""} />
+                <input className="field" name="email" type="email" defaultValue={settings.email ?? ""} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Adres</span>
-                <input className="field" name="address" defaultValue={settings.address ?? ""} />
+                <input className="field" name="address" defaultValue={settings.address ?? ""} disabled={entitlement.isDemo} />
               </label>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Toplam Kapasite</span>
-                <input className="field" type="number" name="seatingCapacity" defaultValue={settings.seatingCapacity} />
+                <input className="field" type="number" name="seatingCapacity" defaultValue={settings.seatingCapacity} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Ortalama Servis Süresi</span>
-                <input className="field" type="number" name="averageDiningDurationMin" defaultValue={settings.averageDiningDurationMin} />
+                <input className="field" type="number" name="averageDiningDurationMin" defaultValue={settings.averageDiningDurationMin} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Maks. Parti</span>
-                <input className="field" type="number" name="maxPartySize" defaultValue={settings.maxPartySize} />
+                <input className="field" type="number" name="maxPartySize" defaultValue={settings.maxPartySize} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Rezervasyon Ufku</span>
-                <input className="field" type="number" name="reservationLeadTimeDays" defaultValue={settings.reservationLeadTimeDays} />
+                <input className="field" type="number" name="reservationLeadTimeDays" defaultValue={settings.reservationLeadTimeDays} disabled={entitlement.isDemo} />
               </label>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Walk-in kabulü</span>
-                <select className="field" name="allowWalkIns" defaultValue={String(settings.allowWalkIns)}>
+                <select className="field" name="allowWalkIns" defaultValue={String(settings.allowWalkIns)} disabled={entitlement.isDemo}>
                   <option value="true">Açık</option>
                   <option value="false">Kapalı</option>
                 </select>
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Telefon doğrulama</span>
-                <select className="field" name="requirePhoneVerification" defaultValue={String(settings.requirePhoneVerification)}>
+                <select className="field" name="requirePhoneVerification" defaultValue={String(settings.requirePhoneVerification)} disabled={entitlement.isDemo}>
                   <option value="false">Kapalı</option>
                   <option value="true">Açık</option>
                 </select>
@@ -88,7 +103,7 @@ export default async function SettingsPage() {
                 {(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const).map((day) => (
                   <label key={day} className="space-y-2">
                     <span className="text-sm font-semibold capitalize text-ink">{day}</span>
-                    <input className="field" name={day} defaultValue={openingHours[day]} />
+                    <input className="field" name={day} defaultValue={openingHours[day]} disabled={entitlement.isDemo} />
                   </label>
                 ))}
               </div>
@@ -96,31 +111,40 @@ export default async function SettingsPage() {
 
             <label className="space-y-2">
               <span className="text-sm font-semibold text-ink">Notlar ve Kurallar</span>
-              <textarea className="field min-h-28" name="notes" defaultValue={settings.notes ?? ""} />
+              <textarea className="field min-h-28" name="notes" defaultValue={settings.notes ?? ""} disabled={entitlement.isDemo} />
             </label>
 
-            <button className="btn-primary w-full" type="submit">
-              Ayarları Kaydet
-            </button>
+            {entitlement.isDemo ? (
+              <LockedAction
+                fullWidth
+                href="/billing?upgrade=settings-save"
+                title="Ayarları kaydetmek için Pro gerekir"
+                description="Demo modunda profilinizi ve servis kurallarınızı önizleyebilirsiniz. Kaydetme açmak için Pro planını etkinleştirin."
+              />
+            ) : (
+              <button className="btn-primary w-full" type="submit">
+                Ayarları Kaydet
+              </button>
+            )}
           </form>
         </Panel>
 
         <Panel>
           <div className="section-title">Entegrasyonlar</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Hazır bağlayıcı alanları</h2>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Yakında açılacak bağlantılar</h2>
           <p className="mt-2 text-sm leading-6 text-sage">
-            MVP kapsamında entegrasyonlar placeholder bırakıldı; yapı gelecekte POS, telephony ve Google rezervasyon senaryolarına açık.
+            Telefon, POS ve online rezervasyon bağlantıları için ürün omurgası hazır. Entegrasyon deneyimi bir sonraki fazda bu alandan genişletilecek.
           </p>
 
           <Link href="/billing" className="btn-secondary mt-6">
-            Billing ve Plan Yönetimi
+            Planı Yönet
           </Link>
 
           <div className="mt-6 space-y-4">
             {[
-              { title: "Telefon Santrali", body: "Çağrı kayıtlarını otomatik içeri almak için webhook ve sağlayıcı eşleme alanı." },
-              { title: "POS / Adisyon", body: "Masa döngüsü ve servis süresi verilerini operasyon paneline taşımak için hazır bölüm." },
-              { title: "Google / Web Rezervasyon", body: "Dış kaynak rezervasyonlarını normalize etmek için kaynak eşleme alanı." }
+              { title: "Telefon Santrali", body: "Çağrı akışını otomatikleştirip ekibinize daha hızlı görünürlük sağlamak için hazırlanan bağlantı alanı." },
+              { title: "POS / Adisyon", body: "Masa döngüsü ve servis temposunu operasyon paneliyle tek akışta birleştirmek için ayrılan alan." },
+              { title: "Google / Web Rezervasyon", body: "Dış rezervasyon kanallarını tek görünümde toplamak için planlanan bağlantı deneyimi." }
             ].map((item) => (
               <div key={item.title} className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/70 p-5">
                 <div className="font-semibold text-ink">{item.title}</div>
@@ -130,9 +154,9 @@ export default async function SettingsPage() {
           </div>
 
           <div className="mt-8 rounded-[24px] bg-[color:var(--bg-strong)] p-5">
-            <div className="text-sm font-semibold text-ink">Güvenlik Notu</div>
+            <div className="text-sm font-semibold text-ink">Pro ile Açılacaklar</div>
             <p className="mt-2 text-sm leading-6 text-sage">
-              Gerçek üretimde kimlik doğrulama olay logları, rate limiting adaptörü, CSRF yaklaşımı ve rol bazlı izin katmanı daha da sertleştirilmelidir.
+              Gelişmiş ekip izinleri, otomatik entegrasyon akışları ve daha derin operasyon otomasyonları bu alanın bir sonraki katmanını oluşturur.
             </p>
           </div>
         </Panel>

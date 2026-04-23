@@ -1,9 +1,13 @@
+import Link from "next/link";
 import { TableStatus } from "@prisma/client";
 import { assignReservationToTableAction, updateTableStatusAction } from "@/actions/reservation-actions";
+import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
+import { LockedAction } from "@/components/demo/locked-action";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireBusinessUser } from "@/lib/auth";
+import { getBusinessEntitlement } from "@/lib/billing";
 import { tableStatusLabels } from "@/lib/constants";
 import { getTablesPageData } from "@/lib/data";
 import { formatDateTime } from "@/lib/utils";
@@ -15,6 +19,7 @@ export default async function TablesPage({
 }) {
   const session = await requireBusinessUser();
   const data = await getTablesPageData(session.user.businessId, searchParams.tableId);
+  const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
 
   return (
     <div className="space-y-6">
@@ -23,7 +28,18 @@ export default async function TablesPage({
         subtitle="Salon akışını görsel masa planı üzerinden yönetin ve rezervasyonları doğru kapasiteye atayın."
         businessName={session.user.business.name}
         role={session.user.role}
+        modeLabel={entitlement.modeLabel}
+        modeDescription={entitlement.modeDescription}
+        showUpgradeCta={entitlement.isDemo}
       />
+
+      {entitlement.isDemo ? (
+        <DemoModeBanner
+          title="Masa planını canlı gibi görüntüleyin."
+          description="Demo modunda tüm salon yerleşimini, masa durumlarını ve önerilen eşleşmeleri inceleyebilirsiniz. Durum güncelleme ve rezervasyon atama akışları Pro ile açılır."
+          href="/billing?upgrade=tables"
+        />
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-4">
         <Panel><div className="text-sm text-sage">Boş</div><div className="mt-2 text-3xl font-bold">{data.summary.empty}</div></Panel>
@@ -38,9 +54,10 @@ export default async function TablesPage({
           <h2 className="mt-2 text-xl font-semibold text-ink">Canlı masa haritası</h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {data.tables.map((table) => (
-              <a
+              <Link
                 key={table.id}
                 href={`/tables?tableId=${table.id}`}
+                scroll={false}
                 className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5 transition hover:-translate-y-1 hover:shadow-soft"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -55,7 +72,7 @@ export default async function TablesPage({
                   <div className="font-[family-name:var(--font-display)] text-4xl text-ink">{table.seatCapacity}</div>
                   <div className="text-sm text-sage">koltuk</div>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </Panel>
@@ -71,23 +88,34 @@ export default async function TablesPage({
                 <StatusBadge value={data.selectedTable.status} />
               </div>
 
-              <form action={updateTableStatusAction} className="mt-6 space-y-4">
-                <input type="hidden" name="tableId" value={data.selectedTable.id} />
-                <input type="hidden" name="redirectTo" value={`/tables?tableId=${data.selectedTable.id}`} />
-                <label className="space-y-2">
-                  <span className="text-sm font-semibold text-ink">Masa Durumu</span>
-                  <select className="field" name="status" defaultValue={data.selectedTable.status}>
-                    {Object.values(TableStatus).map((status) => (
-                    <option key={status} value={status}>
-                        {tableStatusLabels[status]}
-                    </option>
-                  ))}
-                </select>
-                </label>
-                <button className="btn-secondary w-full" type="submit">
-                  Durumu Güncelle
-                </button>
-              </form>
+              {entitlement.isDemo ? (
+                <div className="mt-6">
+                  <LockedAction
+                    fullWidth
+                    href="/billing?upgrade=table-status"
+                    title="Masa durumu güncelleme Pro ile açılır"
+                    description="Masa durumlarını değiştirmek ve servis akışını canlı yönetmek için Pro planına geçin."
+                  />
+                </div>
+              ) : (
+                <form action={updateTableStatusAction} className="mt-6 space-y-4">
+                  <input type="hidden" name="tableId" value={data.selectedTable.id} />
+                  <input type="hidden" name="redirectTo" value={`/tables?tableId=${data.selectedTable.id}`} />
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold text-ink">Masa Durumu</span>
+                    <select className="field" name="status" defaultValue={data.selectedTable.status}>
+                      {Object.values(TableStatus).map((status) => (
+                        <option key={status} value={status}>
+                          {tableStatusLabels[status]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button className="btn-secondary w-full" type="submit">
+                    Durumu Güncelle
+                  </button>
+                </form>
+              )}
 
               <div className="mt-8">
                 <div className="text-sm font-semibold text-ink">Masa Rezervasyonları</div>
@@ -103,26 +131,37 @@ export default async function TablesPage({
                 </div>
               </div>
 
-              <form action={assignReservationToTableAction} className="mt-8 space-y-4">
-                <input type="hidden" name="tableId" value={data.selectedTable.id} />
-                <input type="hidden" name="redirectTo" value={`/tables?tableId=${data.selectedTable.id}`} />
-                <label className="space-y-2">
-                  <span className="text-sm font-semibold text-ink">Rezervasyon Ata</span>
-                  <select className="field" name="reservationId" defaultValue="">
-                    <option value="" disabled>
-                      Rezervasyon seçin
-                    </option>
-                    {data.reservations.map((reservation) => (
-                      <option key={reservation.id} value={reservation.id}>
-                        {reservation.customer.name} • {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
+              {entitlement.isDemo ? (
+                <div className="mt-8">
+                  <LockedAction
+                    fullWidth
+                    href="/billing?upgrade=table-assign"
+                    title="Rezervasyon atama akışı Pro ile açılır"
+                    description="Bekleyen rezervasyonları masalara eşlemek ve masa kullanımını optimize etmek için Pro planını etkinleştirin."
+                  />
+                </div>
+              ) : (
+                <form action={assignReservationToTableAction} className="mt-8 space-y-4">
+                  <input type="hidden" name="tableId" value={data.selectedTable.id} />
+                  <input type="hidden" name="redirectTo" value={`/tables?tableId=${data.selectedTable.id}`} />
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold text-ink">Rezervasyon Ata</span>
+                    <select className="field" name="reservationId" defaultValue="">
+                      <option value="" disabled>
+                        Rezervasyon seçin
                       </option>
-                    ))}
-                  </select>
-                </label>
-                <button className="btn-primary w-full" type="submit">
-                  Rezervasyonu Masaya Ata
-                </button>
-              </form>
+                      {data.reservations.map((reservation) => (
+                        <option key={reservation.id} value={reservation.id}>
+                          {reservation.customer.name} • {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button className="btn-primary w-full" type="submit">
+                    Rezervasyonu Masaya Ata
+                  </button>
+                </form>
+              )}
             </>
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-center">

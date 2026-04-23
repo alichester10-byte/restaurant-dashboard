@@ -1,5 +1,6 @@
 import { CallOutcome } from "@prisma/client";
 import { AppHeader } from "@/components/layout/app-header";
+import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
 import { CallForm } from "@/components/dashboard/call-form";
 import { MiniBarChart } from "@/components/ui/mini-bar-chart";
 import { Panel } from "@/components/ui/panel";
@@ -7,6 +8,7 @@ import { RingChart } from "@/components/ui/ring-chart";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireBusinessUser } from "@/lib/auth";
+import { getBusinessEntitlement } from "@/lib/billing";
 import { callOutcomeLabels, reservationSourceLabels } from "@/lib/constants";
 import { getDashboardDataForBusiness } from "@/lib/data";
 import { formatDateTime, formatPhone, formatTime } from "@/lib/utils";
@@ -14,6 +16,7 @@ import { formatDateTime, formatPhone, formatTime } from "@/lib/utils";
 export default async function DashboardPage() {
   const session = await requireBusinessUser();
   const data = await getDashboardDataForBusiness(session.user.businessId);
+  const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
 
   return (
     <div className="space-y-6">
@@ -22,7 +25,18 @@ export default async function DashboardPage() {
         subtitle="Günlük rezervasyon, masa kullanımı ve çağrı performansını tek ekranda izleyin."
         businessName={session.user.business.name}
         role={session.user.role}
+        modeLabel={entitlement.modeLabel}
+        modeDescription={entitlement.modeDescription}
+        showUpgradeCta={entitlement.isDemo}
       />
+
+      {entitlement.isDemo ? (
+        <DemoModeBanner
+          title="Demo modunda tüm operasyon görünürlüğü açık."
+          description="Paneli canlı bir servis akışı gibi gezebilirsiniz. Yeni çağrı ekleme, rezervasyon güncelleme ve ayar kaydetme işlemleri Pro planıyla açılır."
+          href="/billing?upgrade=dashboard"
+        />
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Günlük Rezervasyon" value={data.stats.dailyReservations} trend={data.stats.trends.dailyReservations} tone="accent" />
@@ -151,7 +165,7 @@ export default async function DashboardPage() {
             Dashboard üzerinden yeni çağrıları işaretleyin ve rezervasyon potansiyelini kaybetmeden ekibe aktarın.
           </p>
           <div className="mt-6">
-            <CallForm />
+            <CallForm locked={entitlement.isDemo} />
           </div>
         </Panel>
       </section>

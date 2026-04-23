@@ -36,7 +36,7 @@ export const planCatalog: Record<
     amountMinor: 29990,
     amountLabel: "299,90 TL / ay",
     durationDays: 30,
-    description: "Canlı restoran operasyonları, tenant erişim kontrolü ve yönetici faturalama akışı için.",
+    description: "Canlı restoran operasyonları, ekip erişimi ve tam ürün kullanımı için.",
     cta: "PAYTR ile Öde",
     purchasable: true
   },
@@ -63,10 +63,12 @@ export function getPlanPricing(plan: SubscriptionPlan) {
   return planCatalog[plan];
 }
 
-export function hasBusinessAccess(
-  business: Pick<Business, "status" | "subscriptionStatus" | "trialEndsAt">,
-  role: UserRole
-) {
+type BusinessBillingSnapshot = Pick<
+  Business,
+  "status" | "subscriptionStatus" | "subscriptionPlan" | "trialEndsAt" | "subscriptionCurrentPeriodEndsAt"
+>;
+
+export function hasWriteAccess(business: BusinessBillingSnapshot, role: UserRole) {
   if (role === UserRole.SUPER_ADMIN) {
     return true;
   }
@@ -75,7 +77,46 @@ export function hasBusinessAccess(
     return false;
   }
 
-  return hasActiveSubscription(business) || isTrialActive(business);
+  return (
+    business.subscriptionStatus === SubscriptionStatus.ACTIVE &&
+    (business.subscriptionPlan === SubscriptionPlan.PRO || business.subscriptionPlan === SubscriptionPlan.ENTERPRISE)
+  );
+}
+
+export function hasBusinessAccess(
+  business: BusinessBillingSnapshot,
+  role: UserRole
+) {
+  if (role === UserRole.SUPER_ADMIN) {
+    return true;
+  }
+
+  return business.status === "ACTIVE";
+}
+
+export function isDemoMode(business: BusinessBillingSnapshot, role: UserRole) {
+  return hasBusinessAccess(business, role) && !hasWriteAccess(business, role);
+}
+
+export function getBusinessEntitlement(business: BusinessBillingSnapshot, role: UserRole) {
+  const isSuperAdmin = role === UserRole.SUPER_ADMIN;
+  const canRead = hasBusinessAccess(business, role);
+  const canWrite = hasWriteAccess(business, role);
+  const demoMode = isDemoMode(business, role);
+
+  return {
+    isSuperAdmin,
+    canRead,
+    canWrite,
+    isDemo: demoMode,
+    isPro: canWrite && !isSuperAdmin,
+    modeLabel: isSuperAdmin ? "Platform Erişimi" : demoMode ? "Demo Modu" : "Pro Mod",
+    modeDescription: isSuperAdmin
+      ? "Tüm işletmeleri kesintisiz yönetebilirsiniz."
+      : demoMode
+        ? "Tüm ekranları keşfedin, ancak değişiklikleri kaydetmek için Pro'ya geçin."
+        : "Tüm operasyon araçları ve kayıt akışları aktif."
+  };
 }
 
 export function getAppBaseUrl() {

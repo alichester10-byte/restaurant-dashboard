@@ -59,7 +59,7 @@ export default function LoginPage({
             <div className="text-xs uppercase tracking-[0.28em] text-white/60">Yönetici Girişi</div>
             <div className="mt-3 text-2xl font-semibold">Hoş geldiniz</div>
             <p className="mt-2 text-sm leading-6 text-white/75">
-              Demo hesabıyla giriş yapın ve bütün modülleri seeded gerçekçi veriyle inceleyin.
+              Demo giriş deneyimiyle bütün modülleri gerçek restoran akışı hissiyle inceleyin.
             </p>
           </div>
           <div className="mt-8">
@@ -70,11 +70,11 @@ export default function LoginPage({
               Hesap Oluştur
             </Link>
             <Link href="/onboarding" className="text-center text-sm font-semibold text-moss transition hover:text-ink">
-              İşletme onboarding sayfasına git
+              Yeni işletme çalışma alanı başlat
             </Link>
           </div>
           <div className="mt-6 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4 text-sm text-sage">
-            Varsayılan demo hesabı `.env` içindeki `ADMIN_EMAIL` ve `ADMIN_PASSWORD` değerlerinden üretilir.
+            İlk girişte Demo Modu ile tüm ekranları gezebilir, Pro&apos;ya geçtiğiniz anda tüm kayıt ve yönetim akışlarını açabilirsiniz.
           </div>
         </section>
       </div>

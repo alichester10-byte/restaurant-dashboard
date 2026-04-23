@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { ReservationStatus } from "@prisma/client";
 import { updateReservationStatusAction } from "@/actions/reservation-actions";
+import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
+import { LockedAction } from "@/components/demo/locked-action";
+import { UpgradeButton } from "@/components/demo/upgrade-button";
 import { AppHeader } from "@/components/layout/app-header";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { Panel } from "@/components/ui/panel";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireBusinessUser } from "@/lib/auth";
+import { getBusinessEntitlement } from "@/lib/billing";
 import { getReservationsPageData } from "@/lib/data";
 import { formatDateTime, formatPhone } from "@/lib/utils";
 
@@ -16,6 +20,7 @@ export default async function ReservationsPage({
 }) {
   const session = await requireBusinessUser();
   const data = await getReservationsPageData(session.user.businessId, searchParams.reservationId);
+  const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
 
   return (
     <div className="space-y-6">
@@ -24,7 +29,18 @@ export default async function ReservationsPage({
         subtitle="Rezervasyonları oluşturun, güncelleyin, onaylayın ve servis akışını kontrol altında tutun."
         businessName={session.user.business.name}
         role={session.user.role}
+        modeLabel={entitlement.modeLabel}
+        modeDescription={entitlement.modeDescription}
+        showUpgradeCta={entitlement.isDemo}
       />
+
+      {entitlement.isDemo ? (
+        <DemoModeBanner
+          title="Rezervasyon akışını keşfedin, Pro ile aksiyona geçin."
+          description="Demo modunda yaklaşan kayıtları, durumları ve masa atamalarını inceleyebilirsiniz. Yeni rezervasyon, onay, iptal ve düzenleme işlemleri Pro planıyla açılır."
+          href="/billing?upgrade=reservations"
+        />
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Panel>
@@ -33,9 +49,18 @@ export default async function ReservationsPage({
               <div className="section-title">Yaklaşan ve Geçmiş Kayıtlar</div>
               <h2 className="mt-2 text-xl font-semibold text-ink">Rezervasyon listesi</h2>
             </div>
-            <Link href="/reservations" className="btn-secondary">
-              Yeni Form
-            </Link>
+            {entitlement.isDemo ? (
+              <UpgradeButton
+                href="/billing?upgrade=reservations"
+                label="Pro ile Oluştur"
+                title="Yeni rezervasyon oluşturmak için Pro gerekir"
+                description="Demo modunda rezervasyon akışını keşfedebilirsiniz. Yeni kayıt eklemek için Pro planına geçin."
+              />
+            ) : (
+              <Link href="#reservation-form-panel" scroll className="btn-secondary">
+                Yeni Rezervasyon
+              </Link>
+            )}
           </div>
 
           <div className="mt-6 space-y-3">
@@ -54,31 +79,42 @@ export default async function ReservationsPage({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link href={`/reservations?reservationId=${reservation.id}`} className="btn-secondary">
-                      Düzenle
-                    </Link>
+                    {entitlement.isDemo ? (
+                      <UpgradeButton
+                        href="/billing?upgrade=reservations"
+                        label="Pro ile Düzenle"
+                        title="Rezervasyon düzenlemek için Pro gerekir"
+                        description="Demo modunda kayıtları görüntüleyebilirsiniz. Durum güncellemek veya düzenleme yapmak için Pro planına geçin."
+                      />
+                    ) : (
+                      <>
+                        <Link href={`/reservations?reservationId=${reservation.id}`} className="btn-secondary">
+                          Düzenle
+                        </Link>
 
-                    {reservation.status !== ReservationStatus.CONFIRMED ? (
-                      <form action={updateReservationStatusAction}>
-                        <input type="hidden" name="id" value={reservation.id} />
-                        <input type="hidden" name="status" value={ReservationStatus.CONFIRMED} />
-                        <input type="hidden" name="redirectTo" value="/reservations" />
-                        <button className="btn-primary" type="submit">
-                          Onayla
-                        </button>
-                      </form>
-                    ) : null}
+                        {reservation.status !== ReservationStatus.CONFIRMED ? (
+                          <form action={updateReservationStatusAction}>
+                            <input type="hidden" name="id" value={reservation.id} />
+                            <input type="hidden" name="status" value={ReservationStatus.CONFIRMED} />
+                            <input type="hidden" name="redirectTo" value="/reservations" />
+                            <button className="btn-primary" type="submit">
+                              Onayla
+                            </button>
+                          </form>
+                        ) : null}
 
-                    {reservation.status !== ReservationStatus.CANCELLED ? (
-                      <form action={updateReservationStatusAction}>
-                        <input type="hidden" name="id" value={reservation.id} />
-                        <input type="hidden" name="status" value={ReservationStatus.CANCELLED} />
-                        <input type="hidden" name="redirectTo" value="/reservations" />
-                        <button className="btn-danger" type="submit">
-                          İptal Et
-                        </button>
-                      </form>
-                    ) : null}
+                        {reservation.status !== ReservationStatus.CANCELLED ? (
+                          <form action={updateReservationStatusAction}>
+                            <input type="hidden" name="id" value={reservation.id} />
+                            <input type="hidden" name="status" value={ReservationStatus.CANCELLED} />
+                            <input type="hidden" name="redirectTo" value="/reservations" />
+                            <button className="btn-danger" type="submit">
+                              İptal Et
+                            </button>
+                          </form>
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -86,7 +122,7 @@ export default async function ReservationsPage({
           </div>
         </Panel>
 
-        <Panel>
+        <Panel className="scroll-mt-28" id="reservation-form-panel">
           <div className="section-title">{data.selectedReservation ? "Rezervasyon Düzenle" : "Yeni Rezervasyon"}</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">
             {data.selectedReservation ? "Detayları güncelleyin" : "Yeni kayıt oluşturun"}
@@ -96,6 +132,7 @@ export default async function ReservationsPage({
           </p>
           <div className="mt-6">
             <ReservationForm
+              locked={entitlement.isDemo}
               tables={data.tables}
               reservation={data.selectedReservation
                 ? {
@@ -112,6 +149,16 @@ export default async function ReservationsPage({
                 : null}
             />
           </div>
+          {entitlement.isDemo ? (
+            <div className="mt-6">
+              <LockedAction
+                fullWidth
+                href="/billing?upgrade=reservations-panel"
+                title="Kaydetme işlemleri şu anda kilitli"
+                description="Demo modunda form deneyimini görebilir, ancak gerçek rezervasyon verisi oluşturamaz veya güncelleyemezsiniz."
+              />
+            </div>
+          ) : null}
         </Panel>
       </section>
     </div>

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/layout/app-header";
+import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
 import { Panel } from "@/components/ui/panel";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireBusinessUser } from "@/lib/auth";
+import { getBusinessEntitlement } from "@/lib/billing";
 import { getCustomersPageData } from "@/lib/data";
 import { formatDateTime, formatPhone } from "@/lib/utils";
 
@@ -13,6 +15,7 @@ export default async function CustomersPage({
 }) {
   const session = await requireBusinessUser();
   const data = await getCustomersPageData(session.user.businessId, searchParams.customerId);
+  const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
 
   return (
     <div className="space-y-6">
@@ -21,7 +24,18 @@ export default async function CustomersPage({
         subtitle="VIP, düzenli ve yeni misafirleri davranış geçmişiyle birlikte takip edin."
         businessName={session.user.business.name}
         role={session.user.role}
+        modeLabel={entitlement.modeLabel}
+        modeDescription={entitlement.modeDescription}
+        showUpgradeCta={entitlement.isDemo}
       />
+
+      {entitlement.isDemo ? (
+        <DemoModeBanner
+          title="Müşteri hafızası demo modunda tamamen görünür."
+          description="Geçmiş rezervasyonları, notları ve segmentleri keşfedebilirsiniz. Müşteri notlarını ve segment güncellemelerini açmak için Pro planını etkinleştirin."
+          href="/billing?upgrade=customers"
+        />
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Panel>

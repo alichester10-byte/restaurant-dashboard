@@ -1,8 +1,20 @@
 import { CallOutcome } from "@prisma/client";
 import { createCallAction } from "@/actions/dashboard-actions";
+import { LockedAction } from "@/components/demo/locked-action";
 import { callOutcomeLabels } from "@/lib/constants";
 
-export function CallForm() {
+export function CallForm({ locked = false }: { locked?: boolean }) {
+  if (locked) {
+    return (
+      <LockedAction
+        fullWidth
+        href="/billing?upgrade=calls"
+        title="Yeni çağrı kaydı Pro ile açılır"
+        description="Demo modunda çağrı performansını inceleyebilirsiniz. Yeni çağrı eklemek ve ekibe aktarmak için Pro planını etkinleştirin."
+      />
+    );
+  }
+
   return (
     <form action={createCallAction} className="space-y-4">
       <input type="hidden" name="redirectTo" value="/dashboard" />

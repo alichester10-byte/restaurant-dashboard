@@ -4,8 +4,9 @@ import Link from "next/link";
 import Script from "next/script";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
-import { getPlanPricing } from "@/lib/billing";
+import { getBusinessEntitlement, getPlanPricing } from "@/lib/billing";
 import { requireBusinessAccess } from "@/lib/auth";
+import { billingPaymentStatusLabels } from "@/lib/constants";
 import { createPaytrIframeToken, formatMinorAmount, getRequestIp } from "@/lib/paytr";
 import { prisma } from "@/lib/prisma";
 
@@ -40,6 +41,7 @@ export default async function PaytrPaymentPage({
   });
 
   const pricing = getPlanPricing(payment.plan);
+  const entitlement = getBusinessEntitlement(business, session.user.role);
   let iframeToken: string | null = null;
   let tokenError: string | null = null;
 
@@ -64,9 +66,11 @@ export default async function PaytrPaymentPage({
     <div className="space-y-6">
       <AppHeader
         title="PAYTR Ödeme"
-        subtitle="Ödeme formu PAYTR tarafından güvenli iframe içinde sunulur. Onay sonrası abonelik callback ile aktive edilir."
+        subtitle="Güvenli ödeme akışını tamamlayın, ardından işletmeniz Pro moduna geçsin."
         businessName={session.user.business.name}
         role={session.user.role}
+        modeLabel={entitlement.modeLabel}
+        modeDescription={entitlement.modeDescription}
       />
 
       <section className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
@@ -84,11 +88,11 @@ export default async function PaytrPaymentPage({
               <br />
               Tutar: <span className="font-semibold text-ink">{formatMinorAmount(payment.amountMinor)}</span>
               <br />
-              Durum: <span className="font-semibold text-ink">{payment.status}</span>
+              Durum: <span className="font-semibold text-ink">{billingPaymentStatusLabels[payment.status]}</span>
             </div>
 
             <div className="rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
-              PAYTR başarılı ödeme dönüşü tek başına erişim açmaz; asıl aktivasyon callback ile yapılır. Bu yüzden kullanıcı başarılı sayfaya düşse bile panel erişimi callback tamamlandığında açılır.
+              Ödemeniz onaylandığında planınız kısa süre içinde güncellenir. Ardından tüm Pro araçları kullanımınıza açılır.
             </div>
 
             <Link href="/billing" className="btn-secondary w-full text-center">
@@ -106,7 +110,7 @@ export default async function PaytrPaymentPage({
               </div>
             ) : tokenError ? (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm leading-6 text-rose-700">
-                PAYTR iframe token oluşturulamadı: {tokenError}
+                Ödeme oturumu hazırlanamadı. Lütfen tekrar deneyin veya destek ekibimizle iletişime geçin.
               </div>
             ) : iframeToken ? (
               <div className="overflow-hidden rounded-[28px] border border-[color:var(--border)] bg-white">

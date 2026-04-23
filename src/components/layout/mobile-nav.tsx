@@ -3,8 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { UserRole } from "@prisma/client";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { NavItemLink } from "@/components/layout/nav-item-link";
 
 const businessItems = [
   { href: "/dashboard" as Route, label: "Panel" },
@@ -21,24 +20,32 @@ const superAdminItems = [
   { href: "/onboarding" as Route, label: "Onboarding" }
 ];
 
-export function MobileNav({ role }: { role: UserRole }) {
-  const pathname = usePathname();
+export function MobileNav({
+  role,
+  modeLabel,
+  canWrite
+}: {
+  role: UserRole;
+  modeLabel: string;
+  canWrite: boolean;
+}) {
   const items = role === UserRole.SUPER_ADMIN ? superAdminItems : businessItems;
 
   return (
-    <div className="glass-panel grid grid-cols-3 gap-2 rounded-[28px] p-3 lg:hidden">
-      {items.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={cn(
-            "rounded-2xl px-3 py-2 text-center text-xs font-semibold",
-            pathname === item.href || pathname.startsWith(`${item.href}/`) ? "bg-moss text-white" : "bg-white text-ink"
-          )}
-        >
-          {item.label}
-        </Link>
-      ))}
+    <div className="glass-panel space-y-3 rounded-[28px] p-3 lg:hidden">
+      <div className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3">
+        <div className="text-xs font-semibold uppercase tracking-[0.22em] text-sage">{modeLabel}</div>
+        {role !== UserRole.SUPER_ADMIN && !canWrite ? (
+          <Link href="/billing?upgrade=mobile-nav" className="btn-primary px-3 py-2 text-xs">
+            Go Pro
+          </Link>
+        ) : null}
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {items.map((item) => (
+          <NavItemLink key={item.href} href={item.href} label={item.label} compact />
+        ))}
+      </div>
     </div>
   );
 }
