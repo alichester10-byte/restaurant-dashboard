@@ -22,7 +22,7 @@ export function ReservationPrimaryCta({ locked }: { locked: boolean }) {
       className="btn-secondary"
       type="button"
       onClick={() => {
-        router.push("/reservations?compose=1");
+        router.push("/reservations?compose=1#reservation-form-panel");
       }}
     >
       Yeni Rezervasyon Yap

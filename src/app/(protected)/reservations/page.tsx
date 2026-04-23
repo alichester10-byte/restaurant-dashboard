@@ -4,6 +4,7 @@ import { updateReservationStatusAction } from "@/actions/reservation-actions";
 import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
 import { LockedAction } from "@/components/demo/locked-action";
 import { UpgradeButton } from "@/components/demo/upgrade-button";
+import { ReservationEditLink } from "@/components/reservations/reservation-edit-link";
 import { AppHeader } from "@/components/layout/app-header";
 import { ReservationForm } from "@/components/reservations/reservation-form";
 import { ReservationPrimaryCta } from "@/components/reservations/reservation-primary-cta";
@@ -112,9 +113,7 @@ export default async function ReservationsPage({
                       />
                     ) : (
                       <>
-                        <Link href={`/reservations?reservationId=${reservation.id}`} className="btn-secondary">
-                          Düzenle
-                        </Link>
+                        <ReservationEditLink reservationId={reservation.id} />
 
                         {reservation.status !== ReservationStatus.CONFIRMED ? (
                           <form action={updateReservationStatusAction}>
@@ -150,6 +149,22 @@ export default async function ReservationsPage({
           <p className="mt-2 text-sm leading-6 text-sage">
             Sunucu tarafında doğrulanan form akışıyla müşteri, masa ve durum bilgisini aynı anda yönetin.
           </p>
+          {data.selectedReservation ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl bg-white/80 p-4">
+                <div className="text-sm text-sage">Misafir</div>
+                <div className="mt-2 font-semibold text-ink">{data.selectedReservation.guestName}</div>
+              </div>
+              <div className="rounded-2xl bg-white/80 p-4">
+                <div className="text-sm text-sage">Telefon</div>
+                <div className="mt-2 font-semibold text-ink">{formatPhone(data.selectedReservation.guestPhone)}</div>
+              </div>
+              <div className="rounded-2xl bg-white/80 p-4">
+                <div className="text-sm text-sage">Durum</div>
+                <div className="mt-2 font-semibold text-ink">{formatDateTime(data.selectedReservation.startAt)}</div>
+              </div>
+            </div>
+          ) : null}
           <div className="mt-6">
             <ReservationForm
               key={data.selectedReservation?.id ?? (searchParams.compose ? "compose" : "new")}

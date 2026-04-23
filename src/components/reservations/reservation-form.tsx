@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { ReservationSource, ReservationStatus } from "@prisma/client";
 import { saveReservationAction } from "@/actions/reservation-actions";
 import { LockedAction } from "@/components/demo/locked-action";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { reservationSourceLabels, reservationStatusLabels } from "@/lib/constants";
-import { createTimeSlots } from "@/lib/utils";
+import { createTimeSlots, formatDateTime } from "@/lib/utils";
 
 type ReservationFormProps = {
   tables: Array<{ id: string; label: string; number: string }>;
@@ -27,6 +28,9 @@ export function ReservationForm({ tables, reservation, locked = false }: Reserva
   const time = reservation
     ? reservation.startAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", hour12: false })
     : "19:30";
+  const selectedTableLabel = reservation?.assignedTableId
+    ? tables.find((table) => table.id === reservation.assignedTableId)?.number ?? "Atanmış masa"
+    : "Henüz masa ataması yok";
 
   if (locked) {
     return (
@@ -67,6 +71,29 @@ export function ReservationForm({ tables, reservation, locked = false }: Reserva
     <form action={saveReservationAction} className="space-y-4">
       <input type="hidden" name="id" defaultValue={reservation?.id} />
       <input type="hidden" name="redirectTo" value={reservation ? `/reservations?reservationId=${reservation.id}` : "/reservations"} />
+      <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-sage">
+              {reservation ? "Seçili Rezervasyon" : "Yeni Rezervasyon"}
+            </div>
+            <h3 className="mt-2 text-xl font-semibold text-ink">
+              {reservation ? `${reservation.guestName} için rezervasyonu düzenleyin` : "Yeni rezervasyon detaylarını hazırlayın"}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-sage">
+              {reservation
+                ? `${formatDateTime(reservation.startAt)} • ${reservation.guestCount} kişi • ${selectedTableLabel}`
+                : "Misafir bilgilerini, servis zamanını ve masa atamasını tek ekranda düzenleyin."}
+            </p>
+          </div>
+          {reservation ? (
+            <Link href="/reservations" className="btn-secondary">
+              Düzenlemeyi Kapat
+            </Link>
+          ) : null}
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">Misafir Adı</span>
@@ -137,13 +164,23 @@ export function ReservationForm({ tables, reservation, locked = false }: Reserva
       </div>
 
       <label className="space-y-2">
-        <span className="text-sm font-semibold text-ink">Özel Gün</span>
-        <input className="field" name="occasion" defaultValue={reservation?.occasion ?? ""} placeholder="Doğum günü, iş yemeği, yıldönümü..." />
+        <span className="text-sm font-semibold text-ink">Özel İstekler</span>
+        <textarea
+          className="field min-h-24"
+          name="occasion"
+          defaultValue={reservation?.occasion ?? ""}
+          placeholder="Doğum günü düzeni, pencere kenarı tercihi, çocuk sandalyesi, sessiz masa..."
+        />
       </label>
 
       <label className="space-y-2">
-        <span className="text-sm font-semibold text-ink">Operasyon Notu</span>
-        <textarea className="field min-h-28" name="notes" defaultValue={reservation?.notes ?? ""} />
+        <span className="text-sm font-semibold text-ink">Operasyon Notları</span>
+        <textarea
+          className="field min-h-28"
+          name="notes"
+          defaultValue={reservation?.notes ?? ""}
+          placeholder="Ekibin bilmesi gereken servis notları, karşılama detayları ve teyit bilgileri..."
+        />
       </label>
 
       <FormSubmitButton
