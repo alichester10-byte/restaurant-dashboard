@@ -94,10 +94,12 @@ NEXT_PUBLIC_APP_URL="https://your-app-domain.vercel.app"
 PAYTR_MERCHANT_ID="your-merchant-id"
 PAYTR_MERCHANT_KEY="your-merchant-key"
 PAYTR_MERCHANT_SALT="your-merchant-salt"
-PAYTR_OK_URL="https://your-app-domain.vercel.app/billing/result/success"
-PAYTR_FAIL_URL="https://your-app-domain.vercel.app/billing/result/fail"
+PAYTR_OK_URL="https://your-app-domain.vercel.app/billing/success"
+PAYTR_FAIL_URL="https://your-app-domain.vercel.app/billing/fail"
 PAYTR_CALLBACK_URL="https://your-app-domain.vercel.app/api/paytr/callback"
 ```
+
+Not: PAYTR iFrame API için `PAYTR_CALLBACK_URL` uygulama env'inde tutulsa da, ödeme sonucu bildirimi PAYTR Merchant Panel içindeki Bildirim URL ayarında da aynı endpoint olarak tanımlanmalıdır.
 
 ## Varsayılan Demo Hesapları
 

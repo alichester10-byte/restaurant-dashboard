@@ -39,5 +39,12 @@ export async function POST(request: Request) {
     }
   });
 
+  console.info("[PAYTR:payment-created]", {
+    paymentId: payment.id,
+    merchantOid,
+    plan,
+    businessId: session.user.businessId
+  });
+
   return NextResponse.redirect(new URL(`/billing/paytr?payment=${payment.id}`, request.url), { status: 303 });
 }

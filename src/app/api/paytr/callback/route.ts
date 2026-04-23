@@ -22,12 +22,29 @@ export async function POST(request: Request) {
   const hash = params.get("hash") ?? "";
 
   if (!merchantOid || !status || !totalAmount || !hash) {
+    console.warn("[PAYTR:callback-missing-fields]", {
+      merchantOid,
+      status,
+      totalAmount,
+      hasHash: Boolean(hash)
+    });
     return textResponse("PAYTR notification failed: missing fields", 400);
   }
 
   if (!verifyPaytrCallbackHash({ merchantOid, status, totalAmount, hash })) {
+    console.warn("[PAYTR:callback-bad-hash]", {
+      merchantOid,
+      status,
+      totalAmount
+    });
     return textResponse("PAYTR notification failed: bad hash", 400);
   }
+
+  console.info("[PAYTR:callback-hit]", {
+    merchantOid,
+    status,
+    totalAmount
+  });
 
   const payment = await prisma.billingPayment.findUnique({
     where: {
@@ -39,10 +56,17 @@ export async function POST(request: Request) {
   });
 
   if (!payment) {
+    console.warn("[PAYTR:callback-payment-not-found]", {
+      merchantOid
+    });
     return textResponse("OK");
   }
 
   if (payment.status === BillingPaymentStatus.SUCCEEDED || payment.status === BillingPaymentStatus.FAILED) {
+    console.info("[PAYTR:callback-duplicate]", {
+      merchantOid,
+      paymentStatus: payment.status
+    });
     return textResponse("OK");
   }
 
@@ -78,6 +102,13 @@ export async function POST(request: Request) {
       })
     ]);
 
+    console.info("[PAYTR:callback-success]", {
+      merchantOid,
+      businessId: payment.businessId,
+      activatedPlan: payment.plan,
+      nextPeriodEnd: nextPeriodEnd.toISOString()
+    });
+
     return textResponse("OK");
   }
 
@@ -110,6 +141,13 @@ export async function POST(request: Request) {
       }
     })
   ]);
+
+  console.warn("[PAYTR:callback-failed]", {
+    merchantOid,
+    businessId: payment.businessId,
+    failedReasonCode,
+    failedReasonMessage
+  });
 
   return textResponse("OK");
 }

@@ -12,13 +12,40 @@ function getRequiredEnv(name: string) {
   return value;
 }
 
+function normalizePaytrReturnUrl(value: string | undefined, fallbackPath: "/billing/success" | "/billing/fail") {
+  const baseUrl = getAppBaseUrl();
+  const fallback = new URL(fallbackPath, baseUrl).toString();
+
+  if (!value) {
+    return fallback;
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (url.pathname === "/billing/result/success") {
+      url.pathname = "/billing/success";
+      return url.toString();
+    }
+
+    if (url.pathname === "/billing/result/fail") {
+      url.pathname = "/billing/fail";
+      return url.toString();
+    }
+
+    return url.toString();
+  } catch {
+    return fallback;
+  }
+}
+
 export function getPaytrConfig() {
   return {
     merchantId: getRequiredEnv("PAYTR_MERCHANT_ID"),
     merchantKey: getRequiredEnv("PAYTR_MERCHANT_KEY"),
     merchantSalt: getRequiredEnv("PAYTR_MERCHANT_SALT"),
-    okUrl: process.env.PAYTR_OK_URL ?? `${getAppBaseUrl()}/billing/success`,
-    failUrl: process.env.PAYTR_FAIL_URL ?? `${getAppBaseUrl()}/billing/fail`,
+    okUrl: normalizePaytrReturnUrl(process.env.PAYTR_OK_URL, "/billing/success"),
+    failUrl: normalizePaytrReturnUrl(process.env.PAYTR_FAIL_URL, "/billing/fail"),
     callbackUrl: process.env.PAYTR_CALLBACK_URL ?? `${getAppBaseUrl()}/api/paytr/callback`
   };
 }
@@ -99,6 +126,15 @@ export async function createPaytrIframeToken(input: {
     currency,
     test_mode: testMode,
     lang
+  });
+
+  console.info("[PAYTR:initiate]", {
+    merchantOid: input.merchantOid,
+    plan: input.plan,
+    okUrl: config.okUrl,
+    failUrl: config.failUrl,
+    callbackUrl: config.callbackUrl,
+    callbackReminder: "For iFrame API, callback URL must also be configured in the PAYTR merchant panel."
   });
 
   const response = await fetch(PAYTR_TOKEN_URL, {
