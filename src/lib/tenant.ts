@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { AuditCategory, BusinessStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, UserRole } from "@prisma/client";
-import { createAuditLog } from "@/lib/audit";
+import { safeCreateAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueBusinessSlug } from "@/lib/slug";
 
@@ -79,7 +79,7 @@ export async function createBusinessWithAdmin(input: CreateBusinessInput) {
   const businessSlug = await generateUniqueBusinessSlug(businessName);
   const passwordHash = await bcrypt.hash(input.adminPassword, 12);
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const business = await tx.business.create({
       data: {
         name: businessName,
@@ -135,15 +135,17 @@ export async function createBusinessWithAdmin(input: CreateBusinessInput) {
       });
     }
 
-    await createAuditLog({
-      businessId: business.id,
-      actorUserId: admin.id,
-      actorRole: admin.role,
-      category: AuditCategory.BUSINESS,
-      action: "business_created",
-      message: "A new business workspace was created."
-    });
-
     return { business, admin };
   });
+
+  await safeCreateAuditLog({
+    businessId: result.business.id,
+    actorUserId: result.admin.id,
+    actorRole: result.admin.role,
+    category: AuditCategory.BUSINESS,
+    action: "business_created",
+    message: "A new business workspace was created."
+  });
+
+  return result;
 }

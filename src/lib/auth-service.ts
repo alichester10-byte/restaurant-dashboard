@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { AuditCategory, SubscriptionStatus } from "@prisma/client";
+import { AuditCategory, Prisma, SubscriptionStatus } from "@prisma/client";
 import { getAppBaseUrl, hasBusinessAccess } from "@/lib/billing";
 import { createSession } from "@/lib/auth";
 import { safeCreateAuditLog } from "@/lib/audit";
@@ -25,6 +25,7 @@ export class AuthFlowError extends Error {
     | "invalid_token"
     | "expired_token"
     | "rate_limited"
+    | "database_issue"
     | "unknown";
 
   constructor(
@@ -36,6 +37,7 @@ export class AuthFlowError extends Error {
       | "invalid_token"
       | "expired_token"
       | "rate_limited"
+      | "database_issue"
       | "unknown",
     message: string
   ) {
@@ -54,6 +56,17 @@ function hashToken(token: string) {
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function getFirstValidationMessage(error: {
+  flatten: () => {
+    formErrors: string[];
+    fieldErrors: Record<string, string[] | undefined>;
+  };
+}) {
+  const flattened = error.flatten();
+  const firstFieldError = Object.values(flattened.fieldErrors).flat().find(Boolean);
+  return firstFieldError ?? flattened.formErrors[0] ?? "Kayıt bilgileri geçersiz.";
 }
 
 export async function loginWithEmail(formData: FormData) {
@@ -220,7 +233,7 @@ export async function registerBusinessAccount(formData: FormData) {
   });
 
   if (!parsed.success) {
-    throw new AuthFlowError("validation", parsed.error.flatten().formErrors[0] ?? "Kayıt bilgileri geçersiz.");
+    throw new AuthFlowError("validation", getFirstValidationMessage(parsed.error));
   }
 
   if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(parsed.data.adminPassword)) {
@@ -239,6 +252,9 @@ export async function registerBusinessAccount(formData: FormData) {
         throw new AuthFlowError("email_exists", "Bu e-posta ile zaten bir hesap oluşturulmuş.");
       }
       throw new AuthFlowError("validation", error.message);
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError || error instanceof Prisma.PrismaClientInitializationError) {
+      throw new AuthFlowError("database_issue", "Veritabanı kurulumu eksik veya güncel değil. Lütfen destek ekibiyle iletişime geçin.");
     }
     throw new AuthFlowError("unknown", "Kayıt sırasında beklenmeyen bir hata oluştu.");
   }

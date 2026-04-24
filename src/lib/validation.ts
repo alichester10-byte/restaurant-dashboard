@@ -1,6 +1,11 @@
 import { BusinessStatus, CallOutcome, ReminderChannel, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus } from "@prisma/client";
 import { z } from "zod";
 
+const phoneSchema = z
+  .string()
+  .trim()
+  .regex(/^\+?\d[\d\s()-]{8,}\d$/, "Geçerli bir telefon numarası girin.");
+
 export const loginSchema = z.object({
   email: z.string().email("Geçerli bir e-posta girin."),
   password: z.string().min(8, "Şifre en az 8 karakter olmalı."),
@@ -20,18 +25,18 @@ export const resetPasswordSchema = z.object({
 });
 
 export const businessOnboardingSchema = z.object({
-  businessName: z.string().min(2).max(100),
-  ownerName: z.string().min(2).max(80),
-  ownerEmail: z.string().email(),
-  ownerPhone: z.string().min(10).max(30),
-  businessPhone: z.string().min(10).max(30),
-  businessAddress: z.string().max(200),
-  city: z.string().min(2).max(80),
-  district: z.string().min(2).max(80),
-  restaurantType: z.string().min(2).max(80),
-  estimatedTableCount: z.coerce.number().int().min(1).max(150),
+  businessName: z.string().min(2, "İşletme adı gerekli.").max(100, "İşletme adı çok uzun."),
+  ownerName: z.string().min(2, "Sahip adı gerekli.").max(80, "Sahip adı çok uzun."),
+  ownerEmail: z.string().email("Geçerli bir e-posta girin."),
+  ownerPhone: phoneSchema,
+  businessPhone: phoneSchema,
+  businessAddress: z.string().min(5, "İşletme adresi gerekli.").max(200, "Adres çok uzun."),
+  city: z.string().min(2, "Şehir gerekli.").max(80, "Şehir adı çok uzun."),
+  district: z.string().min(2, "İlçe gerekli.").max(80, "İlçe adı çok uzun."),
+  restaurantType: z.string().min(2, "Restoran tipi gerekli.").max(80, "Restoran tipi çok uzun."),
+  estimatedTableCount: z.coerce.number().int().min(1, "Masa sayısı en az 1 olmalı.").max(150, "Masa sayısı çok yüksek."),
   notes: z.string().max(500).optional().or(z.literal("")),
-  adminPassword: z.string().min(8).max(100),
+  adminPassword: z.string().min(8, "Şifre en az 8 karakter olmalı.").max(100, "Şifre çok uzun."),
   createDefaultTables: z.enum(["true", "false"]).default("true"),
   redirectTo: z.string().default("/login")
 });

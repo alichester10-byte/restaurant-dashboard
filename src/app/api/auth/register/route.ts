@@ -22,12 +22,12 @@ export async function POST(request: Request) {
           ok: false,
           error: error.message,
           code: error.code
-        },
-        {
-          status: error.code === "rate_limited" ? 429 : 400
-        }
-      );
-    }
+      },
+      {
+        status: error.code === "rate_limited" ? 429 : error.code === "database_issue" ? 500 : 400
+      }
+    );
+  }
 
     return NextResponse.json(
       {
