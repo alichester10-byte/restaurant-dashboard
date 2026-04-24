@@ -1,6 +1,7 @@
 import { ReservationRequestStatus, UserRole } from "@prisma/client";
-import { configureIntegrationAction, createManualReservationRequestAction, reviewReservationRequestAction } from "@/actions/integration-actions";
+import { configureIntegrationAction, reviewReservationRequestAction } from "@/actions/integration-actions";
 import { LockedAction } from "@/components/demo/locked-action";
+import { AiAssistantComposer } from "@/components/integrations/ai-assistant-composer";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -8,7 +9,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { requireBusinessAccess } from "@/lib/auth";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { integrationDescriptions } from "@/lib/integrations";
-import { integrationProviderLabels, integrationStatusLabels, reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
+import { integrationProviderLabels, reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
 import { getIntegrationsPageData } from "@/lib/data";
 import { formatDateTime } from "@/lib/utils";
 
@@ -21,6 +22,13 @@ function RequestBadge({ value }: { value: ReservationRequestStatus }) {
         : "bg-amber-100 text-amber-800";
 
   return <span className={`badge ${tone}`}>{reservationRequestStatusLabels[value]}</span>;
+}
+
+function ConfidenceBadge({ score }: { score: number | null }) {
+  const value = Math.round((score ?? 0) * 100);
+  const tone = value >= 75 ? "bg-emerald-100 text-emerald-800" : value >= 45 ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-700";
+
+  return <span className={`badge ${tone}`}>Güven %{value}</span>;
 }
 
 export default async function IntegrationsPage({
@@ -102,17 +110,7 @@ export default async function IntegrationsPage({
                 description="Demo modunda pending request akışını inceleyebilirsiniz. Yeni talep oluşturma ve onay işlemleri Pro ile açılır."
               />
             ) : (
-              <form action={createManualReservationRequestAction} className="space-y-4">
-                <input type="hidden" name="redirectTo" value="/integrations" />
-                <input type="hidden" name="source" value="AI" />
-                <textarea
-                  className="field min-h-28"
-                  name="message"
-                  placeholder="Örn: Merhaba yarın akşam 20:00 için 4 kişilik yer var mı? Ben Emre, telefonum +90 555 111 22 33."
-                  required
-                />
-                <FormSubmitButton className="w-full md:w-auto" idleLabel="Talebi Çözümle ve Beklemeye Al" pendingLabel="Çözümleme yapılıyor..." />
-              </form>
+              <AiAssistantComposer />
             )}
           </div>
 
@@ -126,7 +124,7 @@ export default async function IntegrationsPage({
             <div className="mt-6 space-y-4">
               {data.pendingRequests.length === 0 ? (
                 <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-6 text-sm leading-6 text-sage">
-                  Henüz bekleyen dış kanal talebi yok. WhatsApp, Instagram veya web widget akışı bağlandığında talepler burada görünecek.
+                  Test etmek için yukarıya bir mesaj yazın.
                 </div>
               ) : (
                 data.pendingRequests.map((request) => (
@@ -136,14 +134,12 @@ export default async function IntegrationsPage({
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="text-lg font-semibold text-ink">{request.guestName}</div>
                           <RequestBadge value={request.status} />
+                          <ConfidenceBadge score={request.confidenceScore} />
                         </div>
                         <div className="mt-2 text-sm text-sage">
                           {reservationSourceLabels[request.source]} • {request.guestPhone ?? "Telefon bekleniyor"} • {formatDateTime(request.createdAt)}
                         </div>
-                        <div className="mt-2 text-sm text-sage">
-                          {request.requestedDate ?? "Tarih yok"} • {request.requestedTime ?? "Saat yok"} • {request.guestCount ?? "-"} kişi
-                        </div>
-                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                           <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
                             <div className="font-semibold text-ink">İsim</div>
                             <div className="mt-1">{request.guestName}</div>
@@ -156,13 +152,35 @@ export default async function IntegrationsPage({
                             <div className="font-semibold text-ink">Kaynak</div>
                             <div className="mt-1">{reservationSourceLabels[request.source]}</div>
                           </div>
+                          <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                            <div className="font-semibold text-ink">Tarih</div>
+                            <div className="mt-1">{request.requestedDate ?? "Belirlenemedi"}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                            <div className="font-semibold text-ink">Saat</div>
+                            <div className="mt-1">{request.requestedTime ?? "Belirlenemedi"}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                            <div className="font-semibold text-ink">Kişi Sayısı</div>
+                            <div className="mt-1">{request.guestCount ?? "-"}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage md:col-span-2 xl:col-span-3">
+                            <div className="font-semibold text-ink">Notlar</div>
+                            <div className="mt-1">{request.notes ?? request.rawMessage ?? "Not eklenmedi"}</div>
+                          </div>
                         </div>
                         <div className="mt-3 rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
                           {request.rawMessage ?? request.notes ?? "Mesaj içeriği yok"}
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm">
-                        AI güven skoru: %{Math.round((request.confidenceScore ?? 0) * 100)}
+                      <div className="rounded-2xl border border-[color:var(--border)] bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(244,239,227,0.92)_100%)] px-4 py-4 text-sm">
+                        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-sage">AI Önerisi</div>
+                        <div className="mt-3 flex items-center gap-2">
+                          <ConfidenceBadge score={request.confidenceScore} />
+                        </div>
+                        <p className="mt-3 max-w-[14rem] leading-6 text-sage">
+                          Düşük güvenli taleplerde alanları düzeltip ardından onaylamanız önerilir.
+                        </p>
                       </div>
                     </div>
 
