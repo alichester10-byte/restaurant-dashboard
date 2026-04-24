@@ -7,7 +7,8 @@ import { safeCreateAuditLog } from "@/lib/audit";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
-import { sanitizeNullableText, sanitizeText } from "@/lib/security";
+import { getRequestIp, sanitizeNullableText, sanitizeText } from "@/lib/security";
+import { verifyTotpToken } from "@/lib/two-factor";
 import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "@/lib/validation";
 import { CreateBusinessError, createBusinessWithAdmin } from "@/lib/tenant";
 
@@ -66,6 +67,7 @@ export async function loginWithEmail(formData: FormData) {
   }
 
   const email = normalizeEmail(parsed.data.email);
+  const ipAddress = getRequestIp();
   const limiter = await rateLimitPlaceholder(email, "login");
   if (!limiter.allowed) {
     throw new AuthFlowError("rate_limited", "Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.");
@@ -87,22 +89,73 @@ export async function loginWithEmail(formData: FormData) {
       message: "Login failed because user does not exist.",
       metadata: {
         email
-      }
+      },
+      ipAddress
     });
     throw new AuthFlowError("invalid_credentials", "E-posta veya şifre hatalı.");
   }
 
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    await safeCreateAuditLog({
+      businessId: user.businessId,
+      actorUserId: user.id,
+      actorRole: user.role,
+      category: AuditCategory.AUTH,
+      action: "login_locked",
+      message: "Login blocked because account is temporarily locked.",
+      metadata: {
+        lockedUntil: user.lockedUntil.toISOString()
+      },
+      ipAddress
+    });
+    throw new AuthFlowError("rate_limited", "Hesap geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin.");
+  }
+
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
   if (!isValid) {
+    const nextAttemptCount = user.failedLoginAttempts + 1;
+    const lockedUntil = nextAttemptCount >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+
+    await prisma.user.update({
+      where: {
+        id: user.id
+      },
+      data: {
+        failedLoginAttempts: nextAttemptCount,
+        lockedUntil
+      }
+    });
+
     await safeCreateAuditLog({
       businessId: user.businessId,
       actorUserId: user.id,
       actorRole: user.role,
       category: AuditCategory.AUTH,
       action: "login_failed",
-      message: "Login failed due to invalid password."
+      message: "Login failed due to invalid password.",
+      metadata: {
+        failedLoginAttempts: nextAttemptCount,
+        lockedUntil: lockedUntil?.toISOString() ?? null
+      },
+      ipAddress
     });
     throw new AuthFlowError("invalid_credentials", "E-posta veya şifre hatalı.");
+  }
+
+  if (user.twoFactorEnabled) {
+    const otpCode = parsed.data.otpCode?.trim() ?? "";
+    if (!user.twoFactorSecret || !verifyTotpToken({ secret: user.twoFactorSecret, token: otpCode })) {
+      await safeCreateAuditLog({
+        businessId: user.businessId,
+        actorUserId: user.id,
+        actorRole: user.role,
+        category: AuditCategory.AUTH,
+        action: "two_factor_failed",
+        message: "Two-factor verification failed during login.",
+        ipAddress
+      });
+      throw new AuthFlowError("invalid_credentials", "Doğrulama kodu geçersiz.");
+    }
   }
 
   await createSession(user.id);
@@ -110,13 +163,23 @@ export async function loginWithEmail(formData: FormData) {
     where: { id: user.businessId },
     data: { lastActivityAt: new Date() }
   });
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      lastLoginAt: new Date(),
+      lastLoginIp: ipAddress
+    }
+  });
   await safeCreateAuditLog({
     businessId: user.businessId,
     actorUserId: user.id,
     actorRole: user.role,
     category: AuditCategory.AUTH,
     action: "login_success",
-    message: "User logged in successfully."
+    message: "User logged in successfully.",
+    ipAddress
   });
 
   return {

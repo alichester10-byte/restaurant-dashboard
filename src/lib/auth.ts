@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { getBusinessEntitlement, hasBusinessAccess } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
+import { getRequestIp } from "@/lib/security";
+import { verifyTotpToken } from "@/lib/two-factor";
 import { loginSchema } from "@/lib/validation";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 
@@ -24,7 +26,7 @@ function getSessionSecret() {
   return secret;
 }
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, options?: { impersonatedByUserId?: string | null }) {
   getSessionSecret();
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = hashToken(token);
@@ -39,6 +41,7 @@ export async function createSession(userId: string) {
   await prisma.session.create({
     data: {
       userId,
+      impersonatedByUserId: options?.impersonatedByUserId ?? null,
       tokenHash,
       expiresAt
     }
@@ -178,13 +181,15 @@ export async function requireBusinessWriteAccess(options?: {
 export async function authenticate(formData: FormData) {
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
-    password: formData.get("password")
+    password: formData.get("password"),
+    otpCode: formData.get("otpCode")
   });
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.flatten().formErrors[0] ?? "Giriş bilgileri geçersiz." };
   }
 
+  const ipAddress = getRequestIp();
   const limiter = await rateLimitPlaceholder(parsed.data.email, "login");
   if (!limiter.allowed) {
     await safeCreateAuditLog({
@@ -194,7 +199,8 @@ export async function authenticate(formData: FormData) {
       severity: AuditSeverity.WARN,
       metadata: {
         email: parsed.data.email
-      }
+      },
+      ipAddress
     });
     return { ok: false, error: "Çok fazla deneme yapıldı. Lütfen tekrar deneyin." };
   }
@@ -213,14 +219,40 @@ export async function authenticate(formData: FormData) {
       severity: AuditSeverity.WARN,
       metadata: {
         email: parsed.data.email
-      }
+      },
+      ipAddress
     });
     return { ok: false, error: "E-posta veya şifre hatalı." };
+  }
+
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    await safeCreateAuditLog({
+      businessId: user.businessId,
+      actorUserId: user.id,
+      actorRole: user.role,
+      category: AuditCategory.AUTH,
+      action: "login_locked",
+      message: "Login blocked because account is temporarily locked.",
+      severity: AuditSeverity.WARN,
+      ipAddress
+    });
+    return { ok: false, error: "Hesap geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin." };
   }
 
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
 
   if (!isValid) {
+    const nextAttemptCount = user.failedLoginAttempts + 1;
+    const lockedUntil = nextAttemptCount >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: nextAttemptCount,
+        lockedUntil
+      }
+    });
+
     await safeCreateAuditLog({
       businessId: user.businessId,
       actorUserId: user.id,
@@ -228,9 +260,42 @@ export async function authenticate(formData: FormData) {
       category: AuditCategory.AUTH,
       action: "login_failed",
       message: "Login failed due to invalid password.",
-      severity: AuditSeverity.WARN
+      severity: AuditSeverity.WARN,
+      ipAddress,
+      metadata: {
+        failedLoginAttempts: nextAttemptCount,
+        lockedUntil: lockedUntil?.toISOString() ?? null
+      }
     });
     return { ok: false, error: "E-posta veya şifre hatalı." };
+  }
+
+  if (user.twoFactorEnabled) {
+    await safeCreateAuditLog({
+      businessId: user.businessId,
+      actorUserId: user.id,
+      actorRole: user.role,
+      category: AuditCategory.AUTH,
+      action: "two_factor_challenge_started",
+      message: "Two-factor verification required during login.",
+      severity: AuditSeverity.WARN,
+      ipAddress
+    });
+
+    const otpCode = parsed.data.otpCode?.trim() ?? "";
+    if (!user.twoFactorSecret || !verifyTotpToken({ secret: user.twoFactorSecret, token: otpCode })) {
+      await safeCreateAuditLog({
+        businessId: user.businessId,
+        actorUserId: user.id,
+        actorRole: user.role,
+        category: AuditCategory.AUTH,
+        action: "two_factor_failed",
+        message: "Two-factor verification failed during login.",
+        severity: AuditSeverity.WARN,
+        ipAddress
+      });
+      return { ok: false, error: "Doğrulama kodu geçersiz." };
+    }
   }
 
   await createSession(user.id);
@@ -242,13 +307,25 @@ export async function authenticate(formData: FormData) {
       lastActivityAt: new Date()
     }
   });
+  await prisma.user.update({
+    where: {
+      id: user.id
+    },
+    data: {
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      lastLoginAt: new Date(),
+      lastLoginIp: ipAddress
+    }
+  });
   await safeCreateAuditLog({
     businessId: user.businessId,
     actorUserId: user.id,
     actorRole: user.role,
     category: AuditCategory.AUTH,
     action: "login_success",
-    message: "User logged in successfully."
+    message: "User logged in successfully.",
+    ipAddress
   });
   return { ok: true, role: user.role };
 }

@@ -4,10 +4,10 @@ import { AuditCategory, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole, requireSuperAdmin } from "@/lib/auth";
-import { createAuditLog } from "@/lib/audit";
+import { safeCreateAuditLog } from "@/lib/audit";
 import { sendAccountLifecycleEmails } from "@/lib/auth-service";
 import { prisma } from "@/lib/prisma";
-import { sanitizeNullableText, sanitizeText } from "@/lib/security";
+import { getRequestIp, sanitizeNullableText, sanitizeText } from "@/lib/security";
 import { CreateBusinessError, createBusinessWithAdmin } from "@/lib/tenant";
 import { businessAdminCreateSchema, businessOnboardingSchema, businessStatusSchema } from "@/lib/validation";
 
@@ -92,7 +92,7 @@ export async function superAdminCreateBusinessAction(formData: FormData) {
       businessName: result.business.name
     });
 
-    await createAuditLog({
+    await safeCreateAuditLog({
       businessId: result.business.id,
       actorUserId: session.user.id,
       actorRole: session.user.role,
@@ -100,7 +100,8 @@ export async function superAdminCreateBusinessAction(formData: FormData) {
       action: "business_created_by_super_admin",
       message: "Super admin created a business workspace.",
       targetType: "Business",
-      targetId: result.business.id
+      targetId: result.business.id,
+      ipAddress: getRequestIp()
     });
   } catch (error) {
     if (error instanceof CreateBusinessError) {
@@ -158,12 +159,23 @@ export async function updateBusinessStatusAction(formData: FormData) {
     }
   });
 
-  await createAuditLog({
+  const action =
+    business.status !== parsed.data.status && parsed.data.status === "SUSPENDED"
+      ? "business_suspended"
+      : business.status !== parsed.data.status && parsed.data.status === "ACTIVE"
+        ? "business_reactivated"
+        : business.subscriptionPlan !== parsed.data.plan
+          ? "plan_changed"
+          : business.subscriptionStatus !== parsed.data.subscriptionStatus
+            ? "subscription_changed"
+            : "business_status_updated";
+
+  await safeCreateAuditLog({
     businessId: business.id,
     actorUserId: session.user.id,
     actorRole: session.user.role,
     category: AuditCategory.SUPER_ADMIN,
-    action: "business_status_updated",
+    action,
     message: "Super admin updated business plan or status.",
     targetType: "Business",
     targetId: business.id,
@@ -172,7 +184,8 @@ export async function updateBusinessStatusAction(formData: FormData) {
       plan: parsed.data.plan,
       subscriptionStatus: parsed.data.subscriptionStatus,
       trialDays: parsed.data.trialDays ?? null
-    }
+    },
+    ipAddress: getRequestIp()
   });
 
   revalidatePath("/super-admin");

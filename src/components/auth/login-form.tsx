@@ -47,6 +47,10 @@ export function LoginForm() {
         <span className="text-sm font-semibold text-ink">Şifre</span>
         <input className="field" name="password" type="password" placeholder="••••••••" required disabled={isPending} />
       </label>
+      <label className="space-y-2">
+        <span className="text-sm font-semibold text-ink">Doğrulama Kodu</span>
+        <input className="field" name="otpCode" inputMode="numeric" placeholder="Sadece 2FA açıksa gerekli" disabled={isPending} />
+      </label>
       <div className="flex items-center justify-between gap-3">
         <Link href="/forgot-password" className="text-sm font-semibold text-moss transition hover:text-ink">
           Şifremi unuttum

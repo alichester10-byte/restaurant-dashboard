@@ -517,3 +517,97 @@ export async function getSecurityLogData() {
     suspiciousSummary
   };
 }
+
+export async function getSuperAdminBusinessDetail(businessId: string) {
+  const todayStart = startOfDay(new Date());
+  const todayEnd = endOfDay(new Date());
+
+  const business = await prisma.business.findUniqueOrThrow({
+    where: {
+      id: businessId
+    },
+    include: {
+      users: {
+        orderBy: {
+          createdAt: "asc"
+        }
+      },
+      settings: {
+        take: 1
+      },
+      billingPayments: {
+        orderBy: {
+          createdAt: "desc"
+        },
+        take: 10
+      },
+      _count: {
+        select: {
+          reservations: true,
+          customers: true,
+          tables: true
+        }
+      }
+    }
+  });
+
+  const [todayReservations, lastReservations, recentLogins, recentActivity] = await Promise.all([
+    prisma.reservation.count({
+      where: {
+        businessId,
+        startAt: {
+          gte: todayStart,
+          lte: todayEnd
+        }
+      }
+    }),
+    prisma.reservation.findMany({
+      where: {
+        businessId
+      },
+      orderBy: {
+        startAt: "desc"
+      },
+      take: 10,
+      include: {
+        assignedTable: true
+      }
+    }),
+    prisma.auditLog.findMany({
+      where: {
+        businessId,
+        category: AuditCategory.AUTH,
+        action: {
+          in: ["login_success", "login_failed", "login_locked"]
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 10
+    }),
+    prisma.auditLog.findMany({
+      where: {
+        businessId
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 12
+    })
+  ]);
+
+  return {
+    business,
+    metrics: {
+      totalReservations: business._count.reservations,
+      todayReservations,
+      totalCustomers: business._count.customers,
+      totalTables: business._count.tables
+    },
+    lastReservations,
+    recentLogins,
+    recentActivity,
+    lastPayment: business.billingPayments[0] ?? null
+  };
+}

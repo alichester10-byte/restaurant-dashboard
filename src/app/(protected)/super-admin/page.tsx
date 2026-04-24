@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BusinessStatus, SubscriptionPlan, SubscriptionStatus, UserRole } from "@prisma/client";
 import { superAdminCreateBusinessAction, updateBusinessStatusAction } from "@/actions/tenant-actions";
 import { AppHeader } from "@/components/layout/app-header";
@@ -218,7 +219,9 @@ export default async function SuperAdminPage({
                   <div className="space-y-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <div className="text-xl font-semibold text-ink">{business.name}</div>
+                        <Link href={`/super-admin/${business.id}`} className="text-xl font-semibold text-ink transition hover:text-moss">
+                          {business.name}
+                        </Link>
                         <StatusBadge value={business.status} />
                       </div>
                       <div className="mt-2 flex flex-wrap gap-3 text-sm text-sage">
@@ -279,6 +282,10 @@ export default async function SuperAdminPage({
                         </div>
                       </div>
                     ) : null}
+
+                    <Link href={`/super-admin/${business.id}`} className="btn-secondary inline-flex">
+                      Detayı Aç
+                    </Link>
                   </div>
 
                   <form action={updateBusinessStatusAction} className="grid w-full max-w-xl gap-3 md:grid-cols-2 xl:w-[420px]">

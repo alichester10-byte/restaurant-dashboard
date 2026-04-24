@@ -3,7 +3,8 @@ import { z } from "zod";
 
 export const loginSchema = z.object({
   email: z.string().email("Geçerli bir e-posta girin."),
-  password: z.string().min(8, "Şifre en az 8 karakter olmalı.")
+  password: z.string().min(8, "Şifre en az 8 karakter olmalı."),
+  otpCode: z.string().trim().regex(/^\d{6}$/,"Kod 6 haneli olmalı.").optional().or(z.literal(""))
 });
 
 export const forgotPasswordSchema = z.object({
@@ -48,6 +49,28 @@ export const businessStatusSchema = z.object({
   internalNotes: z.string().max(1000).optional().or(z.literal("")),
   trialDays: z.coerce.number().int().min(0).max(90).optional(),
   redirectTo: z.string().default("/super-admin")
+});
+
+export const superAdminPasswordResetSchema = z.object({
+  userId: z.string(),
+  redirectTo: z.string().default("/admin/security")
+});
+
+export const twoFactorSetupSchema = z.object({
+  secret: z.string().min(16).max(64),
+  token: z.string().regex(/^\d{6}$/, "Kod 6 haneli olmalı."),
+  redirectTo: z.string().default("/admin/security")
+});
+
+export const businessDataResetSchema = z.object({
+  businessId: z.string(),
+  confirmation: z.string().min(3).max(120),
+  redirectTo: z.string().default("/super-admin")
+});
+
+export const impersonationSchema = z.object({
+  businessId: z.string(),
+  redirectTo: z.string().default("/dashboard")
 });
 
 export const reservationSchema = z.object({
