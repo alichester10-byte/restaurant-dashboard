@@ -1,15 +1,14 @@
 import { ReservationRequestStatus, UserRole } from "@prisma/client";
-import { configureIntegrationAction, reviewReservationRequestAction } from "@/actions/integration-actions";
+import { reviewReservationRequestAction } from "@/actions/integration-actions";
 import { LockedAction } from "@/components/demo/locked-action";
 import { AiAssistantComposer } from "@/components/integrations/ai-assistant-composer";
+import { IntegrationCardGrid } from "@/components/integrations/integration-card-grid";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { requireBusinessAccess } from "@/lib/auth";
-import { getBusinessEntitlement } from "@/lib/billing";
-import { integrationDescriptions } from "@/lib/integrations";
-import { integrationProviderLabels, reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
+import { getAppBaseUrl, getBusinessEntitlement } from "@/lib/billing";
+import { reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
 import { getIntegrationsPageData } from "@/lib/data";
 import { formatDateTime } from "@/lib/utils";
 
@@ -69,32 +68,10 @@ export default async function IntegrationsPage({
         </Panel>
       ) : null}
 
-      <section className="grid gap-6 xl:grid-cols-5">
-        {data.cards.map((item) => {
-          const copy = integrationDescriptions[item.provider];
-          return (
-            <Panel key={item.provider} className="flex h-full flex-col">
-              <div className="section-title">{copy.title}</div>
-              <div className="mt-3 text-lg font-semibold text-ink">{integrationProviderLabels[item.provider]}</div>
-              <div className="mt-2 inline-flex">
-                <StatusBadge value={item.connection.status} />
-              </div>
-              <p className="mt-4 text-sm leading-6 text-sage">{copy.description}</p>
-              <div className="mt-auto pt-5">
-                <form action={configureIntegrationAction}>
-                  <input type="hidden" name="provider" value={item.provider} />
-                  <button className="btn-secondary w-full" type="submit">
-                    {item.connection.status === "CONNECTED" ? "Bağlantıyı Gör" : copy.buttonLabel}
-                  </button>
-                </form>
-              </div>
-            </Panel>
-          );
-        })}
-      </section>
+      <IntegrationCardGrid cards={data.cards} businessSlug={session.user.business.slug} baseUrl={getAppBaseUrl()} />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Panel>
+        <Panel id="ai-assistant-testing">
           <div className="section-title">AI Reservation Assistant</div>
           <h2 className="mt-2 text-2xl font-semibold text-ink">Mesajı yapıştır, talebi önizle</h2>
           <p className="mt-2 text-sm leading-6 text-sage">
