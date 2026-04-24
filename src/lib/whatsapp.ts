@@ -1,3 +1,4 @@
+import "server-only";
 import crypto from "node:crypto";
 
 export const WHATSAPP_SAMPLE_MESSAGE =

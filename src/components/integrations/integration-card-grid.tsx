@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 import { integrationDescriptions } from "@/lib/integrations";
 import { integrationProviderLabels } from "@/lib/constants";
-import { WHATSAPP_SAMPLE_MESSAGE } from "@/lib/whatsapp";
 
 type CardItem = {
   provider: IntegrationProvider;
@@ -91,12 +90,14 @@ export function IntegrationCardGrid({
   cards,
   businessSlug,
   baseUrl,
-  whatsappVerifyToken
+  whatsappVerifyToken,
+  whatsappSampleMessage
 }: {
   cards: CardItem[];
   businessSlug: string;
   baseUrl: string;
   whatsappVerifyToken: string;
+  whatsappSampleMessage: string;
 }) {
   const [openProvider, setOpenProvider] = useState<IntegrationProvider | null>(null);
   const [testNotice, setTestNotice] = useState<string | null>(null);
@@ -224,7 +225,7 @@ export function IntegrationCardGrid({
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4">
               <div className="text-sm font-semibold text-ink">Demo WhatsApp mesajı</div>
               <div className="mt-2 rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
-                {WHATSAPP_SAMPLE_MESSAGE}
+                {whatsappSampleMessage}
               </div>
               <p className="mt-3 text-sm leading-6 text-sage">
                 Sistem bu mesajı analiz edip isim, telefon, tarih, saat ve kişi sayısını çıkarır; ardından talebi onay bekleyen kuyruğa düşürür.
