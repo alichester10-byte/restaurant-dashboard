@@ -30,3 +30,27 @@ export async function createAuditLog(input: {
     }
   });
 }
+
+export async function safeCreateAuditLog(input: {
+  businessId?: string | null;
+  actorUserId?: string | null;
+  actorRole?: UserRole | null;
+  category: AuditCategory;
+  action: string;
+  message: string;
+  severity?: AuditSeverity;
+  targetType?: string;
+  targetId?: string;
+  metadata?: Record<string, unknown> | null;
+  ipAddress?: string | null;
+}) {
+  try {
+    await createAuditLog(input);
+  } catch (error) {
+    console.error("[audit:write_failed]", {
+      action: input.action,
+      category: input.category,
+      error: error instanceof Error ? error.message : "unknown_error"
+    });
+  }
+}

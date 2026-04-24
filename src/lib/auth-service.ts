@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { AuditCategory, SubscriptionStatus } from "@prisma/client";
 import { getAppBaseUrl, hasBusinessAccess } from "@/lib/billing";
 import { createSession } from "@/lib/auth";
-import { createAuditLog } from "@/lib/audit";
+import { safeCreateAuditLog } from "@/lib/audit";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
@@ -81,7 +81,7 @@ export async function loginWithEmail(formData: FormData) {
   });
 
   if (!user) {
-    await createAuditLog({
+    await safeCreateAuditLog({
       category: AuditCategory.AUTH,
       action: "login_failed",
       message: "Login failed because user does not exist.",
@@ -94,7 +94,7 @@ export async function loginWithEmail(formData: FormData) {
 
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
   if (!isValid) {
-    await createAuditLog({
+    await safeCreateAuditLog({
       businessId: user.businessId,
       actorUserId: user.id,
       actorRole: user.role,
@@ -110,7 +110,7 @@ export async function loginWithEmail(formData: FormData) {
     where: { id: user.businessId },
     data: { lastActivityAt: new Date() }
   });
-  await createAuditLog({
+  await safeCreateAuditLog({
     businessId: user.businessId,
     actorUserId: user.id,
     actorRole: user.role,
@@ -314,7 +314,7 @@ export async function requestPasswordReset(formData: FormData) {
   });
 
   const resetUrl = `${getAppBaseUrl()}/reset-password?token=${plainToken}`;
-  await createAuditLog({
+  await safeCreateAuditLog({
     businessId: user.businessId,
     actorUserId: user.id,
     actorRole: user.role,
@@ -390,7 +390,7 @@ export async function resetPassword(formData: FormData) {
     })
   ]);
 
-  await createAuditLog({
+  await safeCreateAuditLog({
     businessId: resetToken.user.businessId,
     actorUserId: resetToken.user.id,
     actorRole: resetToken.user.role,

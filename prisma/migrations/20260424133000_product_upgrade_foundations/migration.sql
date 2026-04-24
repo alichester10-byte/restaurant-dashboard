@@ -40,8 +40,8 @@ SET
   "businessAddress" = s."address",
   "lastActivityAt" = COALESCE(b."updatedAt", b."createdAt")
 FROM first_admin fa
-LEFT JOIN settings s ON s."businessId" = b."id"
-WHERE fa."businessId" = b."id" OR s."businessId" = b."id";
+LEFT JOIN settings s ON s."businessId" = fa."businessId"
+WHERE fa."businessId" = b."id";
 
 UPDATE "Business"
 SET
@@ -49,6 +49,12 @@ SET
   "ownerEmail" = COALESCE("ownerEmail", CONCAT("slug", '@example.com')),
   "ownerPhone" = COALESCE("ownerPhone", '+90 555 000 00 00'),
   "businessPhone" = COALESCE("businessPhone", '+90 555 000 00 00'),
+  "businessAddress" = COALESCE("businessAddress", (
+    SELECT rs."address"
+    FROM "RestaurantSettings" rs
+    WHERE rs."businessId" = "Business"."id"
+    LIMIT 1
+  )),
   "lastActivityAt" = COALESCE("lastActivityAt", "updatedAt");
 
 ALTER TABLE "Business"

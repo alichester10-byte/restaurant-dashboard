@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { AuditCategory, AuditSeverity, UserRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createAuditLog } from "@/lib/audit";
+import { safeCreateAuditLog } from "@/lib/audit";
 import { getBusinessEntitlement, hasBusinessAccess } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validation";
@@ -187,7 +187,7 @@ export async function authenticate(formData: FormData) {
 
   const limiter = await rateLimitPlaceholder(parsed.data.email, "login");
   if (!limiter.allowed) {
-    await createAuditLog({
+    await safeCreateAuditLog({
       category: AuditCategory.AUTH,
       action: "login_rate_limited",
       message: "Login attempt blocked by rate limit.",
@@ -206,7 +206,7 @@ export async function authenticate(formData: FormData) {
   });
 
   if (!user) {
-    await createAuditLog({
+    await safeCreateAuditLog({
       category: AuditCategory.AUTH,
       action: "login_failed",
       message: "Login failed because user does not exist.",
@@ -221,7 +221,7 @@ export async function authenticate(formData: FormData) {
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
 
   if (!isValid) {
-    await createAuditLog({
+    await safeCreateAuditLog({
       businessId: user.businessId,
       actorUserId: user.id,
       actorRole: user.role,
@@ -242,7 +242,7 @@ export async function authenticate(formData: FormData) {
       lastActivityAt: new Date()
     }
   });
-  await createAuditLog({
+  await safeCreateAuditLog({
     businessId: user.businessId,
     actorUserId: user.id,
     actorRole: user.role,
