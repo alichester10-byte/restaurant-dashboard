@@ -10,6 +10,7 @@ const businessItems = [
   { href: "/reservations" as Route, label: "Rezervasyon" },
   { href: "/tables" as Route, label: "Masalar" },
   { href: "/customers" as Route, label: "Müşteriler" },
+  { href: "/integrations" as Route, label: "Kanallar" },
   { href: "/billing" as Route, label: "Faturalama" },
   { href: "/reports" as Route, label: "Raporlar" },
   { href: "/settings" as Route, label: "Ayarlar" }
@@ -17,6 +18,7 @@ const businessItems = [
 
 const superAdminItems = [
   { href: "/super-admin" as Route, label: "İşletmeler" },
+  { href: "/admin/security" as Route, label: "Güvenlik" },
   { href: "/onboarding" as Route, label: "Onboarding" }
 ];
 

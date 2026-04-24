@@ -1,4 +1,4 @@
-import { BillingPaymentStatus, BusinessStatus, CallOutcome, CustomerTag, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableStatus, UserRole } from "@prisma/client";
+import { BillingPaymentStatus, BusinessStatus, CallOutcome, CustomerTag, IntegrationProvider, IntegrationStatus, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus, UserRole } from "@prisma/client";
 
 export const reservationStatusLabels: Record<ReservationStatus, string> = {
   CONFIRMED: "Onaylandı",
@@ -13,6 +13,26 @@ export const tableStatusLabels: Record<TableStatus, string> = {
   OCCUPIED: "Dolu",
   RESERVED: "Rezerve",
   MAINTENANCE: "Bakım"
+};
+
+export const tableAreaLabels: Record<TableArea, string> = {
+  WINDOW: "Cam önü",
+  ENTRANCE: "Kapı kenarı",
+  GARDEN: "Bahçe",
+  TERRACE: "Teras",
+  MAIN_DINING: "İç salon",
+  VIP: "VIP alan",
+  BAR: "Bar önü",
+  CUSTOM: "Özel alan"
+};
+
+export const tableShapeLabels: Record<TableShape, string> = {
+  ROUND: "Yuvarlak",
+  SQUARE: "Kare",
+  RECTANGLE: "Dikdörtgen",
+  BOOTH: "Booth",
+  BAR: "Bar",
+  CUSTOM: "Özel"
 };
 
 export const callOutcomeLabels: Record<CallOutcome, string> = {
@@ -66,4 +86,24 @@ export const billingPaymentStatusLabels: Record<BillingPaymentStatus, string> = 
   SUCCEEDED: "Başarılı",
   FAILED: "Başarısız",
   EXPIRED: "Süresi Doldu"
+};
+
+export const integrationProviderLabels: Record<IntegrationProvider, string> = {
+  WHATSAPP: "WhatsApp Business",
+  INSTAGRAM: "Instagram DM",
+  GOOGLE_WEB: "Google / Web Rezervasyon",
+  WEBSITE_WIDGET: "Website Widget",
+  AI_ASSISTANT: "AI Reservation Assistant"
+};
+
+export const integrationStatusLabels: Record<IntegrationStatus, string> = {
+  NOT_CONNECTED: "Bağlı değil",
+  CONNECTED: "Bağlı",
+  NEEDS_CONFIGURATION: "Yapılandırma gerekli"
+};
+
+export const reservationRequestStatusLabels: Record<ReservationRequestStatus, string> = {
+  PENDING: "Onay bekliyor",
+  APPROVED: "Onaylandı",
+  REJECTED: "Reddedildi"
 };

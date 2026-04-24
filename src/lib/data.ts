@@ -1,4 +1,14 @@
-import { CallOutcome, Prisma, ReservationStatus, TableStatus } from "@prisma/client";
+import {
+  AuditCategory,
+  CallOutcome,
+  IntegrationProvider,
+  IntegrationStatus,
+  Prisma,
+  ReservationRequestStatus,
+  ReservationSource,
+  ReservationStatus,
+  TableStatus
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { endOfDay, startOfDay } from "@/lib/utils";
 
@@ -181,7 +191,8 @@ export async function getTablesPageData(businessId: string, selectedId?: string)
   const [tables, reservations, selectedTable] = await Promise.all([
     prisma.diningTable.findMany({
       where: {
-        businessId
+        businessId,
+        archivedAt: null
       },
       include: {
         reservations: {
@@ -209,7 +220,7 @@ export async function getTablesPageData(businessId: string, selectedId?: string)
     }),
     selectedId
       ? prisma.diningTable.findFirst({
-          where: { id: selectedId, businessId },
+          where: { id: selectedId, businessId, archivedAt: null },
           include: {
             reservations: {
               where: {
@@ -355,21 +366,64 @@ export async function getSettingsData(businessId: string) {
   });
 }
 
-export async function getSuperAdminData() {
+export async function getSuperAdminData(input?: {
+  search?: string;
+  filter?: "all" | "demo" | "pro" | "suspended" | "trial";
+}) {
+  const search = input?.search?.trim();
+  const filter = input?.filter ?? "all";
   const businesses = await prisma.business.findMany({
+    where: {
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { ownerName: { contains: search, mode: "insensitive" } },
+              { ownerEmail: { contains: search, mode: "insensitive" } },
+              { city: { contains: search, mode: "insensitive" } },
+              { district: { contains: search, mode: "insensitive" } }
+            ]
+          }
+        : {}),
+      ...(filter === "demo"
+        ? { subscriptionPlan: "STARTER" }
+        : filter === "pro"
+          ? { subscriptionPlan: "PRO" }
+          : filter === "suspended"
+            ? { status: "SUSPENDED" }
+            : filter === "trial"
+              ? { subscriptionStatus: "TRIALING" }
+              : {})
+    },
     include: {
       _count: {
         select: {
           users: true,
           reservations: true,
-          customers: true
+          customers: true,
+          tables: true
         }
+      },
+      settings: {
+        take: 1
+      },
+      billingPayments: {
+        orderBy: {
+          createdAt: "desc"
+        },
+        take: 1
       },
       users: {
         orderBy: {
           createdAt: "asc"
         },
-        take: 3
+        take: 5
+      },
+      auditLogs: {
+        orderBy: {
+          createdAt: "desc"
+        },
+        take: 5
       }
     },
     orderBy: {
@@ -377,7 +431,89 @@ export async function getSuperAdminData() {
     }
   });
 
+  const summary = {
+    total: businesses.length,
+    demo: businesses.filter((business) => business.subscriptionPlan === "STARTER").length,
+    pro: businesses.filter((business) => business.subscriptionPlan === "PRO").length,
+    suspended: businesses.filter((business) => business.status === "SUSPENDED").length,
+    trial: businesses.filter((business) => business.subscriptionStatus === "TRIALING").length
+  };
+
   return {
-    businesses
+    businesses,
+    summary
+  };
+}
+
+export async function getIntegrationsPageData(businessId: string) {
+  const providers = Object.values(IntegrationProvider);
+  const [connections, pendingRequests] = await Promise.all([
+    prisma.integrationConnection.findMany({
+      where: { businessId },
+      orderBy: { provider: "asc" }
+    }),
+    prisma.reservationRequest.findMany({
+      where: {
+        businessId,
+        status: ReservationRequestStatus.PENDING
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 12
+    })
+  ]);
+
+  const connectionMap = new Map(connections.map((connection) => [connection.provider, connection]));
+  const cards = providers.map((provider) => ({
+    provider,
+    connection:
+      connectionMap.get(provider) ??
+      ({
+        provider,
+        status:
+          provider === IntegrationProvider.AI_ASSISTANT || provider === IntegrationProvider.GOOGLE_WEB
+            ? IntegrationStatus.NEEDS_CONFIGURATION
+            : IntegrationStatus.NOT_CONNECTED
+      } as const)
+  }));
+
+  return {
+    cards,
+    pendingRequests
+  };
+}
+
+export async function getSecurityLogData() {
+  const [recentLogs, failedLogins, suspiciousSummary] = await Promise.all([
+    prisma.auditLog.findMany({
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 50
+    }),
+    prisma.auditLog.groupBy({
+      by: ["action"],
+      _count: { _all: true },
+      where: {
+        category: AuditCategory.AUTH,
+        action: {
+          in: ["login_failed", "login_rate_limited"]
+        }
+      }
+    }),
+    prisma.auditLog.groupBy({
+      by: ["severity"],
+      _count: { _all: true },
+      where: {
+        category: AuditCategory.SECURITY
+      }
+    })
+  ]);
+
+  return {
+    recentLogs,
+    failedLogins,
+    suspiciousSummary
   };
 }

@@ -32,6 +32,64 @@ enum SubscriptionStatus {
   CANCELED
 }
 
+enum TableArea {
+  WINDOW
+  ENTRANCE
+  GARDEN
+  TERRACE
+  MAIN_DINING
+  VIP
+  BAR
+  CUSTOM
+}
+
+enum TableShape {
+  ROUND
+  SQUARE
+  RECTANGLE
+  BOOTH
+  BAR
+  CUSTOM
+}
+
+enum IntegrationProvider {
+  WHATSAPP
+  INSTAGRAM
+  GOOGLE_WEB
+  WEBSITE_WIDGET
+  AI_ASSISTANT
+}
+
+enum IntegrationStatus {
+  NOT_CONNECTED
+  CONNECTED
+  NEEDS_CONFIGURATION
+}
+
+enum ReservationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AuditCategory {
+  AUTH
+  SECURITY
+  BILLING
+  SUPER_ADMIN
+  BUSINESS
+  WEBHOOK
+  RESERVATION
+  TABLE
+  INTEGRATION
+}
+
+enum AuditSeverity {
+  INFO
+  WARN
+  CRITICAL
+}
+
 enum BillingProvider {
   PAYTR
 }
@@ -130,6 +188,15 @@ model Business {
   id                    String               @id @default(cuid())
   name                  String
   slug                  String               @unique
+  ownerName             String
+  ownerEmail            String
+  ownerPhone            String
+  businessPhone         String
+  businessAddress       String?
+  city                  String?
+  district              String?
+  restaurantType        String?
+  estimatedTableCount   Int?
   status                BusinessStatus       @default(ACTIVE)
   subscriptionPlan      SubscriptionPlan     @default(STARTER)
   subscriptionStatus    SubscriptionStatus   @default(TRIALING)
@@ -143,6 +210,8 @@ model Business {
   suspendedAt           DateTime?
   onboardingCompletedAt DateTime?
   notes                 String?
+  internalNotes         String?
+  lastActivityAt        DateTime?
   users                 User[]
   settings              RestaurantSettings[]
   customers             Customer[]
@@ -150,11 +219,16 @@ model Business {
   reservations          Reservation[]
   callLogs              CallLog[]
   billingPayments       BillingPayment[]
+  reservationRequests   ReservationRequest[]
+  integrationConnections IntegrationConnection[]
+  auditLogs             AuditLog[]
+  rateLimits            RateLimitBucket[]
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
   @@index([status])
   @@index([subscriptionStatus])
+  @@index([ownerEmail])
 }
 
 model Session {
@@ -220,9 +294,12 @@ model DiningTable {
   number       String
   label        String
   zone         String
+  area         TableArea     @default(MAIN_DINING)
+  shape        TableShape    @default(RECTANGLE)
   seatCapacity Int
   status       TableStatus   @default(EMPTY)
   notes        String?
+  archivedAt   DateTime?
   business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   reservations Reservation[]
   createdAt    DateTime      @default(now())
@@ -308,4 +385,82 @@ model BillingPayment {
 
   @@index([businessId, status])
   @@index([businessId, createdAt])
+}
+
+model IntegrationConnection {
+  id                String            @id @default(cuid())
+  businessId        String
+  provider          IntegrationProvider
+  status            IntegrationStatus @default(NOT_CONNECTED)
+  externalAccountId String?
+  config            Json?
+  lastSyncedAt      DateTime?
+  business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([businessId, provider])
+  @@index([businessId])
+}
+
+model ReservationRequest {
+  id                String                   @id @default(cuid())
+  businessId        String
+  source            ReservationSource
+  status            ReservationRequestStatus @default(PENDING)
+  guestName         String
+  guestPhone        String?
+  requestedDate     String?
+  requestedTime     String?
+  guestCount        Int?
+  notes             String?
+  extractedData     Json?
+  confidenceScore   Float?
+  rawMessage        String?
+  reviewReason      String?
+  approvedReservationId String?
+  reviewedByUserId  String?
+  business          Business                 @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@index([businessId, status])
+  @@index([businessId, source])
+}
+
+model AuditLog {
+  id           String        @id @default(cuid())
+  businessId   String?
+  actorUserId  String?
+  actorRole    UserRole?
+  category     AuditCategory
+  severity     AuditSeverity @default(INFO)
+  action       String
+  targetType   String?
+  targetId     String?
+  message      String
+  ipAddress    String?
+  metadata     Json?
+  business     Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+
+  @@index([businessId, category, createdAt])
+  @@index([category, severity, createdAt])
+}
+
+model RateLimitBucket {
+  id           String   @id @default(cuid())
+  businessId    String?
+  action       String
+  identifier   String
+  windowKey    String
+  count        Int      @default(0)
+  blockedUntil DateTime?
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  business     Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([action, identifier, windowKey])
+  @@index([action, identifier])
+  @@index([blockedUntil])
 }

@@ -1,8 +1,31 @@
-import { CallOutcome, CustomerTag, ReservationStatus, TableStatus } from "@prisma/client";
+import {
+  BusinessStatus,
+  CallOutcome,
+  CustomerTag,
+  IntegrationStatus,
+  ReservationStatus,
+  SubscriptionStatus,
+  TableStatus
+} from "@prisma/client";
 import { cn } from "@/lib/utils";
-import { callOutcomeLabels, customerTagLabels, reservationStatusLabels, tableStatusLabels } from "@/lib/constants";
+import {
+  businessStatusLabels,
+  callOutcomeLabels,
+  customerTagLabels,
+  integrationStatusLabels,
+  reservationStatusLabels,
+  subscriptionStatusLabels,
+  tableStatusLabels
+} from "@/lib/constants";
 
-type SupportedStatus = ReservationStatus | TableStatus | CallOutcome | CustomerTag;
+type SupportedStatus =
+  | ReservationStatus
+  | TableStatus
+  | CallOutcome
+  | CustomerTag
+  | BusinessStatus
+  | SubscriptionStatus
+  | IntegrationStatus;
 
 const styleMap: Record<SupportedStatus, string> = {
   CONFIRMED: "bg-emerald-100 text-emerald-800",
@@ -20,14 +43,25 @@ const styleMap: Record<SupportedStatus, string> = {
   INFO_REQUEST: "bg-violet-100 text-violet-700",
   VIP: "bg-amber-100 text-amber-800",
   REGULAR: "bg-slate-100 text-slate-700",
-  NEW: "bg-sky-100 text-sky-700"
+  NEW: "bg-sky-100 text-sky-700",
+  ACTIVE: "bg-emerald-100 text-emerald-800",
+  SUSPENDED: "bg-rose-100 text-rose-700",
+  TRIALING: "bg-amber-100 text-amber-800",
+  PAST_DUE: "bg-orange-100 text-orange-700",
+  CANCELED: "bg-slate-200 text-slate-700",
+  NOT_CONNECTED: "bg-stone-100 text-stone-700",
+  CONNECTED: "bg-emerald-100 text-emerald-800",
+  NEEDS_CONFIGURATION: "bg-amber-100 text-amber-800"
 };
 
 const labelMap: Partial<Record<SupportedStatus, string>> = {
   ...reservationStatusLabels,
   ...tableStatusLabels,
   ...callOutcomeLabels,
-  ...customerTagLabels
+  ...customerTagLabels,
+  ...businessStatusLabels,
+  ...subscriptionStatusLabels,
+  ...integrationStatusLabels
 };
 
 export function StatusBadge({ value }: { value: SupportedStatus }) {

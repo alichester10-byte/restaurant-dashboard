@@ -10,6 +10,7 @@ const businessItems = [
   { href: "/reservations" as Route, label: "Rezervasyonlar", short: "RZ" },
   { href: "/tables" as Route, label: "Masa Planı", short: "MP" },
   { href: "/customers" as Route, label: "Müşteriler", short: "MS" },
+  { href: "/integrations" as Route, label: "Kanallar", short: "KN" },
   { href: "/reports" as Route, label: "Raporlar", short: "RP" },
   { href: "/billing" as Route, label: "Faturalama", short: "BL" },
   { href: "/settings" as Route, label: "Ayarlar", short: "AY" }
@@ -17,6 +18,7 @@ const businessItems = [
 
 const superAdminItems = [
   { href: "/super-admin" as Route, label: "İşletmeler", short: "SA" },
+  { href: "/admin/security" as Route, label: "Güvenlik", short: "GV" },
   { href: "/onboarding" as Route, label: "Onboarding", short: "OB" }
 ];
 

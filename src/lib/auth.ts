@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { UserRole } from "@prisma/client";
+import { AuditCategory, AuditSeverity, UserRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { createAuditLog } from "@/lib/audit";
 import { getBusinessEntitlement, hasBusinessAccess } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validation";
@@ -28,6 +29,12 @@ export async function createSession(userId: string) {
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+
+  await prisma.session.deleteMany({
+    where: {
+      userId
+    }
+  });
 
   await prisma.session.create({
     data: {
@@ -115,6 +122,10 @@ export async function requireRole(...roles: UserRole[]) {
   return session;
 }
 
+export async function requireSuperAdmin() {
+  return requireRole(UserRole.SUPER_ADMIN);
+}
+
 export async function requireBusinessUser() {
   return requireBusinessAccess();
 }
@@ -176,6 +187,15 @@ export async function authenticate(formData: FormData) {
 
   const limiter = await rateLimitPlaceholder(parsed.data.email, "login");
   if (!limiter.allowed) {
+    await createAuditLog({
+      category: AuditCategory.AUTH,
+      action: "login_rate_limited",
+      message: "Login attempt blocked by rate limit.",
+      severity: AuditSeverity.WARN,
+      metadata: {
+        email: parsed.data.email
+      }
+    });
     return { ok: false, error: "Çok fazla deneme yapıldı. Lütfen tekrar deneyin." };
   }
 
@@ -186,15 +206,49 @@ export async function authenticate(formData: FormData) {
   });
 
   if (!user) {
+    await createAuditLog({
+      category: AuditCategory.AUTH,
+      action: "login_failed",
+      message: "Login failed because user does not exist.",
+      severity: AuditSeverity.WARN,
+      metadata: {
+        email: parsed.data.email
+      }
+    });
     return { ok: false, error: "E-posta veya şifre hatalı." };
   }
 
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
 
   if (!isValid) {
+    await createAuditLog({
+      businessId: user.businessId,
+      actorUserId: user.id,
+      actorRole: user.role,
+      category: AuditCategory.AUTH,
+      action: "login_failed",
+      message: "Login failed due to invalid password.",
+      severity: AuditSeverity.WARN
+    });
     return { ok: false, error: "E-posta veya şifre hatalı." };
   }
 
   await createSession(user.id);
+  await prisma.business.update({
+    where: {
+      id: user.businessId
+    },
+    data: {
+      lastActivityAt: new Date()
+    }
+  });
+  await createAuditLog({
+    businessId: user.businessId,
+    actorUserId: user.id,
+    actorRole: user.role,
+    category: AuditCategory.AUTH,
+    action: "login_success",
+    message: "User logged in successfully."
+  });
   return { ok: true, role: user.role };
 }

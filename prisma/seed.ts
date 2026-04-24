@@ -2,11 +2,15 @@ import {
   BusinessStatus,
   CallOutcome,
   CustomerTag,
+  IntegrationProvider,
+  IntegrationStatus,
   PrismaClient,
   ReservationSource,
   ReservationStatus,
   SubscriptionPlan,
   SubscriptionStatus,
+  TableArea,
+  TableShape,
   TableStatus,
   UserRole
 } from "@prisma/client";
@@ -56,12 +60,22 @@ async function createBusinessWorkspace(input: {
     data: {
       name: input.businessName,
       slug: input.slug,
+      ownerName: input.adminName,
+      ownerEmail: input.adminEmail,
+      ownerPhone: input.phone,
+      businessPhone: input.phone,
+      businessAddress: "Demo adres",
+      city: "İstanbul",
+      district: input.slug === "limon-masa" ? "Beşiktaş" : "Kadıköy",
+      restaurantType: "Modern restoran",
+      estimatedTableCount: 12,
       status: input.status,
       subscriptionPlan: input.subscriptionPlan,
       subscriptionStatus: input.subscriptionStatus,
       trialStartsAt: new Date(),
       trialEndsAt: input.trialEndsAt,
-      onboardingCompletedAt: new Date()
+      onboardingCompletedAt: new Date(),
+      lastActivityAt: new Date()
     }
   });
 
@@ -99,12 +113,12 @@ async function createBusinessWorkspace(input: {
 
   const tables = await Promise.all(
     [
-      { number: "T1", label: "Pencere 1", zone: "Salon", seatCapacity: 2, status: TableStatus.RESERVED },
-      { number: "T2", label: "Pencere 2", zone: "Salon", seatCapacity: 2, status: TableStatus.EMPTY },
-      { number: "T3", label: "Orta 1", zone: "Salon", seatCapacity: 4, status: TableStatus.OCCUPIED },
-      { number: "T4", label: "Orta 2", zone: "Salon", seatCapacity: 4, status: TableStatus.RESERVED },
-      { number: "T5", label: "Chef's Table", zone: "Özel Alan", seatCapacity: 6, status: TableStatus.EMPTY },
-      { number: "T6", label: "Teras 1", zone: "Teras", seatCapacity: 4, status: TableStatus.RESERVED }
+      { number: "T1", label: "Pencere 1", zone: "Salon", area: TableArea.WINDOW, shape: TableShape.SQUARE, seatCapacity: 2, status: TableStatus.RESERVED },
+      { number: "T2", label: "Pencere 2", zone: "Salon", area: TableArea.WINDOW, shape: TableShape.SQUARE, seatCapacity: 2, status: TableStatus.EMPTY },
+      { number: "T3", label: "Orta 1", zone: "Salon", area: TableArea.MAIN_DINING, shape: TableShape.RECTANGLE, seatCapacity: 4, status: TableStatus.OCCUPIED },
+      { number: "T4", label: "Orta 2", zone: "Salon", area: TableArea.ENTRANCE, shape: TableShape.RECTANGLE, seatCapacity: 4, status: TableStatus.RESERVED },
+      { number: "T5", label: "Chef's Table", zone: "Özel Alan", area: TableArea.VIP, shape: TableShape.BOOTH, seatCapacity: 6, status: TableStatus.EMPTY },
+      { number: "T6", label: "Teras 1", zone: "Teras", area: TableArea.TERRACE, shape: TableShape.ROUND, seatCapacity: 4, status: TableStatus.RESERVED }
     ].map((table) =>
       prisma.diningTable.create({
         data: {
@@ -116,6 +130,12 @@ async function createBusinessWorkspace(input: {
   );
 
   if (!input.createDemoOpsData) {
+    await prisma.integrationConnection.createMany({
+      data: [
+        { businessId: business.id, provider: IntegrationProvider.WEBSITE_WIDGET, status: IntegrationStatus.NEEDS_CONFIGURATION },
+        { businessId: business.id, provider: IntegrationProvider.AI_ASSISTANT, status: IntegrationStatus.NEEDS_CONFIGURATION }
+      ]
+    });
     return { business, admin, tables };
   }
 
@@ -186,11 +206,24 @@ async function createBusinessWorkspace(input: {
     )
   );
 
+  await prisma.integrationConnection.createMany({
+    data: [
+      { businessId: business.id, provider: IntegrationProvider.WHATSAPP, status: IntegrationStatus.CONNECTED, lastSyncedAt: new Date() },
+      { businessId: business.id, provider: IntegrationProvider.INSTAGRAM, status: IntegrationStatus.NEEDS_CONFIGURATION },
+      { businessId: business.id, provider: IntegrationProvider.WEBSITE_WIDGET, status: IntegrationStatus.CONNECTED, lastSyncedAt: new Date() },
+      { businessId: business.id, provider: IntegrationProvider.AI_ASSISTANT, status: IntegrationStatus.NEEDS_CONFIGURATION }
+    ]
+  });
+
   return { business, admin, tables, customers, reservations };
 }
 
 async function main() {
   await prisma.session.deleteMany();
+  await prisma.rateLimitBucket.deleteMany();
+  await prisma.auditLog.deleteMany();
+  await prisma.integrationConnection.deleteMany();
+  await prisma.reservationRequest.deleteMany();
   await prisma.callLog.deleteMany();
   await prisma.reservation.deleteMany();
   await prisma.diningTable.deleteMany();
@@ -206,11 +239,22 @@ async function main() {
     data: {
       name: "Limon Masa Platform",
       slug: "platform-ops",
+      ownerName: "Platform Super Admin",
+      ownerEmail: superAdminEmail,
+      ownerPhone: "+90 212 000 00 00",
+      businessPhone: "+90 212 000 00 00",
+      businessAddress: "Platform merkezi",
+      city: "İstanbul",
+      district: "Sarıyer",
+      restaurantType: "Platform",
+      estimatedTableCount: 0,
       status: BusinessStatus.ACTIVE,
       subscriptionPlan: SubscriptionPlan.ENTERPRISE,
       subscriptionStatus: SubscriptionStatus.ACTIVE,
       onboardingCompletedAt: new Date(),
-      notes: "Internal platform workspace for super admin users."
+      notes: "Internal platform workspace for super admin users.",
+      internalNotes: "Super admin workspace",
+      lastActivityAt: new Date()
     }
   });
 

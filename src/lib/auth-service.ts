@@ -1,11 +1,13 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { SubscriptionStatus } from "@prisma/client";
+import { AuditCategory, SubscriptionStatus } from "@prisma/client";
 import { getAppBaseUrl, hasBusinessAccess } from "@/lib/billing";
 import { createSession } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
+import { sanitizeNullableText, sanitizeText } from "@/lib/security";
 import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "@/lib/validation";
 import { CreateBusinessError, createBusinessWithAdmin } from "@/lib/tenant";
 
@@ -55,7 +57,7 @@ function normalizeEmail(email: string) {
 
 export async function loginWithEmail(formData: FormData) {
   const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
+    email: sanitizeText(formData.get("email")).toLowerCase(),
     password: formData.get("password")
   });
 
@@ -79,15 +81,43 @@ export async function loginWithEmail(formData: FormData) {
   });
 
   if (!user) {
+    await createAuditLog({
+      category: AuditCategory.AUTH,
+      action: "login_failed",
+      message: "Login failed because user does not exist.",
+      metadata: {
+        email
+      }
+    });
     throw new AuthFlowError("invalid_credentials", "E-posta veya şifre hatalı.");
   }
 
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
   if (!isValid) {
+    await createAuditLog({
+      businessId: user.businessId,
+      actorUserId: user.id,
+      actorRole: user.role,
+      category: AuditCategory.AUTH,
+      action: "login_failed",
+      message: "Login failed due to invalid password."
+    });
     throw new AuthFlowError("invalid_credentials", "E-posta veya şifre hatalı.");
   }
 
   await createSession(user.id);
+  await prisma.business.update({
+    where: { id: user.businessId },
+    data: { lastActivityAt: new Date() }
+  });
+  await createAuditLog({
+    businessId: user.businessId,
+    actorUserId: user.id,
+    actorRole: user.role,
+    category: AuditCategory.AUTH,
+    action: "login_success",
+    message: "User logged in successfully."
+  });
 
   return {
     redirectTo:
@@ -101,7 +131,7 @@ export async function loginWithEmail(formData: FormData) {
 }
 
 export async function registerBusinessAccount(formData: FormData) {
-  const email = normalizeEmail(String(formData.get("adminEmail") ?? ""));
+  const email = normalizeEmail(sanitizeText(formData.get("ownerEmail")));
   const limiter = await rateLimitPlaceholder(email, "register");
   if (!limiter.allowed) {
     throw new AuthFlowError("rate_limited", "Çok fazla kayıt denemesi yapıldı. Lütfen tekrar deneyin.");
@@ -110,14 +140,18 @@ export async function registerBusinessAccount(formData: FormData) {
   const parsed = (
     await import("@/lib/validation")
   ).businessOnboardingSchema.safeParse({
-    businessName: formData.get("businessName"),
-    slug: formData.get("slug"),
-    restaurantName: formData.get("restaurantName"),
-    phone: formData.get("phone"),
-    adminName: formData.get("adminName"),
-    adminEmail: email,
+    businessName: sanitizeText(formData.get("businessName")),
+    ownerName: sanitizeText(formData.get("ownerName")),
+    ownerEmail: email,
+    ownerPhone: sanitizeText(formData.get("ownerPhone")),
+    businessPhone: sanitizeText(formData.get("businessPhone")),
+    businessAddress: sanitizeText(formData.get("businessAddress")),
+    city: sanitizeText(formData.get("city")),
+    district: sanitizeText(formData.get("district")),
+    restaurantType: sanitizeText(formData.get("restaurantType")),
+    estimatedTableCount: formData.get("estimatedTableCount"),
+    notes: sanitizeNullableText(formData.get("notes")),
     adminPassword: formData.get("adminPassword"),
-    seatingCapacity: formData.get("seatingCapacity"),
     createDefaultTables: formData.get("createDefaultTables") ?? "true",
     redirectTo: formData.get("redirectTo") ?? "/login"
   });
@@ -134,12 +168,11 @@ export async function registerBusinessAccount(formData: FormData) {
   try {
     result = await createBusinessWithAdmin({
       ...parsed.data,
-      adminEmail: email,
       createDefaultTables: parsed.data.createDefaultTables === "true"
     });
   } catch (error) {
     if (error instanceof CreateBusinessError) {
-      if (error.code === "admin_email_exists") {
+      if (error.code === "owner_email_exists") {
         throw new AuthFlowError("email_exists", "Bu e-posta ile zaten bir hesap oluşturulmuş.");
       }
       throw new AuthFlowError("validation", error.message);
@@ -246,7 +279,7 @@ export async function verifyEmailToken(token: string) {
 
 export async function requestPasswordReset(formData: FormData) {
   const parsed = forgotPasswordSchema.safeParse({
-    email: formData.get("email")
+    email: sanitizeText(formData.get("email")).toLowerCase()
   });
 
   if (!parsed.success) {
@@ -281,6 +314,14 @@ export async function requestPasswordReset(formData: FormData) {
   });
 
   const resetUrl = `${getAppBaseUrl()}/reset-password?token=${plainToken}`;
+  await createAuditLog({
+    businessId: user.businessId,
+    actorUserId: user.id,
+    actorRole: user.role,
+    category: AuditCategory.AUTH,
+    action: "password_reset_requested",
+    message: "Password reset requested."
+  });
   await sendPasswordResetEmail({
     to: email,
     name: user.name,
@@ -348,6 +389,15 @@ export async function resetPassword(formData: FormData) {
       }
     })
   ]);
+
+  await createAuditLog({
+    businessId: resetToken.user.businessId,
+    actorUserId: resetToken.user.id,
+    actorRole: resetToken.user.role,
+    category: AuditCategory.AUTH,
+    action: "password_reset_completed",
+    message: "Password reset completed."
+  });
 
   return { ok: true as const };
 }

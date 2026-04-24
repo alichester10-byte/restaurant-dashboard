@@ -1,16 +1,22 @@
 import bcrypt from "bcryptjs";
-import { BusinessStatus, SubscriptionPlan, SubscriptionStatus, UserRole } from "@prisma/client";
+import { AuditCategory, BusinessStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, UserRole } from "@prisma/client";
+import { createAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
+import { generateUniqueBusinessSlug } from "@/lib/slug";
 
 type CreateBusinessInput = {
   businessName: string;
-  slug: string;
-  restaurantName: string;
-  phone: string;
-  adminName: string;
-  adminEmail: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone: string;
   adminPassword: string;
-  seatingCapacity: number;
+  businessPhone: string;
+  businessAddress?: string;
+  city?: string;
+  district?: string;
+  restaurantType?: string;
+  estimatedTableCount?: number;
+  notes?: string;
   createDefaultTables: boolean;
   plan?: SubscriptionPlan;
   subscriptionStatus?: SubscriptionStatus;
@@ -28,58 +34,49 @@ const defaultOpeningHours = {
 };
 
 const defaultTables = [
-  { number: "T1", label: "Pencere 1", zone: "Salon", seatCapacity: 2 },
-  { number: "T2", label: "Pencere 2", zone: "Salon", seatCapacity: 2 },
-  { number: "T3", label: "Orta 1", zone: "Salon", seatCapacity: 4 },
-  { number: "T4", label: "Orta 2", zone: "Salon", seatCapacity: 4 },
-  { number: "T5", label: "Teras 1", zone: "Teras", seatCapacity: 4 },
-  { number: "T6", label: "Chef's Table", zone: "Özel Alan", seatCapacity: 6 }
+  { number: "T1", label: "Cam Önü 1", zone: "İç Salon", seatCapacity: 2, area: TableArea.WINDOW, shape: TableShape.SQUARE },
+  { number: "T2", label: "Cam Önü 2", zone: "İç Salon", seatCapacity: 2, area: TableArea.WINDOW, shape: TableShape.SQUARE },
+  { number: "T3", label: "Orta Salon 1", zone: "İç Salon", seatCapacity: 4, area: TableArea.MAIN_DINING, shape: TableShape.RECTANGLE },
+  { number: "T4", label: "Kapı Kenarı", zone: "İç Salon", seatCapacity: 4, area: TableArea.ENTRANCE, shape: TableShape.RECTANGLE },
+  { number: "T5", label: "Teras 1", zone: "Teras", seatCapacity: 4, area: TableArea.TERRACE, shape: TableShape.ROUND },
+  { number: "T6", label: "VIP Alan", zone: "Özel Alan", seatCapacity: 6, area: TableArea.VIP, shape: TableShape.BOOTH }
 ];
 
 export class CreateBusinessError extends Error {
-  code: "slug_exists" | "admin_email_exists" | "unknown";
+  code: "owner_email_exists" | "unknown";
 
-  constructor(code: "slug_exists" | "admin_email_exists" | "unknown", message: string) {
+  constructor(code: "owner_email_exists" | "unknown", message: string) {
     super(message);
     this.code = code;
   }
 }
 
 export async function createBusinessWithAdmin(input: CreateBusinessInput) {
-  const businessSlug = input.slug.trim().toLowerCase();
-  const adminEmail = input.adminEmail.trim().toLowerCase();
   const businessName = input.businessName.trim();
-  const restaurantName = input.restaurantName.trim();
-  const adminName = input.adminName.trim();
-  const phone = input.phone.trim();
+  const ownerName = input.ownerName.trim();
+  const ownerEmail = input.ownerEmail.trim().toLowerCase();
+  const ownerPhone = input.ownerPhone.trim();
+  const businessPhone = input.businessPhone.trim();
+  const businessAddress = input.businessAddress?.trim() || null;
+  const city = input.city?.trim() || null;
+  const district = input.district?.trim() || null;
+  const restaurantType = input.restaurantType?.trim() || null;
+  const notes = input.notes?.trim() || null;
 
-  const [existingBusiness, existingAdmin] = await Promise.all([
-    prisma.business.findUnique({
-      where: {
-        slug: businessSlug
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.user.findUnique({
-      where: {
-        email: adminEmail
-      },
-      select: {
-        id: true
-      }
-    })
-  ]);
-
-  if (existingBusiness) {
-    throw new CreateBusinessError("slug_exists", "Bu slug zaten kullanılıyor.");
-  }
+  const existingAdmin = await prisma.user.findUnique({
+    where: {
+      email: ownerEmail
+    },
+    select: {
+      id: true
+    }
+  });
 
   if (existingAdmin) {
-    throw new CreateBusinessError("admin_email_exists", "Bu yönetici e-postası zaten kullanılıyor.");
+    throw new CreateBusinessError("owner_email_exists", "Bu yönetici e-postası zaten kullanımda.");
   }
 
+  const businessSlug = await generateUniqueBusinessSlug(businessName);
   const passwordHash = await bcrypt.hash(input.adminPassword, 12);
 
   return prisma.$transaction(async (tx) => {
@@ -87,22 +84,34 @@ export async function createBusinessWithAdmin(input: CreateBusinessInput) {
       data: {
         name: businessName,
         slug: businessSlug,
+        ownerName,
+        ownerEmail,
+        ownerPhone,
+        businessPhone,
+        businessAddress,
+        city,
+        district,
+        restaurantType,
+        estimatedTableCount: input.estimatedTableCount ?? null,
+        notes,
         status: input.businessStatus ?? BusinessStatus.ACTIVE,
         subscriptionPlan: input.plan ?? SubscriptionPlan.STARTER,
         subscriptionStatus: input.subscriptionStatus ?? SubscriptionStatus.TRIALING,
         trialStartsAt: new Date(),
         trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        onboardingCompletedAt: new Date()
+        onboardingCompletedAt: new Date(),
+        lastActivityAt: new Date()
       }
     });
 
     await tx.restaurantSettings.create({
       data: {
         businessId: business.id,
-        restaurantName,
+        restaurantName: businessName,
         slug: businessSlug,
-        phone,
-        seatingCapacity: input.seatingCapacity,
+        phone: businessPhone,
+        address: businessAddress,
+        seatingCapacity: Math.max(12, (input.estimatedTableCount ?? 8) * 4),
         openingHours: defaultOpeningHours
       }
     });
@@ -110,8 +119,8 @@ export async function createBusinessWithAdmin(input: CreateBusinessInput) {
     const admin = await tx.user.create({
       data: {
         businessId: business.id,
-        email: adminEmail,
-        name: adminName,
+        email: ownerEmail,
+        name: ownerName,
         passwordHash,
         role: UserRole.BUSINESS_ADMIN
       }
@@ -125,6 +134,15 @@ export async function createBusinessWithAdmin(input: CreateBusinessInput) {
         }))
       });
     }
+
+    await createAuditLog({
+      businessId: business.id,
+      actorUserId: admin.id,
+      actorRole: admin.role,
+      category: AuditCategory.BUSINESS,
+      action: "business_created",
+      message: "A new business workspace was created."
+    });
 
     return { business, admin };
   });

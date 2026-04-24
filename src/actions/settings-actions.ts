@@ -1,10 +1,12 @@
 "use server";
 
-import { UserRole } from "@prisma/client";
+import { AuditCategory, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusinessWriteAccess } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
+import { sanitizeNullableText, sanitizeText } from "@/lib/security";
 import { settingsSchema } from "@/lib/validation";
 
 export async function updateSettingsAction(formData: FormData) {
@@ -15,10 +17,10 @@ export async function updateSettingsAction(formData: FormData) {
   const businessId = session.user.businessId;
 
   const parsed = settingsSchema.safeParse({
-    restaurantName: formData.get("restaurantName"),
-    phone: formData.get("phone"),
-    email: formData.get("email"),
-    address: formData.get("address"),
+    restaurantName: sanitizeText(formData.get("restaurantName")),
+    phone: sanitizeText(formData.get("phone")),
+    email: sanitizeNullableText(formData.get("email")),
+    address: sanitizeNullableText(formData.get("address")),
     seatingCapacity: formData.get("seatingCapacity"),
     averageDiningDurationMin: formData.get("averageDiningDurationMin"),
     maxPartySize: formData.get("maxPartySize"),
@@ -32,7 +34,7 @@ export async function updateSettingsAction(formData: FormData) {
     friday: formData.get("friday"),
     saturday: formData.get("saturday"),
     sunday: formData.get("sunday"),
-    notes: formData.get("notes")
+    notes: sanitizeNullableText(formData.get("notes"))
   });
 
   if (!parsed.success) {
@@ -69,6 +71,15 @@ export async function updateSettingsAction(formData: FormData) {
       },
       notes: parsed.data.notes || null
     }
+  });
+
+  await createAuditLog({
+    businessId,
+    actorUserId: session.user.id,
+    actorRole: session.user.role,
+    category: AuditCategory.BUSINESS,
+    action: "settings_updated",
+    message: "Restaurant settings updated."
   });
 
   revalidatePath("/dashboard");

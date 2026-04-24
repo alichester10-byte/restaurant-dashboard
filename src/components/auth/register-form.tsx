@@ -42,43 +42,61 @@ export function RegisterForm() {
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">İşletme Adı</span>
-          <input className="field" name="businessName" placeholder="Mavi Masa" required disabled={isPending} />
+          <input className="field" name="businessName" placeholder="Limon Masa Nişantaşı" required disabled={isPending} />
         </label>
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-ink">Slug</span>
-          <input className="field" name="slug" placeholder="mavi-masa" required disabled={isPending} />
+          <span className="text-sm font-semibold text-ink">Kurucu / İşletme Sahibi</span>
+          <input className="field" name="ownerName" placeholder="Ayşe Kaya" required disabled={isPending} />
         </label>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-ink">Restoran Adı</span>
-          <input className="field" name="restaurantName" placeholder="Mavi Masa" required disabled={isPending} />
+          <span className="text-sm font-semibold text-ink">Sahip E-postası</span>
+          <input className="field" type="email" name="ownerEmail" placeholder="ayse@restoran.com" required disabled={isPending} />
         </label>
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-ink">Telefon</span>
-          <input className="field" name="phone" placeholder="+90 555 123 45 67" required disabled={isPending} />
+          <span className="text-sm font-semibold text-ink">Sahip Telefonu</span>
+          <input className="field" name="ownerPhone" placeholder="+90 555 123 45 67" required disabled={isPending} />
         </label>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-ink">Yönetici Adı</span>
-          <input className="field" name="adminName" placeholder="Ayşe Operasyon" required disabled={isPending} />
+          <span className="text-sm font-semibold text-ink">İşletme Telefonu</span>
+          <input className="field" name="businessPhone" placeholder="+90 212 555 12 12" required disabled={isPending} />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold text-ink">Yönetici E-postası</span>
-          <input className="field" type="email" name="adminEmail" placeholder="admin@restoran.com" required disabled={isPending} />
-        </label>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">Şifre</span>
-          <input className="field" type="password" name="adminPassword" placeholder="Min. 8 karakter, harf ve rakam" required disabled={isPending} />
-        </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold text-ink">Toplam Kapasite</span>
-          <input className="field" type="number" name="seatingCapacity" defaultValue={80} required disabled={isPending} />
+          <input className="field" type="password" name="adminPassword" placeholder="En az 8 karakter, harf ve rakam" required disabled={isPending} />
         </label>
       </div>
+      <label className="space-y-2">
+        <span className="text-sm font-semibold text-ink">Adres</span>
+        <input className="field" name="businessAddress" placeholder="Valikonagi Caddesi No: 12" required disabled={isPending} />
+      </label>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-ink">Şehir</span>
+          <input className="field" name="city" placeholder="İstanbul" required disabled={isPending} />
+        </label>
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-ink">İlçe</span>
+          <input className="field" name="district" placeholder="Şişli" required disabled={isPending} />
+        </label>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-ink">Restoran Tipi</span>
+          <input className="field" name="restaurantType" placeholder="Modern Türk Mutfağı" required disabled={isPending} />
+        </label>
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-ink">Tahmini Masa Sayısı</span>
+          <input className="field" type="number" name="estimatedTableCount" defaultValue={12} required disabled={isPending} />
+        </label>
+      </div>
+      <label className="space-y-2">
+        <span className="text-sm font-semibold text-ink">Notlar</span>
+        <textarea className="field min-h-24" name="notes" placeholder="Servis tipi, açılış hedefi, özel operasyon notları..." disabled={isPending} />
+      </label>
       <label className="flex items-center gap-3 rounded-2xl border border-[color:var(--border)] bg-white/80 px-4 py-3 text-sm text-ink">
         <input type="checkbox" name="createDefaultTables" value="true" defaultChecked disabled={isPending} />
         Varsayılan masa planını oluştur

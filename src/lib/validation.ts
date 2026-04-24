@@ -1,4 +1,4 @@
-import { BusinessStatus, CallOutcome, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableStatus } from "@prisma/client";
+import { BusinessStatus, CallOutcome, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const loginSchema = z.object({
@@ -20,13 +20,17 @@ export const resetPasswordSchema = z.object({
 
 export const businessOnboardingSchema = z.object({
   businessName: z.string().min(2).max(100),
-  slug: z.string().min(2).max(60).regex(/^[a-z0-9-]+$/),
-  restaurantName: z.string().min(2).max(100),
-  phone: z.string().min(10).max(30),
-  adminName: z.string().min(2).max(80),
-  adminEmail: z.string().email(),
+  ownerName: z.string().min(2).max(80),
+  ownerEmail: z.string().email(),
+  ownerPhone: z.string().min(10).max(30),
+  businessPhone: z.string().min(10).max(30),
+  businessAddress: z.string().max(200),
+  city: z.string().min(2).max(80),
+  district: z.string().min(2).max(80),
+  restaurantType: z.string().min(2).max(80),
+  estimatedTableCount: z.coerce.number().int().min(1).max(150),
+  notes: z.string().max(500).optional().or(z.literal("")),
   adminPassword: z.string().min(8).max(100),
-  seatingCapacity: z.coerce.number().int().min(1).max(500),
   createDefaultTables: z.enum(["true", "false"]).default("true"),
   redirectTo: z.string().default("/login")
 });
@@ -41,6 +45,8 @@ export const businessStatusSchema = z.object({
   status: z.nativeEnum(BusinessStatus),
   plan: z.nativeEnum(SubscriptionPlan).optional(),
   subscriptionStatus: z.nativeEnum(SubscriptionStatus).optional(),
+  internalNotes: z.string().max(1000).optional().or(z.literal("")),
+  trialDays: z.coerce.number().int().min(0).max(90).optional(),
   redirectTo: z.string().default("/super-admin")
 });
 
@@ -71,6 +77,24 @@ export const tableAssignSchema = z.object({
   redirectTo: z.string().default("/tables")
 });
 
+export const tableFormSchema = z.object({
+  id: z.string().optional(),
+  number: z.string().min(1).max(12),
+  label: z.string().min(2).max(80),
+  zone: z.string().min(2).max(80),
+  area: z.nativeEnum(TableArea),
+  shape: z.nativeEnum(TableShape),
+  seatCapacity: z.coerce.number().int().min(1).max(20),
+  status: z.nativeEnum(TableStatus),
+  notes: z.string().max(300).optional().or(z.literal("")),
+  redirectTo: z.string().default("/tables")
+});
+
+export const tableArchiveSchema = z.object({
+  tableId: z.string(),
+  redirectTo: z.string().default("/tables")
+});
+
 export const callSchema = z.object({
   callerName: z.string().min(2).max(80).optional().or(z.literal("")),
   phone: z.string().min(10).max(30),
@@ -80,6 +104,13 @@ export const callSchema = z.object({
   customerId: z.string().optional().or(z.literal("")),
   reservationId: z.string().optional().or(z.literal("")),
   redirectTo: z.string().default("/dashboard")
+});
+
+export const reservationRequestReviewSchema = z.object({
+  requestId: z.string(),
+  decision: z.nativeEnum(ReservationRequestStatus),
+  reason: z.string().max(300).optional().or(z.literal("")),
+  redirectTo: z.string().default("/integrations")
 });
 
 export const settingsSchema = z.object({

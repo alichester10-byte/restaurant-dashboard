@@ -1,6 +1,8 @@
-import { BillingPaymentStatus, SubscriptionStatus } from "@prisma/client";
+import { AuditCategory, BillingPaymentStatus, SubscriptionStatus } from "@prisma/client";
+import { createAuditLog } from "@/lib/audit";
 import { calculateSubscriptionPeriodEnd } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
+import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { verifyPaytrCallbackHash } from "@/lib/paytr";
 
 function textResponse(body: string, status = 200) {
@@ -13,6 +15,10 @@ function textResponse(body: string, status = 200) {
 }
 
 export async function POST(request: Request) {
+  const limiter = await rateLimitPlaceholder("paytr-callback", "webhook");
+  if (!limiter.allowed) {
+    return textResponse("PAYTR notification failed: rate limited", 429);
+  }
   const body = await request.text();
   const params = new URLSearchParams(body);
 
@@ -102,6 +108,15 @@ export async function POST(request: Request) {
       })
     ]);
 
+    await createAuditLog({
+      businessId: payment.businessId,
+      category: AuditCategory.BILLING,
+      action: "payment_succeeded",
+      message: "PAYTR payment callback activated subscription.",
+      targetType: "BillingPayment",
+      targetId: payment.id
+    });
+
     console.info("[PAYTR:callback-success]", {
       merchantOid,
       businessId: payment.businessId,
@@ -141,6 +156,19 @@ export async function POST(request: Request) {
       }
     })
   ]);
+
+  await createAuditLog({
+    businessId: payment.businessId,
+    category: AuditCategory.BILLING,
+    action: "payment_failed",
+    message: "PAYTR payment callback marked payment as failed.",
+    targetType: "BillingPayment",
+    targetId: payment.id,
+    metadata: {
+      failedReasonCode,
+      failedReasonMessage
+    }
+  });
 
   console.warn("[PAYTR:callback-failed]", {
     merchantOid,
