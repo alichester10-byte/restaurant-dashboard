@@ -117,75 +117,94 @@ export default async function IntegrationsPage({
           </div>
 
           <div className="mt-8 border-t border-[color:var(--border)] pt-8">
-          <div className="section-title">Bekleyen Talepler</div>
-          <h2 className="mt-2 text-2xl font-semibold text-ink">Mesajdan rezervasyona dönüşen talepler</h2>
-          <p className="mt-2 text-sm leading-6 text-sage">
-            Tüm dış kanal talepleri önce onay bekleyen istek olarak düşer. Ekip onayı olmadan canlı rezervasyon oluşmaz.
-          </p>
+            <div className="section-title">Bekleyen Talepler</div>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">Mesajdan rezervasyona dönüşen talepler</h2>
+            <p className="mt-2 text-sm leading-6 text-sage">
+              Tüm dış kanal talepleri önce onay bekleyen istek olarak düşer. Ekip onayı olmadan canlı rezervasyon oluşmaz.
+            </p>
 
-          <div className="mt-6 space-y-4">
-            {data.pendingRequests.length === 0 ? (
-              <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-6 text-sm leading-6 text-sage">
-                Henüz bekleyen dış kanal talebi yok. WhatsApp, Instagram veya web widget akışı bağlandığında talepler burada görünecek.
-              </div>
-            ) : (
-              data.pendingRequests.map((request) => (
-                <div key={request.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="text-lg font-semibold text-ink">{request.guestName}</div>
-                        <RequestBadge value={request.status} />
-                      </div>
-                      <div className="mt-2 text-sm text-sage">
-                        {reservationSourceLabels[request.source]} • {request.guestPhone ?? "Telefon bekleniyor"} • {formatDateTime(request.createdAt)}
-                      </div>
-                      <div className="mt-2 text-sm text-sage">
-                        {request.requestedDate ?? "Tarih yok"} • {request.requestedTime ?? "Saat yok"} • {request.guestCount ?? "-"} kişi
-                      </div>
-                      <div className="mt-3 grid gap-3 md:grid-cols-3">
-                        <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
-                          <div className="font-semibold text-ink">İsim</div>
-                          <div className="mt-1">{request.guestName}</div>
-                        </div>
-                        <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
-                          <div className="font-semibold text-ink">Telefon</div>
-                          <div className="mt-1">{request.guestPhone ?? "Belirlenemedi"}</div>
-                        </div>
-                        <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
-                          <div className="font-semibold text-ink">Kaynak</div>
-                          <div className="mt-1">{reservationSourceLabels[request.source]}</div>
-                        </div>
-                      </div>
-                      <div className="mt-3 rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
-                        {request.rawMessage ?? request.notes ?? "Mesaj içeriği yok"}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm">
-                      AI güven skoru: %{Math.round((request.confidenceScore ?? 0) * 100)}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <form action={reviewReservationRequestAction} className="space-y-3">
-                      <input type="hidden" name="requestId" value={request.id} />
-                      <input type="hidden" name="decision" value={ReservationRequestStatus.APPROVED} />
-                      <input type="hidden" name="redirectTo" value="/integrations" />
-                      <input className="field" name="reason" placeholder="İsteğe bağlı onay notu" />
-                      <FormSubmitButton className="w-full" idleLabel="Onayla ve Rezervasyona Dönüştür" pendingLabel="Onaylanıyor..." />
-                    </form>
-                    <form action={reviewReservationRequestAction} className="space-y-3">
-                      <input type="hidden" name="requestId" value={request.id} />
-                      <input type="hidden" name="decision" value={ReservationRequestStatus.REJECTED} />
-                      <input type="hidden" name="redirectTo" value="/integrations" />
-                      <input className="field" name="reason" placeholder="Reddetme nedeni" />
-                      <FormSubmitButton className="w-full" variant="danger" idleLabel="Reddet" pendingLabel="Reddediliyor..." />
-                    </form>
-                  </div>
+            <div className="mt-6 space-y-4">
+              {data.pendingRequests.length === 0 ? (
+                <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-6 text-sm leading-6 text-sage">
+                  Henüz bekleyen dış kanal talebi yok. WhatsApp, Instagram veya web widget akışı bağlandığında talepler burada görünecek.
                 </div>
-              ))
-            )}
-          </div>
+              ) : (
+                data.pendingRequests.map((request) => (
+                  <div key={request.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="text-lg font-semibold text-ink">{request.guestName}</div>
+                          <RequestBadge value={request.status} />
+                        </div>
+                        <div className="mt-2 text-sm text-sage">
+                          {reservationSourceLabels[request.source]} • {request.guestPhone ?? "Telefon bekleniyor"} • {formatDateTime(request.createdAt)}
+                        </div>
+                        <div className="mt-2 text-sm text-sage">
+                          {request.requestedDate ?? "Tarih yok"} • {request.requestedTime ?? "Saat yok"} • {request.guestCount ?? "-"} kişi
+                        </div>
+                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                          <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                            <div className="font-semibold text-ink">İsim</div>
+                            <div className="mt-1">{request.guestName}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                            <div className="font-semibold text-ink">Telefon</div>
+                            <div className="mt-1">{request.guestPhone ?? "Belirlenemedi"}</div>
+                          </div>
+                          <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                            <div className="font-semibold text-ink">Kaynak</div>
+                            <div className="mt-1">{reservationSourceLabels[request.source]}</div>
+                          </div>
+                        </div>
+                        <div className="mt-3 rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
+                          {request.rawMessage ?? request.notes ?? "Mesaj içeriği yok"}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm">
+                        AI güven skoru: %{Math.round((request.confidenceScore ?? 0) * 100)}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
+                      <form action={reviewReservationRequestAction} className="space-y-3">
+                        <input type="hidden" name="requestId" value={request.id} />
+                        <input type="hidden" name="decision" value={ReservationRequestStatus.APPROVED} />
+                        <input type="hidden" name="redirectTo" value="/integrations" />
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <input className="field" name="guestName" defaultValue={request.guestName} placeholder="Misafir adı" />
+                          <input className="field" name="guestPhone" defaultValue={request.guestPhone ?? ""} placeholder="Telefon" />
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <input className="field" name="requestedDate" type="date" defaultValue={request.requestedDate ?? ""} />
+                          <input className="field" name="requestedTime" type="time" defaultValue={request.requestedTime ?? ""} />
+                          <input className="field" name="guestCount" type="number" min={1} max={20} defaultValue={request.guestCount ?? 2} />
+                        </div>
+                        <textarea className="field min-h-24" name="notes" defaultValue={request.notes ?? request.rawMessage ?? ""} placeholder="Rezervasyon notu" />
+                        <input className="field" name="reason" placeholder="İsteğe bağlı onay notu" />
+                        <FormSubmitButton className="w-full" idleLabel="Onayla ve Rezervasyona Dönüştür" pendingLabel="Onaylanıyor..." />
+                      </form>
+                      <form action={reviewReservationRequestAction} className="space-y-3">
+                        <input type="hidden" name="requestId" value={request.id} />
+                        <input type="hidden" name="decision" value={ReservationRequestStatus.REJECTED} />
+                        <input type="hidden" name="redirectTo" value="/integrations" />
+                        <input type="hidden" name="guestName" value={request.guestName} />
+                        <input type="hidden" name="guestPhone" value={request.guestPhone ?? ""} />
+                        <input type="hidden" name="requestedDate" value={request.requestedDate ?? ""} />
+                        <input type="hidden" name="requestedTime" value={request.requestedTime ?? ""} />
+                        <input type="hidden" name="guestCount" value={request.guestCount ?? 2} />
+                        <input type="hidden" name="notes" value={request.notes ?? request.rawMessage ?? ""} />
+                        <div className="rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
+                          İsterseniz sol tarafta alanları düzelttikten sonra onaylayın. Uygun değilse reddedip nedeni kaydedin.
+                        </div>
+                        <input className="field" name="reason" placeholder="Reddetme nedeni" />
+                        <FormSubmitButton className="w-full" variant="danger" idleLabel="Reddet" pendingLabel="Reddediliyor..." />
+                      </form>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </Panel>
 

@@ -133,6 +133,12 @@ export const reservationRequestReviewSchema = z.object({
   requestId: z.string(),
   decision: z.nativeEnum(ReservationRequestStatus),
   reason: z.string().max(300).optional().or(z.literal("")),
+  guestName: z.string().min(0).max(80).optional().or(z.literal("")),
+  guestPhone: z.string().min(0).max(30).optional().or(z.literal("")),
+  requestedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
+  requestedTime: z.string().regex(/^\d{2}:\d{2}$/).optional().or(z.literal("")),
+  guestCount: z.coerce.number().int().min(1).max(20).optional(),
+  notes: z.string().max(500).optional().or(z.literal("")),
   redirectTo: z.string().default("/integrations")
 });
 

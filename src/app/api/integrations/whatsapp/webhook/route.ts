@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     data: {
       businessId: business.id,
       source: ReservationSource.WHATSAPP,
-      guestName: extracted.guestName,
+      guestName: extracted.guestName || "WhatsApp talebi",
       guestPhone: extracted.guestPhone,
       requestedDate: extracted.requestedDate,
       requestedTime: extracted.requestedTime,

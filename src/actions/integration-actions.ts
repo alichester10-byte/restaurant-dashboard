@@ -7,7 +7,7 @@ import { requireBusinessAccess, requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { extractReservationRequest } from "@/lib/ai-reservation";
 import { prisma } from "@/lib/prisma";
-import { sanitizeNullableText } from "@/lib/security";
+import { sanitizeNullableText, sanitizeText } from "@/lib/security";
 import { buildReminderSchedule } from "@/lib/reminders";
 import { reservationRequestCreateSchema, reservationRequestReviewSchema } from "@/lib/validation";
 
@@ -65,6 +65,12 @@ export async function reviewReservationRequestAction(formData: FormData) {
     requestId: formData.get("requestId"),
     decision: formData.get("decision"),
     reason: sanitizeNullableText(formData.get("reason")),
+    guestName: sanitizeText(formData.get("guestName")),
+    guestPhone: sanitizeNullableText(formData.get("guestPhone")),
+    requestedDate: sanitizeNullableText(formData.get("requestedDate")),
+    requestedTime: sanitizeNullableText(formData.get("requestedTime")),
+    guestCount: formData.get("guestCount") ? Number(formData.get("guestCount")) : undefined,
+    notes: sanitizeNullableText(formData.get("notes")),
     redirectTo: formData.get("redirectTo") ?? "/integrations"
   });
 
@@ -89,7 +95,13 @@ export async function reviewReservationRequestAction(formData: FormData) {
       data: {
         status: ReservationRequestStatus.REJECTED,
         reviewReason: parsed.data.reason || null,
-        reviewedByUserId: session.user.id
+        reviewedByUserId: session.user.id,
+        guestName: parsed.data.guestName || request.guestName,
+        guestPhone: parsed.data.guestPhone || request.guestPhone,
+        requestedDate: parsed.data.requestedDate || request.requestedDate,
+        requestedTime: parsed.data.requestedTime || request.requestedTime,
+        guestCount: parsed.data.guestCount ?? request.guestCount,
+        notes: parsed.data.notes || request.notes
       }
     });
 
@@ -109,7 +121,14 @@ export async function reviewReservationRequestAction(formData: FormData) {
     redirect(`${parsed.data.redirectTo}?saved=rejected`);
   }
 
-  const phone = request.guestPhone?.trim() || `request-${request.id.slice(-6)}`;
+  const approvedGuestName = parsed.data.guestName || request.guestName || "AI Talebi";
+  const approvedGuestPhone = parsed.data.guestPhone || request.guestPhone || `request-${request.id.slice(-6)}`;
+  const approvedRequestedDate = parsed.data.requestedDate || request.requestedDate || new Date().toISOString().slice(0, 10);
+  const approvedRequestedTime = parsed.data.requestedTime || request.requestedTime || "19:30";
+  const approvedGuestCount = parsed.data.guestCount ?? request.guestCount ?? 2;
+  const approvedNotes = parsed.data.notes || request.notes || request.rawMessage || null;
+
+  const phone = approvedGuestPhone.trim() || `request-${request.id.slice(-6)}`;
   const settings = await prisma.restaurantSettings.findFirstOrThrow({
     where: {
       businessId
@@ -125,14 +144,12 @@ export async function reviewReservationRequestAction(formData: FormData) {
     update: {},
     create: {
       businessId,
-      name: request.guestName,
+      name: approvedGuestName,
       phone
     }
   });
 
-  const requestedDate = request.requestedDate ?? new Date().toISOString().slice(0, 10);
-  const requestedTime = request.requestedTime ?? "19:30";
-  const startAt = new Date(`${requestedDate}T${requestedTime}:00`);
+  const startAt = new Date(`${approvedRequestedDate}T${approvedRequestedTime}:00`);
   const endAt = new Date(startAt.getTime() + 100 * 60000);
   const reminderConfig = buildReminderSchedule({
     startAt,
@@ -144,14 +161,14 @@ export async function reviewReservationRequestAction(formData: FormData) {
     data: {
       businessId,
       customerId: customer.id,
-      guestName: request.guestName,
-      guestPhone: request.guestPhone ?? customer.phone,
-      source: request.source || ReservationSource.WEBSITE,
+      guestName: approvedGuestName,
+      guestPhone: approvedGuestPhone || customer.phone,
+      source: ReservationSource.AI,
       status: ReservationStatus.CONFIRMED,
       startAt,
       endAt,
-      guestCount: request.guestCount ?? 2,
-      notes: request.notes ?? request.rawMessage ?? null,
+      guestCount: approvedGuestCount,
+      notes: approvedNotes,
       reminderStatus: reminderConfig.reminderStatus,
       reminderScheduledAt: reminderConfig.reminderScheduledAt
     }
@@ -163,7 +180,14 @@ export async function reviewReservationRequestAction(formData: FormData) {
       status: ReservationRequestStatus.APPROVED,
       reviewReason: parsed.data.reason || null,
       reviewedByUserId: session.user.id,
-      approvedReservationId: reservation.id
+      approvedReservationId: reservation.id,
+      guestName: approvedGuestName,
+      guestPhone: approvedGuestPhone || null,
+      requestedDate: approvedRequestedDate,
+      requestedTime: approvedRequestedTime,
+      guestCount: approvedGuestCount,
+      notes: approvedNotes,
+      source: ReservationSource.AI
     }
   });
 
@@ -209,8 +233,8 @@ export async function createManualReservationRequestAction(formData: FormData) {
   await prisma.reservationRequest.create({
     data: {
       businessId,
-      source: parsed.data.source,
-      guestName: extracted.guestName,
+      source: ReservationSource.AI,
+      guestName: extracted.guestName || "AI talebi",
       guestPhone: extracted.guestPhone,
       requestedDate: extracted.requestedDate,
       requestedTime: extracted.requestedTime,

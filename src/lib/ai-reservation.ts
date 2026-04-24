@@ -2,7 +2,7 @@ import { ReservationSource } from "@prisma/client";
 import { extractReservationSignal } from "@/lib/integrations";
 
 export type ReservationExtractionResult = {
-  guestName: string;
+  guestName?: string;
   guestPhone?: string;
   requestedDate?: string;
   requestedTime?: string;
@@ -13,14 +13,61 @@ export type ReservationExtractionResult = {
   provider: "rule-based" | "openai";
 };
 
+function normalizeDate(input?: string) {
+  if (!input) {
+    return undefined;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    return input;
+  }
+
+  const match = input.match(/(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?/);
+  if (!match) {
+    return undefined;
+  }
+
+  const day = match[1].padStart(2, "0");
+  const month = match[2].padStart(2, "0");
+  const year = (match[3] ?? String(new Date().getFullYear())).padStart(4, "20");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeTime(input?: string) {
+  if (!input) {
+    return undefined;
+  }
+
+  const match = input.match(/([01]?\d|2[0-3])[:.]([0-5]\d)/);
+  if (!match) {
+    return undefined;
+  }
+
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function normalizeGuestCount(input?: number | string) {
+  const value = typeof input === "number" ? input : Number(input);
+  if (!Number.isFinite(value) || value <= 0 || value > 20) {
+    return undefined;
+  }
+  return Math.round(value);
+}
+
 function normalizeResult(input: Partial<ReservationExtractionResult>, fallbackMessage: string, source: ReservationSource): ReservationExtractionResult {
   const fallback = extractReservationSignal(fallbackMessage);
+  const guestName = input.guestName?.trim() || fallback.guestName?.trim() || undefined;
+  const guestPhone = input.guestPhone?.trim() || fallback.guestPhone;
+  const requestedDate = normalizeDate(input.requestedDate) || normalizeDate(fallback.requestedDate);
+  const requestedTime = normalizeTime(input.requestedTime) || normalizeTime(fallback.requestedTime);
+  const guestCount = normalizeGuestCount(input.guestCount) || normalizeGuestCount(fallback.guestCount);
+
   return {
-    guestName: input.guestName?.trim() || fallback.guestName,
-    guestPhone: input.guestPhone?.trim() || fallback.guestPhone,
-    requestedDate: input.requestedDate || fallback.requestedDate,
-    requestedTime: input.requestedTime || fallback.requestedTime,
-    guestCount: input.guestCount || fallback.guestCount,
+    guestName,
+    guestPhone,
+    requestedDate,
+    requestedTime,
+    guestCount,
     notes: input.notes?.trim() || fallbackMessage.trim(),
     source,
     confidenceScore: Math.min(0.99, Math.max(0.2, input.confidenceScore ?? fallback.confidenceScore)),
@@ -112,4 +159,8 @@ export async function extractReservationRequest(message: string, source: Reserva
   }
 
   return normalizeResult({ provider: "rule-based" }, message, source);
+}
+
+export async function parseReservationMessage(message: string) {
+  return extractReservationRequest(message, ReservationSource.AI);
 }

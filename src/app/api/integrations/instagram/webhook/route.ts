@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     data: {
       businessId: business.id,
       source: ReservationSource.INSTAGRAM,
-      guestName: extracted.guestName,
+      guestName: extracted.guestName || "Instagram talebi",
       guestPhone: extracted.guestPhone,
       requestedDate: extracted.requestedDate,
       requestedTime: extracted.requestedTime,
