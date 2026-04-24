@@ -11,6 +11,7 @@ import { getAppBaseUrl, getBusinessEntitlement } from "@/lib/billing";
 import { reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
 import { getIntegrationsPageData } from "@/lib/data";
 import { formatDateTime } from "@/lib/utils";
+import { getWhatsAppVerifyToken } from "@/lib/whatsapp";
 
 function RequestBadge({ value }: { value: ReservationRequestStatus }) {
   const tone =
@@ -68,7 +69,12 @@ export default async function IntegrationsPage({
         </Panel>
       ) : null}
 
-      <IntegrationCardGrid cards={data.cards} businessSlug={session.user.business.slug} baseUrl={getAppBaseUrl()} />
+      <IntegrationCardGrid
+        cards={data.cards}
+        businessSlug={session.user.business.slug}
+        baseUrl={getAppBaseUrl()}
+        whatsappVerifyToken={getWhatsAppVerifyToken()}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel id="ai-assistant-testing">

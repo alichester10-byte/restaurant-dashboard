@@ -6,6 +6,7 @@ import { extractReservationRequest } from "@/lib/ai-reservation";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { logSuspiciousActivity, sanitizeText } from "@/lib/security";
+import { getWhatsAppVerifyToken } from "@/lib/whatsapp";
 
 function verifyMetaSignature(body: string, signature: string | null) {
   const appSecret = process.env.META_WEBHOOK_APP_SECRET;
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token && token === process.env.META_WEBHOOK_VERIFY_TOKEN) {
+  if (mode === "subscribe" && token && token === getWhatsAppVerifyToken()) {
     return new NextResponse(challenge ?? "", { status: 200 });
   }
 

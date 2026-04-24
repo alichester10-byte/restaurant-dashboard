@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 import { integrationDescriptions } from "@/lib/integrations";
 import { integrationProviderLabels } from "@/lib/constants";
+import { WHATSAPP_SAMPLE_MESSAGE } from "@/lib/whatsapp";
 
 type CardItem = {
   provider: IntegrationProvider;
@@ -89,22 +90,50 @@ function IntegrationModal({
 export function IntegrationCardGrid({
   cards,
   businessSlug,
-  baseUrl
+  baseUrl,
+  whatsappVerifyToken
 }: {
   cards: CardItem[];
   businessSlug: string;
   baseUrl: string;
+  whatsappVerifyToken: string;
 }) {
   const [openProvider, setOpenProvider] = useState<IntegrationProvider | null>(null);
   const [testNotice, setTestNotice] = useState<string | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testPending, setTestPending] = useState(false);
   const publicReservationLink = `${baseUrl}/r/${businessSlug}`;
   const webhookUrl = `${baseUrl}/api/integrations/whatsapp/webhook`;
-  const verifyToken = "META_WEBHOOK_VERIFY_TOKEN";
+  const verifyToken = whatsappVerifyToken;
   const widgetScript = `<iframe src="${publicReservationLink}?embed=1" title="Reservation Widget" style="width:100%;min-height:640px;border:0;border-radius:24px;"></iframe>`;
   const qrUrl = useMemo(
     () => `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicReservationLink)}`,
     [publicReservationLink]
   );
+
+  async function testWhatsAppConnection() {
+    setTestPending(true);
+    setTestNotice(null);
+    setTestError(null);
+
+    try {
+      const response = await fetch("/api/integrations/whatsapp/test", {
+        method: "POST"
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !payload?.ok) {
+        setTestError("Bağlantı doğrulanamadı. Token ve webhook ayarlarını tekrar kontrol edin.");
+        return;
+      }
+
+      setTestNotice(`${payload.message} Örnek çıktı: ${payload.preview?.guestName ?? "Misafir"} • ${payload.preview?.requestedDate ?? "tarih yok"} • ${payload.preview?.requestedTime ?? "saat yok"}`);
+    } catch {
+      setTestError("Test sırasında beklenmeyen bir hata oluştu.");
+    } finally {
+      setTestPending(false);
+    }
+  }
 
   return (
     <>
@@ -166,25 +195,50 @@ export function IntegrationCardGrid({
           </div>
           <div className="grid gap-4">
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4">
-              <div className="text-sm font-semibold text-ink">Webhook URL</div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                Webhook URL
+                <span className="rounded-full bg-[color:var(--bg-strong)] px-2 py-1 text-[11px] font-medium text-sage" title="Meta panelindeki callback URL alanına bu adresi yapıştırın.">
+                  Nasıl kullanılır?
+                </span>
+              </div>
               <div className="mt-2 break-all text-sm text-sage">{webhookUrl}</div>
               <div className="mt-3"><CopyButton value={webhookUrl} label="Copy webhook URL" /></div>
             </div>
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4">
               <div className="text-sm font-semibold text-ink">Verify Token</div>
               <div className="mt-2 break-all text-sm text-sage">{verifyToken}</div>
+              <div className="mt-3"><CopyButton value={verifyToken} label="Verify token kopyala" /></div>
             </div>
-            <button
-              className="btn-secondary w-full sm:w-auto"
-              type="button"
-              onClick={() => {
-                setTestNotice("Test payload placeholder hazır. İlk gerçek mesaj geldiğinde talepler pending request kuyruğuna düşecek.");
-              }}
-            >
-              Test connection
+            <div className="rounded-2xl border border-[color:var(--border)] bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(244,239,227,0.92)_100%)] p-4">
+              <div className="text-sm font-semibold text-ink">Bağladıktan sonra ne olur</div>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-sage">
+                <span className="rounded-full bg-white px-3 py-2">message</span>
+                <span>→</span>
+                <span className="rounded-full bg-white px-3 py-2">AI</span>
+                <span>→</span>
+                <span className="rounded-full bg-white px-3 py-2">pending</span>
+                <span>→</span>
+                <span className="rounded-full bg-white px-3 py-2">approve</span>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4">
+              <div className="text-sm font-semibold text-ink">Demo WhatsApp mesajı</div>
+              <div className="mt-2 rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
+                {WHATSAPP_SAMPLE_MESSAGE}
+              </div>
+              <p className="mt-3 text-sm leading-6 text-sage">
+                Sistem bu mesajı analiz edip isim, telefon, tarih, saat ve kişi sayısını çıkarır; ardından talebi onay bekleyen kuyruğa düşürür.
+              </p>
+            </div>
+            <button className="btn-secondary w-full gap-2 sm:w-auto" type="button" onClick={testWhatsAppConnection} disabled={testPending}>
+              {testPending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current" /> : null}
+              {testPending ? "Bağlantı test ediliyor..." : "Test connection"}
             </button>
             {testNotice ? (
               <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{testNotice}</div>
+            ) : null}
+            {testError ? (
+              <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{testError}</div>
             ) : null}
           </div>
         </div>
