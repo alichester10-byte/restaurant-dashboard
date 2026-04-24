@@ -1,7 +1,7 @@
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSource } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { createAuditLog } from "@/lib/audit";
-import { extractReservationSignal } from "@/lib/integrations";
+import { extractReservationRequest } from "@/lib/ai-reservation";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { sanitizeNullableText, sanitizeText, verifySameOrigin } from "@/lib/security";
@@ -57,7 +57,10 @@ export async function POST(request: Request) {
     }
   });
 
-  const extracted = extractReservationSignal(`${guestName} ${guestPhone} ${requestedDate} ${requestedTime} ${guestCount ?? ""} ${notes}`);
+  const extracted = await extractReservationRequest(
+    `${guestName} ${guestPhone} ${requestedDate} ${requestedTime} ${guestCount ?? ""} ${notes}`,
+    source
+  );
   await prisma.reservationRequest.create({
     data: {
       businessId: business.id,

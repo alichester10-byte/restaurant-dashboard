@@ -1,5 +1,6 @@
 import { ReservationRequestStatus, UserRole } from "@prisma/client";
-import { configureIntegrationAction, reviewReservationRequestAction } from "@/actions/integration-actions";
+import { configureIntegrationAction, createManualReservationRequestAction, reviewReservationRequestAction } from "@/actions/integration-actions";
+import { LockedAction } from "@/components/demo/locked-action";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -53,6 +54,8 @@ export default async function IntegrationsPage({
               ? "Bekleyen talep onaylanarak rezervasyona dönüştürüldü."
               : searchParams.saved === "rejected"
                 ? "Talep reddedildi ve nedeni kaydedildi."
+                : searchParams.saved === "created"
+                  ? "Mesaj AI asistanı tarafından çözümelendi ve onay bekleyen talep olarak eklendi."
                 : "Bağlantı akışı yapılandırma aşamasına alındı."}
           </p>
         </Panel>
@@ -84,6 +87,36 @@ export default async function IntegrationsPage({
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>
+          <div className="section-title">AI Reservation Assistant</div>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">Mesajı yapıştır, talebi önizle</h2>
+          <p className="mt-2 text-sm leading-6 text-sage">
+            WhatsApp, Instagram veya web üzerinden gelebilecek mesajları önce pending request olarak oluşturun. İnsan onayı olmadan canlı rezervasyon oluşmaz.
+          </p>
+
+          <div className="mt-6">
+            {entitlement.isDemo ? (
+              <LockedAction
+                fullWidth
+                href="/billing?upgrade=ai-assistant"
+                title="AI asistanından talep oluşturmak için Pro gerekir"
+                description="Demo modunda pending request akışını inceleyebilirsiniz. Yeni talep oluşturma ve onay işlemleri Pro ile açılır."
+              />
+            ) : (
+              <form action={createManualReservationRequestAction} className="space-y-4">
+                <input type="hidden" name="redirectTo" value="/integrations" />
+                <input type="hidden" name="source" value="AI" />
+                <textarea
+                  className="field min-h-28"
+                  name="message"
+                  placeholder="Örn: Merhaba yarın akşam 20:00 için 4 kişilik yer var mı? Ben Emre, telefonum +90 555 111 22 33."
+                  required
+                />
+                <FormSubmitButton className="w-full md:w-auto" idleLabel="Talebi Çözümle ve Beklemeye Al" pendingLabel="Çözümleme yapılıyor..." />
+              </form>
+            )}
+          </div>
+
+          <div className="mt-8 border-t border-[color:var(--border)] pt-8">
           <div className="section-title">Bekleyen Talepler</div>
           <h2 className="mt-2 text-2xl font-semibold text-ink">Mesajdan rezervasyona dönüşen talepler</h2>
           <p className="mt-2 text-sm leading-6 text-sage">
@@ -109,6 +142,20 @@ export default async function IntegrationsPage({
                       </div>
                       <div className="mt-2 text-sm text-sage">
                         {request.requestedDate ?? "Tarih yok"} • {request.requestedTime ?? "Saat yok"} • {request.guestCount ?? "-"} kişi
+                      </div>
+                      <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                          <div className="font-semibold text-ink">İsim</div>
+                          <div className="mt-1">{request.guestName}</div>
+                        </div>
+                        <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                          <div className="font-semibold text-ink">Telefon</div>
+                          <div className="mt-1">{request.guestPhone ?? "Belirlenemedi"}</div>
+                        </div>
+                        <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                          <div className="font-semibold text-ink">Kaynak</div>
+                          <div className="mt-1">{reservationSourceLabels[request.source]}</div>
+                        </div>
                       </div>
                       <div className="mt-3 rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
                         {request.rawMessage ?? request.notes ?? "Mesaj içeriği yok"}
@@ -138,6 +185,7 @@ export default async function IntegrationsPage({
                 </div>
               ))
             )}
+          </div>
           </div>
         </Panel>
 

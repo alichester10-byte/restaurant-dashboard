@@ -1,10 +1,12 @@
 "use server";
 
-import { ReservationStatus, TableStatus } from "@prisma/client";
+import { AuditCategory, ReminderStatus, ReservationStatus, TableStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusinessWriteAccess } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
+import { buildReminderSchedule } from "@/lib/reminders";
 import { reservationSchema, tableAssignSchema, tableUpdateSchema } from "@/lib/validation";
 
 function buildReservationDateTime(date: string, time: string) {
@@ -25,9 +27,11 @@ async function syncTableStatus(businessId: string, tableId?: string | null, stat
   }
 
   const tableStatus =
-    status === ReservationStatus.CANCELLED || status === ReservationStatus.NO_SHOW
+    status === ReservationStatus.CANCELLED || status === ReservationStatus.NO_SHOW || status === ReservationStatus.COMPLETED
       ? TableStatus.EMPTY
-      : TableStatus.RESERVED;
+      : status === ReservationStatus.SEATED
+        ? TableStatus.OCCUPIED
+        : TableStatus.RESERVED;
 
   await prisma.diningTable.updateMany({
     where: { id: tableId, businessId },
@@ -90,6 +94,16 @@ export async function saveReservationAction(formData: FormData) {
 
   const startAt = buildReservationDateTime(parsed.data.reservationDate, parsed.data.reservationTime);
   const endAt = new Date(startAt.getTime() + 100 * 60000);
+  const settings = await prisma.restaurantSettings.findFirstOrThrow({
+    where: {
+      businessId
+    }
+  });
+  const reminderConfig = buildReminderSchedule({
+    startAt,
+    reminderEnabled: settings.reminderEnabled,
+    reminderTimingHours: settings.reminderTimingHours
+  });
 
   if (parsed.data.tableId) {
     const table = await prisma.diningTable.findFirst({
@@ -138,7 +152,23 @@ export async function saveReservationAction(formData: FormData) {
         endAt,
         guestCount: parsed.data.guestCount,
         occasion: parsed.data.occasion || null,
-        notes: parsed.data.notes || null
+        notes: parsed.data.notes || null,
+        reminderStatus:
+          parsed.data.status === ReservationStatus.CANCELLED ||
+          parsed.data.status === ReservationStatus.NO_SHOW ||
+          parsed.data.status === ReservationStatus.COMPLETED ||
+          parsed.data.status === ReservationStatus.SEATED
+            ? ReminderStatus.NOT_SCHEDULED
+            : reminderConfig.reminderStatus,
+        reminderScheduledAt:
+          parsed.data.status === ReservationStatus.CANCELLED ||
+          parsed.data.status === ReservationStatus.NO_SHOW ||
+          parsed.data.status === ReservationStatus.COMPLETED ||
+          parsed.data.status === ReservationStatus.SEATED
+            ? null
+            : reminderConfig.reminderScheduledAt,
+        reminderSentAt: null,
+        lastReminderError: null
       }
     });
 
@@ -150,9 +180,20 @@ export async function saveReservationAction(formData: FormData) {
     }
 
     await syncTableStatus(businessId, reservation.assignedTableId, reservation.status);
+    await createAuditLog({
+      businessId,
+      actorUserId: session.user.id,
+      actorRole: session.user.role,
+      category: AuditCategory.RESERVATION,
+      action: "reservation_updated",
+      message: "Reservation updated.",
+      targetType: "Reservation",
+      targetId: reservation.id
+    });
     revalidatePath("/dashboard");
     revalidatePath("/reservations");
     revalidatePath("/tables");
+    revalidatePath("/reports");
     redirect(withQueryParam(redirectTo, "saved", "updated"));
   } else {
     const customer = await findOrCreateCustomerForReservation({
@@ -174,14 +215,27 @@ export async function saveReservationAction(formData: FormData) {
         endAt,
         guestCount: parsed.data.guestCount,
         occasion: parsed.data.occasion || null,
-        notes: parsed.data.notes || null
+        notes: parsed.data.notes || null,
+        reminderStatus: reminderConfig.reminderStatus,
+        reminderScheduledAt: reminderConfig.reminderScheduledAt
       }
     });
 
     await syncTableStatus(businessId, reservation.assignedTableId, reservation.status);
+    await createAuditLog({
+      businessId,
+      actorUserId: session.user.id,
+      actorRole: session.user.role,
+      category: AuditCategory.RESERVATION,
+      action: "reservation_created",
+      message: "Reservation created.",
+      targetType: "Reservation",
+      targetId: reservation.id
+    });
     revalidatePath("/dashboard");
     revalidatePath("/reservations");
     revalidatePath("/tables");
+    revalidatePath("/reports");
     redirect(withQueryParam(`/reservations?reservationId=${reservation.id}`, "saved", "created"));
   }
 }
@@ -209,14 +263,44 @@ export async function updateReservationStatusAction(formData: FormData) {
 
   const reservation = await prisma.reservation.update({
     where: { id: existing.id },
-    data: { status }
+    data: {
+      status,
+      reminderStatus:
+        status === ReservationStatus.CANCELLED ||
+        status === ReservationStatus.NO_SHOW ||
+        status === ReservationStatus.COMPLETED ||
+        status === ReservationStatus.SEATED
+          ? ReminderStatus.NOT_SCHEDULED
+          : existing.reminderStatus,
+      reminderScheduledAt:
+        status === ReservationStatus.CANCELLED ||
+        status === ReservationStatus.NO_SHOW ||
+        status === ReservationStatus.COMPLETED ||
+        status === ReservationStatus.SEATED
+          ? null
+          : existing.reminderScheduledAt
+    }
   });
 
   await syncTableStatus(businessId, reservation.assignedTableId, status);
+  await createAuditLog({
+    businessId,
+    actorUserId: session.user.id,
+    actorRole: session.user.role,
+    category: AuditCategory.RESERVATION,
+    action: "reservation_status_updated",
+    message: "Reservation attendance status updated.",
+    targetType: "Reservation",
+    targetId: reservation.id,
+    metadata: {
+      status
+    }
+  });
 
   revalidatePath("/dashboard");
   revalidatePath("/reservations");
   revalidatePath("/tables");
+  revalidatePath("/reports");
   redirect(withQueryParam(redirectTo, "saved", "status"));
 }
 

@@ -1,11 +1,25 @@
-import { BillingPaymentStatus, BusinessStatus, CallOutcome, CustomerTag, IntegrationProvider, IntegrationStatus, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus, UserRole } from "@prisma/client";
+import { BillingPaymentStatus, BusinessStatus, CallOutcome, CustomerTag, IntegrationProvider, IntegrationStatus, ReminderChannel, ReminderStatus, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus, UserRole } from "@prisma/client";
 
 export const reservationStatusLabels: Record<ReservationStatus, string> = {
   CONFIRMED: "Onaylandı",
   PENDING: "Bekliyor",
+  SEATED: "Karşılandı",
   CANCELLED: "İptal",
   COMPLETED: "Tamamlandı",
   NO_SHOW: "Gelmedi"
+};
+
+export const reminderChannelLabels: Record<ReminderChannel, string> = {
+  EMAIL: "E-posta",
+  WHATSAPP: "WhatsApp",
+  SMS: "SMS"
+};
+
+export const reminderStatusLabels: Record<ReminderStatus, string> = {
+  NOT_SCHEDULED: "Planlanmadı",
+  SCHEDULED: "Planlandı",
+  SENT: "Gönderildi",
+  FAILED: "Başarısız"
 };
 
 export const tableStatusLabels: Record<TableStatus, string> = {
@@ -54,7 +68,8 @@ export const reservationSourceLabels: Record<ReservationSource, string> = {
   WALK_IN: "Walk-in",
   WEBSITE: "Web",
   GOOGLE: "Google",
-  WHATSAPP: "WhatsApp"
+  WHATSAPP: "WhatsApp",
+  AI: "AI"
 };
 
 export const userRoleLabels: Record<UserRole, string> = {

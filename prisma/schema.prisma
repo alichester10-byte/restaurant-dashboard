@@ -104,9 +104,23 @@ enum BillingPaymentStatus {
 enum ReservationStatus {
   CONFIRMED
   PENDING
+  SEATED
   CANCELLED
   COMPLETED
   NO_SHOW
+}
+
+enum ReminderChannel {
+  EMAIL
+  WHATSAPP
+  SMS
+}
+
+enum ReminderStatus {
+  NOT_SCHEDULED
+  SCHEDULED
+  SENT
+  FAILED
 }
 
 enum TableStatus {
@@ -136,6 +150,7 @@ enum ReservationSource {
   WEBSITE
   GOOGLE
   WHATSAPP
+  AI
 }
 
 model User {
@@ -267,6 +282,9 @@ model RestaurantSettings {
   allowWalkIns             Boolean  @default(true)
   requirePhoneVerification Boolean  @default(false)
   reservationLeadTimeDays  Int      @default(30)
+  reminderEnabled          Boolean  @default(false)
+  reminderTimingHours      Int      @default(24)
+  reminderChannel          ReminderChannel @default(EMAIL)
   notes                    String?
   business                 Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   createdAt                DateTime @default(now())
@@ -332,6 +350,10 @@ model Reservation {
   guestCount       Int
   occasion         String?
   notes            String?
+  reminderStatus   ReminderStatus     @default(NOT_SCHEDULED)
+  reminderScheduledAt DateTime?
+  reminderSentAt   DateTime?
+  lastReminderError String?
   createdBy        String?
   business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   createdAt        DateTime           @default(now())

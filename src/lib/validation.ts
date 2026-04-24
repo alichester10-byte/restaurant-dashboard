@@ -1,4 +1,4 @@
-import { BusinessStatus, CallOutcome, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus } from "@prisma/client";
+import { BusinessStatus, CallOutcome, ReminderChannel, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const loginSchema = z.object({
@@ -136,6 +136,12 @@ export const reservationRequestReviewSchema = z.object({
   redirectTo: z.string().default("/integrations")
 });
 
+export const reservationRequestCreateSchema = z.object({
+  message: z.string().min(8).max(1000),
+  source: z.nativeEnum(ReservationSource).default(ReservationSource.AI),
+  redirectTo: z.string().default("/integrations")
+});
+
 export const settingsSchema = z.object({
   restaurantName: z.string().min(2).max(80),
   phone: z.string().min(10).max(30),
@@ -145,6 +151,9 @@ export const settingsSchema = z.object({
   averageDiningDurationMin: z.coerce.number().int().min(30).max(240),
   maxPartySize: z.coerce.number().int().min(1).max(40),
   reservationLeadTimeDays: z.coerce.number().int().min(1).max(180),
+  reminderEnabled: z.enum(["true", "false"]),
+  reminderTimingHours: z.coerce.number().int().min(2).max(24),
+  reminderChannel: z.nativeEnum(ReminderChannel),
   allowWalkIns: z.enum(["true", "false"]),
   requirePhoneVerification: z.enum(["true", "false"]),
   monday: z.string(),

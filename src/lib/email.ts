@@ -129,3 +129,29 @@ export async function sendPasswordResetEmail(input: {
     `
   });
 }
+
+export async function sendReservationReminderEmail(input: {
+  to: string;
+  guestName: string;
+  restaurantName: string;
+  reservationDateText: string;
+  guestCount: number;
+}) {
+  return sendEmail({
+    to: input.to,
+    subject: `${input.restaurantName} rezervasyon hatırlatması`,
+    text: `Merhaba ${input.guestName}, ${input.restaurantName} için ${input.reservationDateText} tarihinde ${input.guestCount} kişilik rezervasyonunuz bulunuyor.`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#14211b;">
+        <div style="font-size:12px;letter-spacing:0.28em;text-transform:uppercase;color:#607268;">Limon Masa Ops</div>
+        <h1 style="margin-top:16px;font-size:28px;">Rezervasyonunuzu hatırlatıyoruz</h1>
+        <p style="font-size:16px;line-height:1.7;color:#607268;">
+          Merhaba ${input.guestName}, ${input.restaurantName} için <strong>${input.reservationDateText}</strong> tarihinde <strong>${input.guestCount} kişilik</strong> rezervasyonunuz bulunuyor.
+        </p>
+        <p style="font-size:15px;line-height:1.7;color:#607268;">
+          Uygun değilseniz restoran ekibiyle iletişime geçerek planlamayı güncelleyebilirsiniz.
+        </p>
+      </div>
+    `
+  });
+}

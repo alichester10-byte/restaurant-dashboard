@@ -1,10 +1,28 @@
+import crypto from "node:crypto";
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSource } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { createAuditLog } from "@/lib/audit";
-import { extractReservationSignal } from "@/lib/integrations";
+import { extractReservationRequest } from "@/lib/ai-reservation";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { logSuspiciousActivity, sanitizeText } from "@/lib/security";
+
+function verifyMetaSignature(body: string, signature: string | null) {
+  const appSecret = process.env.META_WEBHOOK_APP_SECRET;
+  if (!appSecret) {
+    return true;
+  }
+
+  if (!signature) {
+    return false;
+  }
+
+  const expected = `sha256=${crypto.createHmac("sha256", appSecret).update(body).digest("hex")}`;
+  if (expected.length !== signature.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -29,7 +47,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false }, { status: 429 });
   }
 
-  const payload = await request.json().catch(() => null);
+  const rawBody = await request.text();
+  const signature = request.headers.get("x-hub-signature-256");
+  if (!verifyMetaSignature(rawBody, signature)) {
+    await logSuspiciousActivity({
+      action: "instagram_webhook_signature_failed",
+      message: "Instagram webhook signature verification failed."
+    });
+    return NextResponse.json({ ok: false }, { status: 403 });
+  }
+
+  let payload: any = null;
+  try {
+    payload = JSON.parse(rawBody || "{}");
+  } catch {
+    await logSuspiciousActivity({
+      action: "instagram_webhook_invalid_json",
+      message: "Instagram webhook body was not valid JSON."
+    });
+    return NextResponse.json({ ok: false }, { status: 400 });
+  }
   const businessId = sanitizeText(payload?.businessId);
   const businessSlug = sanitizeText(payload?.businessSlug);
   const message = sanitizeText(payload?.message ?? payload?.entry?.[0]?.messaging?.[0]?.message?.text);
@@ -73,7 +110,7 @@ export async function POST(request: Request) {
     }
   });
 
-  const extracted = extractReservationSignal(message);
+  const extracted = await extractReservationRequest(message, ReservationSource.INSTAGRAM);
   await prisma.reservationRequest.create({
     data: {
       businessId: business.id,

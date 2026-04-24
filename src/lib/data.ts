@@ -4,6 +4,7 @@ import {
   IntegrationProvider,
   IntegrationStatus,
   Prisma,
+  ReminderStatus,
   ReservationRequestStatus,
   ReservationSource,
   ReservationStatus,
@@ -15,6 +16,12 @@ import { endOfDay, startOfDay } from "@/lib/utils";
 const activeReservationStatuses = new Set<ReservationStatus>([
   ReservationStatus.CONFIRMED,
   ReservationStatus.PENDING,
+  ReservationStatus.SEATED,
+  ReservationStatus.COMPLETED
+]);
+
+const visitReservationStatuses = new Set<ReservationStatus>([
+  ReservationStatus.SEATED,
   ReservationStatus.COMPLETED
 ]);
 
@@ -28,6 +35,45 @@ const reservationInclude = {
   customer: true,
   assignedTable: true
 } satisfies Prisma.ReservationInclude;
+
+function getCustomerValueLabel(metrics: {
+  completedReservations: number;
+  noShowCount: number;
+}) {
+  if (metrics.noShowCount >= 2) {
+    return "Riskli / No-show";
+  }
+
+  if (metrics.completedReservations >= 8) {
+    return "VIP";
+  }
+
+  if (metrics.completedReservations >= 3) {
+    return "Regular";
+  }
+
+  return "Yeni";
+}
+
+function aggregateSourceRows(reservations: Array<{ source: ReservationSource }>) {
+  const totals = reservations.reduce<Record<string, number>>((acc, reservation) => {
+    const key =
+      reservation.source === ReservationSource.PHONE || reservation.source === ReservationSource.WALK_IN
+        ? "MANUAL"
+        : reservation.source;
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return [
+    { source: "MANUAL", total: totals.MANUAL ?? 0 },
+    { source: ReservationSource.WEBSITE, total: totals.WEBSITE ?? 0 },
+    { source: ReservationSource.WHATSAPP, total: totals.WHATSAPP ?? 0 },
+    { source: ReservationSource.INSTAGRAM, total: totals.INSTAGRAM ?? 0 },
+    { source: ReservationSource.GOOGLE, total: totals.GOOGLE ?? 0 },
+    { source: ReservationSource.AI, total: totals.AI ?? 0 }
+  ];
+}
 
 export async function getDashboardData() {
   throw new Error("businessId is required. Use getDashboardDataForBusiness instead.");
@@ -156,7 +202,7 @@ export async function getDashboardDataForBusiness(businessId: string) {
 }
 
 export async function getReservationsPageData(businessId: string, selectedId?: string) {
-  const [reservations, tables, customers, selectedReservation] = await Promise.all([
+  const [reservations, tables, customers, selectedReservation, settings] = await Promise.all([
     prisma.reservation.findMany({
       where: {
         businessId
@@ -181,10 +227,56 @@ export async function getReservationsPageData(businessId: string, selectedId?: s
           where: { id: selectedId, businessId },
           include: reservationInclude
         })
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    prisma.restaurantSettings.findFirst({
+      where: {
+        businessId
+      }
+    })
   ]);
 
-  return { reservations, tables, customers, selectedReservation };
+  const customerHistory = selectedReservation
+    ? await prisma.reservation.findMany({
+        where: {
+          businessId,
+          customerId: selectedReservation.customerId
+        },
+        orderBy: {
+          startAt: "desc"
+        },
+        take: 24
+      })
+    : [];
+
+  const completedReservations = customerHistory.filter((reservation) => reservation.status === ReservationStatus.COMPLETED).length;
+  const noShowCount = customerHistory.filter((reservation) => reservation.status === ReservationStatus.NO_SHOW).length;
+
+  return {
+    reservations,
+    tables,
+    customers,
+    selectedReservation,
+    customerHistorySummary: selectedReservation
+      ? {
+          totalVisits: customerHistory.filter((reservation) => visitReservationStatuses.has(reservation.status)).length,
+          completedReservations,
+          noShowCount,
+          cancelledCount: customerHistory.filter((reservation) => reservation.status === ReservationStatus.CANCELLED).length,
+          lastVisitDate: customerHistory.find((reservation) => visitReservationStatuses.has(reservation.status))?.startAt ?? null,
+          valueLabel: getCustomerValueLabel({
+            completedReservations,
+            noShowCount
+          })
+        }
+      : null,
+    reminderSettings: settings
+      ? {
+          enabled: settings.reminderEnabled,
+          timingHours: settings.reminderTimingHours,
+          channel: settings.reminderChannel
+        }
+      : null
+  };
 }
 
 export async function getTablesPageData(businessId: string, selectedId?: string) {
@@ -289,30 +381,47 @@ export async function getCustomersPageData(businessId: string, selectedId?: stri
 export async function getReportsPageData(businessId: string) {
   const now = new Date();
   const start = startOfDay(new Date(now.getTime() - 13 * 86400000));
-  const reservations = await prisma.reservation.findMany({
-    where: {
-      businessId,
-      startAt: {
-        gte: start
+  const monthStart = startOfDay(new Date(now.getTime() - 29 * 86400000));
+  const [reservations, calls, settings, customers, tables] = await Promise.all([
+    prisma.reservation.findMany({
+      where: {
+        businessId,
+        startAt: {
+          gte: monthStart
+        }
+      },
+      include: {
+        assignedTable: true
       }
-    },
-    include: {
-      assignedTable: true
-    }
-  });
-  const calls = await prisma.callLog.findMany({
-    where: {
-      businessId,
-      startedAt: {
-        gte: start
+    }),
+    prisma.callLog.findMany({
+      where: {
+        businessId,
+        startedAt: {
+          gte: monthStart
+        }
       }
-    }
-  });
-  const settings = await prisma.restaurantSettings.findFirstOrThrow({
-    where: {
-      businessId
-    }
-  });
+    }),
+    prisma.restaurantSettings.findFirstOrThrow({
+      where: {
+        businessId
+      }
+    }),
+    prisma.customer.findMany({
+      where: {
+        businessId
+      },
+      include: {
+        reservations: true
+      }
+    }),
+    prisma.diningTable.findMany({
+      where: {
+        businessId,
+        archivedAt: null
+      }
+    })
+  ]);
 
   const reservationsByDay = Array.from({ length: 14 }).map((_, index) => {
     const date = startOfDay(new Date(start.getTime() + index * 86400000));
@@ -327,12 +436,23 @@ export async function getReportsPageData(businessId: string) {
     };
   });
 
-  const sourceCounts = Object.entries(
-    reservations.reduce<Record<string, number>>((acc, reservation) => {
-      acc[reservation.source] = (acc[reservation.source] ?? 0) + 1;
-      return acc;
-    }, {})
-  ).map(([source, total]) => ({ source, total }));
+  const weeklyTrend = Array.from({ length: 7 }).map((_, index) => {
+    const date = startOfDay(new Date(now.getTime() - (6 - index) * 86400000));
+    const end = endOfDay(date);
+    return {
+      label: new Intl.DateTimeFormat("tr-TR", { weekday: "short" }).format(date),
+      total: reservations.filter((reservation) => reservation.startAt >= date && reservation.startAt <= end).length
+    };
+  });
+
+  const monthlyTrend = Array.from({ length: 5 }).map((_, index) => {
+    const bucketStart = startOfDay(new Date(now.getTime() - (4 - index) * 7 * 86400000));
+    const bucketEnd = endOfDay(new Date(bucketStart.getTime() + 6 * 86400000));
+    return {
+      label: `${new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit" }).format(bucketStart)} - ${new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit" }).format(bucketEnd)}`,
+      total: reservations.filter((reservation) => reservation.startAt >= bucketStart && reservation.startAt <= bucketEnd).length
+    };
+  });
 
   const callCounts = Object.entries(
     calls.reduce<Record<string, number>>((acc, call) => {
@@ -341,20 +461,56 @@ export async function getReportsPageData(businessId: string) {
     }, {})
   ).map(([outcome, total]) => ({ outcome, total }));
 
+  const todayReservations = reservations.filter((reservation) => reservation.startAt >= startOfDay(now) && reservation.startAt <= endOfDay(now));
+  const completedCount = reservations.filter((reservation) => reservation.status === ReservationStatus.COMPLETED).length;
+  const noShowCount = reservations.filter((reservation) => reservation.status === ReservationStatus.NO_SHOW).length;
+  const cancelledCount = reservations.filter((reservation) => reservation.status === ReservationStatus.CANCELLED).length;
+  const validReservations = Math.max(1, reservations.length);
+  const returningCustomers = customers.filter((customer) => customer.reservations.length >= 2).length;
+  const vipCustomers = customers.filter((customer) => {
+    const completedReservations = customer.reservations.filter((reservation) => reservation.status === ReservationStatus.COMPLETED).length;
+    const noShows = customer.reservations.filter((reservation) => reservation.status === ReservationStatus.NO_SHOW).length;
+    return getCustomerValueLabel({ completedReservations, noShowCount: noShows }) === "VIP";
+  }).length;
+
+  const popularHours = Array.from({ length: 6 }).map((_, index) => {
+    const hour = 17 + index;
+    return {
+      label: `${hour.toString().padStart(2, "0")}:00`,
+      total: reservations.filter((reservation) => reservation.startAt.getHours() === hour).length
+    };
+  }).sort((a, b) => b.total - a.total);
+
   const occupancySummary = {
     average:
       reservationsByDay.reduce((sum, row) => sum + row.occupancy, 0) /
       Math.max(1, reservationsByDay.length),
     peak:
       reservationsByDay.reduce((max, row) => Math.max(max, row.occupancy), 0),
-    totalGuests: reservations.reduce((sum, reservation) => sum + reservation.guestCount, 0)
+    totalGuests: reservations.reduce((sum, reservation) => sum + reservation.guestCount, 0),
+    utilization:
+      tables.length === 0
+        ? 0
+        : Math.min(100, (reservations.filter((reservation) => reservation.assignedTableId).length / Math.max(1, tables.length * 4)) * 100)
   };
 
   return {
     reservationsByDay,
-    sourceCounts,
+    weeklyTrend,
+    monthlyTrend,
+    sourceCounts: aggregateSourceRows(reservations),
     callCounts,
-    occupancySummary
+    occupancySummary,
+    summaryCards: {
+      todayReservations: todayReservations.length,
+      noShowRate: noShowCount / validReservations,
+      cancellationRate: cancelledCount / validReservations,
+      completedRate: completedCount / validReservations,
+      totalCustomers: customers.length,
+      returningCustomers,
+      vipCustomers
+    },
+    popularHours
   };
 }
 
@@ -481,6 +637,56 @@ export async function getIntegrationsPageData(businessId: string) {
   return {
     cards,
     pendingRequests
+  };
+}
+
+export async function getBusinessSecurityData(businessId: string) {
+  const [recentLogins, failedAttempts, passwordResetEvents] = await Promise.all([
+    prisma.auditLog.findMany({
+      where: {
+        businessId,
+        category: AuditCategory.AUTH,
+        action: {
+          in: ["login_success", "login_failed", "login_locked"]
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 12
+    }),
+    prisma.auditLog.findMany({
+      where: {
+        businessId,
+        category: AuditCategory.AUTH,
+        action: {
+          in: ["login_failed", "login_rate_limited"]
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 8
+    }),
+    prisma.auditLog.findMany({
+      where: {
+        businessId,
+        category: AuditCategory.AUTH,
+        action: {
+          in: ["password_reset_requested", "password_reset_completed"]
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 8
+    })
+  ]);
+
+  return {
+    recentLogins,
+    failedAttempts,
+    passwordResetEvents
   };
 }
 

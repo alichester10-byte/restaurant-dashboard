@@ -3,6 +3,7 @@ import {
   CallOutcome,
   CustomerTag,
   IntegrationStatus,
+  ReminderStatus,
   ReservationStatus,
   SubscriptionStatus,
   TableStatus
@@ -13,6 +14,7 @@ import {
   callOutcomeLabels,
   customerTagLabels,
   integrationStatusLabels,
+  reminderStatusLabels,
   reservationStatusLabels,
   subscriptionStatusLabels,
   tableStatusLabels
@@ -25,11 +27,13 @@ type SupportedStatus =
   | CustomerTag
   | BusinessStatus
   | SubscriptionStatus
-  | IntegrationStatus;
+  | IntegrationStatus
+  | ReminderStatus;
 
 const styleMap: Record<SupportedStatus, string> = {
   CONFIRMED: "bg-emerald-100 text-emerald-800",
   PENDING: "bg-amber-100 text-amber-800",
+  SEATED: "bg-sky-100 text-sky-700",
   CANCELLED: "bg-rose-100 text-rose-700",
   COMPLETED: "bg-slate-200 text-slate-700",
   NO_SHOW: "bg-orange-100 text-orange-700",
@@ -51,7 +55,11 @@ const styleMap: Record<SupportedStatus, string> = {
   CANCELED: "bg-slate-200 text-slate-700",
   NOT_CONNECTED: "bg-stone-100 text-stone-700",
   CONNECTED: "bg-emerald-100 text-emerald-800",
-  NEEDS_CONFIGURATION: "bg-amber-100 text-amber-800"
+  NEEDS_CONFIGURATION: "bg-amber-100 text-amber-800",
+  NOT_SCHEDULED: "bg-stone-100 text-stone-700",
+  SENT: "bg-emerald-100 text-emerald-800",
+  FAILED: "bg-rose-100 text-rose-700",
+  SCHEDULED: "bg-sky-100 text-sky-700"
 };
 
 const labelMap: Partial<Record<SupportedStatus, string>> = {
@@ -61,7 +69,8 @@ const labelMap: Partial<Record<SupportedStatus, string>> = {
   ...customerTagLabels,
   ...businessStatusLabels,
   ...subscriptionStatusLabels,
-  ...integrationStatusLabels
+  ...integrationStatusLabels,
+  ...reminderStatusLabels
 };
 
 export function StatusBadge({ value }: { value: SupportedStatus }) {

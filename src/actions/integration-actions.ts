@@ -5,13 +5,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusinessAccess, requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
+import { extractReservationRequest } from "@/lib/ai-reservation";
 import { prisma } from "@/lib/prisma";
 import { sanitizeNullableText } from "@/lib/security";
-import { reservationRequestReviewSchema } from "@/lib/validation";
+import { buildReminderSchedule } from "@/lib/reminders";
+import { reservationRequestCreateSchema, reservationRequestReviewSchema } from "@/lib/validation";
 
 export async function configureIntegrationAction(formData: FormData) {
-  const session = await requireBusinessAccess({
-    roles: [UserRole.BUSINESS_ADMIN]
+  const session = await requireBusinessWriteAccess({
+    roles: [UserRole.BUSINESS_ADMIN],
+    feature: "integrations"
   });
   const businessId = session.user.businessId;
   const provider = formData.get("provider") as IntegrationProvider;
@@ -107,6 +110,11 @@ export async function reviewReservationRequestAction(formData: FormData) {
   }
 
   const phone = request.guestPhone?.trim() || `request-${request.id.slice(-6)}`;
+  const settings = await prisma.restaurantSettings.findFirstOrThrow({
+    where: {
+      businessId
+    }
+  });
   const customer = await prisma.customer.upsert({
     where: {
       businessId_phone: {
@@ -126,6 +134,11 @@ export async function reviewReservationRequestAction(formData: FormData) {
   const requestedTime = request.requestedTime ?? "19:30";
   const startAt = new Date(`${requestedDate}T${requestedTime}:00`);
   const endAt = new Date(startAt.getTime() + 100 * 60000);
+  const reminderConfig = buildReminderSchedule({
+    startAt,
+    reminderEnabled: settings.reminderEnabled,
+    reminderTimingHours: settings.reminderTimingHours
+  });
 
   const reservation = await prisma.reservation.create({
     data: {
@@ -138,7 +151,9 @@ export async function reviewReservationRequestAction(formData: FormData) {
       startAt,
       endAt,
       guestCount: request.guestCount ?? 2,
-      notes: request.notes ?? request.rawMessage ?? null
+      notes: request.notes ?? request.rawMessage ?? null,
+      reminderStatus: reminderConfig.reminderStatus,
+      reminderScheduledAt: reminderConfig.reminderScheduledAt
     }
   });
 
@@ -168,5 +183,73 @@ export async function reviewReservationRequestAction(formData: FormData) {
 
   revalidatePath("/integrations");
   revalidatePath("/reservations");
+  revalidatePath("/reports");
   redirect(`${parsed.data.redirectTo}?saved=approved`);
+}
+
+export async function createManualReservationRequestAction(formData: FormData) {
+  const session = await requireBusinessWriteAccess({
+    roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF],
+    feature: "integrations"
+  });
+  const businessId = session.user.businessId;
+
+  const parsed = reservationRequestCreateSchema.safeParse({
+    message: sanitizeNullableText(formData.get("message")) ?? "",
+    source: formData.get("source") ?? ReservationSource.AI,
+    redirectTo: formData.get("redirectTo") ?? "/integrations"
+  });
+
+  if (!parsed.success) {
+    redirect("/integrations?error=request_create");
+  }
+
+  const extracted = await extractReservationRequest(parsed.data.message, parsed.data.source);
+
+  await prisma.reservationRequest.create({
+    data: {
+      businessId,
+      source: parsed.data.source,
+      guestName: extracted.guestName,
+      guestPhone: extracted.guestPhone,
+      requestedDate: extracted.requestedDate,
+      requestedTime: extracted.requestedTime,
+      guestCount: extracted.guestCount,
+      notes: extracted.notes ?? "Manuel AI asistan talebi",
+      confidenceScore: extracted.confidenceScore,
+      extractedData: extracted,
+      rawMessage: parsed.data.message
+    }
+  });
+
+  await prisma.integrationConnection.upsert({
+    where: {
+      businessId_provider: {
+        businessId,
+        provider: IntegrationProvider.AI_ASSISTANT
+      }
+    },
+    update: {
+      status: IntegrationStatus.NEEDS_CONFIGURATION,
+      lastSyncedAt: new Date()
+    },
+    create: {
+      businessId,
+      provider: IntegrationProvider.AI_ASSISTANT,
+      status: IntegrationStatus.NEEDS_CONFIGURATION,
+      lastSyncedAt: new Date()
+    }
+  });
+
+  await createAuditLog({
+    businessId,
+    actorUserId: session.user.id,
+    actorRole: session.user.role,
+    category: AuditCategory.INTEGRATION,
+    action: "manual_reservation_request_created",
+    message: "Manual message converted into pending reservation request."
+  });
+
+  revalidatePath("/integrations");
+  redirect(`${parsed.data.redirectTo}?saved=created`);
 }

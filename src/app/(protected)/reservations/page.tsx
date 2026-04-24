@@ -16,6 +16,12 @@ import { getBusinessEntitlement } from "@/lib/billing";
 import { getReservationsPageData } from "@/lib/data";
 import { formatDateTime, formatPhone } from "@/lib/utils";
 
+const noShowLockedStatuses = new Set<ReservationStatus>([
+  ReservationStatus.NO_SHOW,
+  ReservationStatus.CANCELLED,
+  ReservationStatus.COMPLETED
+]);
+
 export default async function ReservationsPage({
   searchParams
 }: {
@@ -115,7 +121,7 @@ export default async function ReservationsPage({
                       <>
                         <ReservationEditLink reservationId={reservation.id} />
 
-                        {reservation.status !== ReservationStatus.CONFIRMED ? (
+                        {reservation.status === ReservationStatus.PENDING ? (
                           <form action={updateReservationStatusAction}>
                             <input type="hidden" name="id" value={reservation.id} />
                             <input type="hidden" name="status" value={ReservationStatus.CONFIRMED} />
@@ -124,7 +130,34 @@ export default async function ReservationsPage({
                           </form>
                         ) : null}
 
-                        {reservation.status !== ReservationStatus.CANCELLED ? (
+                        {(reservation.status === ReservationStatus.PENDING || reservation.status === ReservationStatus.CONFIRMED) ? (
+                          <form action={updateReservationStatusAction}>
+                            <input type="hidden" name="id" value={reservation.id} />
+                            <input type="hidden" name="status" value={ReservationStatus.SEATED} />
+                            <input type="hidden" name="redirectTo" value="/reservations" />
+                            <FormSubmitButton variant="secondary" idleLabel="Karşılandı" pendingLabel="Kaydediliyor..." />
+                          </form>
+                        ) : null}
+
+                        {(reservation.status === ReservationStatus.SEATED || reservation.status === ReservationStatus.CONFIRMED) ? (
+                          <form action={updateReservationStatusAction}>
+                            <input type="hidden" name="id" value={reservation.id} />
+                            <input type="hidden" name="status" value={ReservationStatus.COMPLETED} />
+                            <input type="hidden" name="redirectTo" value="/reservations" />
+                            <FormSubmitButton variant="secondary" idleLabel="Tamamlandı" pendingLabel="Kaydediliyor..." />
+                          </form>
+                        ) : null}
+
+                        {!noShowLockedStatuses.has(reservation.status) ? (
+                          <form action={updateReservationStatusAction}>
+                            <input type="hidden" name="id" value={reservation.id} />
+                            <input type="hidden" name="status" value={ReservationStatus.NO_SHOW} />
+                            <input type="hidden" name="redirectTo" value="/reservations" />
+                            <FormSubmitButton variant="danger" idleLabel="No-show" pendingLabel="Kaydediliyor..." />
+                          </form>
+                        ) : null}
+
+                        {reservation.status !== ReservationStatus.CANCELLED && reservation.status !== ReservationStatus.COMPLETED ? (
                           <form action={updateReservationStatusAction}>
                             <input type="hidden" name="id" value={reservation.id} />
                             <input type="hidden" name="status" value={ReservationStatus.CANCELLED} />
@@ -162,6 +195,33 @@ export default async function ReservationsPage({
               <div className="rounded-2xl bg-white/80 p-4">
                 <div className="text-sm text-sage">Durum</div>
                 <div className="mt-2 font-semibold text-ink">{formatDateTime(data.selectedReservation.startAt)}</div>
+              </div>
+            </div>
+          ) : null}
+          {data.selectedReservation && data.customerHistorySummary ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
+                <div className="text-sm text-sage">Müşteri değeri</div>
+                <div className="mt-2 text-lg font-semibold text-ink">{data.customerHistorySummary.valueLabel}</div>
+                <p className="mt-2 text-sm leading-6 text-sage">Bu misafirin tamamlanan, iptal edilen ve no-show geçmişi anlık olarak hesaplanır.</p>
+              </div>
+              <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
+                <div className="text-sm text-sage">Ziyaret Özeti</div>
+                <div className="mt-2 text-lg font-semibold text-ink">{data.customerHistorySummary.totalVisits} toplam ziyaret</div>
+                <div className="mt-2 text-sm text-sage">
+                  {data.customerHistorySummary.completedReservations} tamamlandı • {data.customerHistorySummary.noShowCount} no-show • {data.customerHistorySummary.cancelledCount} iptal
+                </div>
+              </div>
+              <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
+                <div className="text-sm text-sage">Hatırlatıcı Önizlemesi</div>
+                <div className="mt-2 text-lg font-semibold text-ink">
+                  {data.reminderSettings?.enabled ? `${data.reminderSettings.timingHours} saat önce` : "Hatırlatıcı kapalı"}
+                </div>
+                <div className="mt-2 text-sm text-sage">
+                  {data.reminderSettings?.enabled
+                    ? `Kanal: ${data.reminderSettings.channel} • Durum: ${data.selectedReservation.reminderStatus}`
+                    : "Ayarlar sayfasından e-posta, WhatsApp veya SMS önizlemesini aktif edebilirsiniz."}
+                </div>
               </div>
             </div>
           ) : null}
