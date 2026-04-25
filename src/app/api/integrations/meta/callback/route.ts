@@ -9,6 +9,20 @@ function buildRedirect(baseUrl: string, query: string) {
   return new URL(`/integrations?${query}`, baseUrl);
 }
 
+function mapMetaCallbackError(provider: "whatsapp" | "instagram", error: string | null, errorDescription: string | null) {
+  const combined = `${error ?? ""} ${errorDescription ?? ""}`.toLowerCase();
+
+  if (combined.includes("developer") || combined.includes("tester") || combined.includes("app isn't available") || combined.includes("app is not available")) {
+    return `${provider}_test_mode`;
+  }
+
+  if (combined.includes("redirect") || combined.includes("url blocked") || combined.includes("url is not whitelisted")) {
+    return `${provider}_redirect_mismatch`;
+  }
+
+  return `${provider}_connect_failed`;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const session = await getCurrentSession();
@@ -17,7 +31,11 @@ export async function GET(request: Request) {
   const error = url.searchParams.get("error");
   const errorDescription = url.searchParams.get("error_description");
 
-  if (!session || !state || state.userId !== session.user.id || state.businessId !== session.user.businessId) {
+  if (!session) {
+    return NextResponse.redirect(buildRedirect(request.url, "error=meta_session_expired"), { status: 303 });
+  }
+
+  if (!state || state.userId !== session.user.id || state.businessId !== session.user.businessId) {
     return NextResponse.redirect(buildRedirect(request.url, "error=meta_state_invalid"), { status: 303 });
   }
 
@@ -56,7 +74,7 @@ export async function GET(request: Request) {
       }
     });
 
-    return NextResponse.redirect(buildRedirect(request.url, `error=${state.provider}_connect_failed`), { status: 303 });
+    return NextResponse.redirect(buildRedirect(request.url, `error=${mapMetaCallbackError(state.provider, error, errorDescription)}`), { status: 303 });
   }
 
   try {

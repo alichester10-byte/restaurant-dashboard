@@ -33,6 +33,11 @@ function getMetaEnv(name: string) {
   return value && value.length > 0 ? value : null;
 }
 
+function getMetaRedirectBaseUrl() {
+  const publicAppUrl = getMetaEnv("NEXT_PUBLIC_APP_URL");
+  return publicAppUrl ? publicAppUrl.replace(/\/+$/, "") : getAppBaseUrl().replace(/\/+$/, "");
+}
+
 function getStateSecret() {
   return process.env.META_APP_SECRET ?? process.env.SESSION_SECRET ?? "limon-masa-meta-state";
 }
@@ -102,6 +107,7 @@ export function getMetaSetupStatus(): MetaSetupStatus {
     !shared.appId ? "META_APP_ID" : null,
     !shared.appSecret ? "META_APP_SECRET" : null,
     !shared.publicAppId ? "NEXT_PUBLIC_META_APP_ID" : null,
+    !getMetaEnv("NEXT_PUBLIC_APP_URL") ? "NEXT_PUBLIC_APP_URL" : null,
     !shared.verifyToken ? "META_WEBHOOK_VERIFY_TOKEN" : null,
     !shared.appWebhookSecret ? "META_WEBHOOK_APP_SECRET" : null
   ].filter(Boolean) as string[];
@@ -118,9 +124,9 @@ export function getMetaSetupStatus(): MetaSetupStatus {
     configId: null,
     appId: shared.publicAppId,
     verifyToken: shared.verifyToken,
-    callbackUrl: `${getAppBaseUrl()}/api/integrations/meta/callback`,
-    whatsappWebhookUrl: `${getAppBaseUrl()}/api/integrations/whatsapp/webhook`,
-    instagramWebhookUrl: `${getAppBaseUrl()}/api/integrations/instagram/webhook`
+    callbackUrl: `${getMetaRedirectBaseUrl()}/api/integrations/meta/callback`,
+    whatsappWebhookUrl: `${getMetaRedirectBaseUrl()}/api/integrations/whatsapp/webhook`,
+    instagramWebhookUrl: `${getMetaRedirectBaseUrl()}/api/integrations/instagram/webhook`
   };
 }
 
@@ -216,12 +222,14 @@ export function buildMetaAuthorizationUrl(provider: MetaProvider, state: string)
     throw new Error("Meta credentials are not fully configured.");
   }
 
-  const url = new URL(`https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`);
+  const url = new URL("https://www.facebook.com/dialog/oauth");
   url.searchParams.set("client_id", setup.appId);
   url.searchParams.set("redirect_uri", setup.callbackUrl);
   url.searchParams.set("state", state);
   url.searchParams.set("scope", getProviderScopes(provider).join(","));
   url.searchParams.set("response_type", "code");
+  url.searchParams.set("override_default_response_type", "true");
+  url.searchParams.set("display", "popup");
   url.searchParams.set("config_id", setup.configId);
 
   if (provider === "whatsapp") {
@@ -232,6 +240,18 @@ export function buildMetaAuthorizationUrl(provider: MetaProvider, state: string)
   }
 
   return url.toString();
+}
+
+export function getMetaAuthorizationDebugInfo(provider: MetaProvider, state: string) {
+  const setup = getMetaProviderSetup(provider);
+  return {
+    provider,
+    clientId: setup.appId,
+    configId: setup.configId,
+    redirectUri: setup.callbackUrl,
+    scopes: getProviderScopes(provider),
+    statePreview: state.slice(0, 18)
+  };
 }
 
 async function fetchMetaJson<T>(path: string, input: { accessToken?: string; searchParams?: Record<string, string | undefined>; method?: string; body?: BodyInit | null } = {}) {

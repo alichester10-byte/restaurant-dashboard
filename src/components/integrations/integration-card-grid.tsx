@@ -32,6 +32,7 @@ type CardItem = {
 type MetaSetup = {
   available: boolean;
   missing: string[];
+  warnings?: string[];
   verifyToken: string | null;
   callbackUrl: string;
   whatsappWebhookUrl: string;
@@ -247,9 +248,18 @@ export function IntegrationCardGrid({
     }
 
     return (
-      <a href={`/api/integrations/${provider}/start`} className="btn-primary w-full text-center">
+      <button
+        className="btn-primary w-full text-center"
+        type="button"
+        onClick={() => {
+          const popup = window.open(`/api/integrations/${provider}/start`, "meta-connect", "popup=yes,width=560,height=760");
+          if (!popup) {
+            window.location.href = `/api/integrations/${provider}/start`;
+          }
+        }}
+      >
         {provider === "whatsapp" ? "WhatsApp’ı Bağla" : "Instagram’ı Bağla"}
-      </a>
+      </button>
     );
   }
 
@@ -420,6 +430,10 @@ export function IntegrationCardGrid({
             </div>
           ) : null}
 
+          <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 px-4 py-4 text-sm leading-6 text-sage">
+            Meta uygulaması hâlâ development/test modundaysa yalnızca app admins, developers veya testers bağlantıyı tamamlayabilir.
+          </div>
+
           {notice ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div> : null}
           {error ? <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
         </div>
@@ -464,6 +478,10 @@ export function IntegrationCardGrid({
               Meta kurulumu eksik. Gerekli değişkenler: {metaSetup.instagram.missing.join(", ")}
             </div>
           ) : null}
+
+          <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 px-4 py-4 text-sm leading-6 text-sage">
+            Meta uygulaması development/test modundaysa yalnızca app admins, developers veya testers bu bağlantıyı tamamlayabilir.
+          </div>
 
           {notice ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div> : null}
           {error ? <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}

@@ -52,7 +52,12 @@ export default async function IntegrationsPage({
     instagram_setup_required: "Instagram self-serve bağlantısı için Meta Business Login yapılandırması eksik.",
     whatsapp_connect_failed: "WhatsApp bağlantısı tamamlanamadı. Meta izinlerini ve telefon numarası erişimini kontrol edin.",
     instagram_connect_failed: "Instagram bağlantısı tamamlanamadı. Professional hesap ve Messaging izinlerini kontrol edin.",
-    meta_state_invalid: "Bağlantı oturumu doğrulanamadı. Lütfen tekrar deneyin."
+    whatsapp_test_mode: "Meta uygulaması şu anda development/test modunda görünüyor. Yalnızca app admins, developers veya testers bağlantıyı tamamlayabilir.",
+    instagram_test_mode: "Meta uygulaması şu anda development/test modunda görünüyor. Yalnızca app admins, developers veya testers bağlantıyı tamamlayabilir.",
+    whatsapp_redirect_mismatch: "WhatsApp redirect URI Meta ayarlarındaki Valid OAuth Redirect URIs listesiyle eşleşmiyor.",
+    instagram_redirect_mismatch: "Instagram redirect URI Meta ayarlarındaki Valid OAuth Redirect URIs listesiyle eşleşmiyor.",
+    meta_state_invalid: "Bağlantı oturumu doğrulanamadı. Lütfen tekrar deneyin.",
+    meta_session_expired: "Bağlantı oturumu süresi doldu. Panelden tekrar bağlamayı deneyin."
   };
 
   return (

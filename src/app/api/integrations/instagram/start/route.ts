@@ -2,7 +2,7 @@ import { AuditCategory, IntegrationProvider, IntegrationStatus, UserRole } from 
 import { NextResponse } from "next/server";
 import { requireBusinessWriteAccess } from "@/lib/auth";
 import { safeCreateAuditLog } from "@/lib/audit";
-import { buildMetaAuthorizationUrl, createMetaConnectionState, getMetaProviderSetup } from "@/lib/meta";
+import { buildMetaAuthorizationUrl, createMetaConnectionState, getMetaAuthorizationDebugInfo, getMetaProviderSetup } from "@/lib/meta";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
@@ -49,5 +49,14 @@ export async function GET(request: Request) {
     message: "Instagram business login flow started."
   });
 
-  return NextResponse.redirect(buildMetaAuthorizationUrl("instagram", state), { status: 303 });
+  try {
+    const authUrl = buildMetaAuthorizationUrl("instagram", state);
+    console.info("[meta:instagram_oauth_url]", getMetaAuthorizationDebugInfo("instagram", state));
+    return NextResponse.redirect(authUrl, { status: 303 });
+  } catch (error) {
+    console.error("[meta:instagram_oauth_build_failed]", {
+      error: error instanceof Error ? error.message : "unknown_error"
+    });
+    return NextResponse.redirect(new URL("/integrations?error=instagram_setup_required", request.url), { status: 303 });
+  }
 }
