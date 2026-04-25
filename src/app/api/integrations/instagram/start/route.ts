@@ -2,7 +2,7 @@ import { AuditCategory, IntegrationProvider, IntegrationStatus, UserRole } from 
 import { NextResponse } from "next/server";
 import { requireBusinessWriteAccess } from "@/lib/auth";
 import { safeCreateAuditLog } from "@/lib/audit";
-import { buildMetaAuthorizationUrl, createMetaConnectionState, getMetaAuthorizationDebugInfo, getMetaProviderSetup } from "@/lib/meta";
+import { buildMetaAuthorizationUrl, createMetaConnectionState, getMetaAuthorizationDebugInfo, getMetaEnvironmentDiagnostics, getMetaProviderSetup } from "@/lib/meta";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
@@ -13,6 +13,9 @@ export async function GET(request: Request) {
 
   const setup = getMetaProviderSetup("instagram");
   if (!setup.available) {
+    console.warn("[meta:instagram_setup_required]", {
+      missing: getMetaEnvironmentDiagnostics().missing
+    });
     return NextResponse.redirect(new URL("/integrations?error=instagram_setup_required", request.url), { status: 303 });
   }
 

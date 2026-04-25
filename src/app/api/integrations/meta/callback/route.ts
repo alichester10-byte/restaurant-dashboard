@@ -1,5 +1,6 @@
 import { AuditCategory, IntegrationProvider, IntegrationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { isDynamicServerError } from "next/dist/client/components/hooks-server-context";
 import { getCurrentSession } from "@/lib/auth";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { completeInstagramConnection, completeWhatsAppConnection, verifyMetaConnectionState } from "@/lib/meta";
@@ -24,60 +25,60 @@ function mapMetaCallbackError(provider: "whatsapp" | "instagram", error: string 
 }
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const session = await getCurrentSession();
-  const code = url.searchParams.get("code");
-  const state = verifyMetaConnectionState(url.searchParams.get("state"));
-  const error = url.searchParams.get("error");
-  const errorDescription = url.searchParams.get("error_description");
-
-  if (!session) {
-    return NextResponse.redirect(buildRedirect(request.url, "error=meta_session_expired"), { status: 303 });
-  }
-
-  if (!state || state.userId !== session.user.id || state.businessId !== session.user.businessId) {
-    return NextResponse.redirect(buildRedirect(request.url, "error=meta_state_invalid"), { status: 303 });
-  }
-
-  const provider = state.provider === "whatsapp" ? IntegrationProvider.WHATSAPP : IntegrationProvider.INSTAGRAM;
-
-  if (error || !code) {
-    await prisma.integrationConnection.upsert({
-      where: {
-        businessId_provider: {
-          businessId: state.businessId,
-          provider
-        }
-      },
-      update: {
-        status: IntegrationStatus.ERROR,
-        errorMessage: errorDescription ?? error ?? "Meta bağlantısı tamamlanamadı."
-      },
-      create: {
-        businessId: state.businessId,
-        provider,
-        status: IntegrationStatus.ERROR,
-        errorMessage: errorDescription ?? error ?? "Meta bağlantısı tamamlanamadı."
-      }
-    });
-
-    await safeCreateAuditLog({
-      businessId: state.businessId,
-      actorUserId: session.user.id,
-      actorRole: session.user.role,
-      category: AuditCategory.INTEGRATION,
-      action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
-      message: "Meta connection callback returned an error.",
-      metadata: {
-        error,
-        errorDescription
-      }
-    });
-
-    return NextResponse.redirect(buildRedirect(request.url, `error=${mapMetaCallbackError(state.provider, error, errorDescription)}`), { status: 303 });
-  }
-
   try {
+    const url = new URL(request.url);
+    const session = await getCurrentSession();
+    const code = url.searchParams.get("code");
+    const state = verifyMetaConnectionState(url.searchParams.get("state"));
+    const error = url.searchParams.get("error");
+    const errorDescription = url.searchParams.get("error_description");
+
+    if (!session) {
+      return NextResponse.redirect(buildRedirect(request.url, "error=meta_session_expired"), { status: 303 });
+    }
+
+    if (!state || state.userId !== session.user.id || state.businessId !== session.user.businessId) {
+      return NextResponse.redirect(buildRedirect(request.url, "error=meta_state_invalid"), { status: 303 });
+    }
+
+    const provider = state.provider === "whatsapp" ? IntegrationProvider.WHATSAPP : IntegrationProvider.INSTAGRAM;
+
+    if (error || !code) {
+      await prisma.integrationConnection.upsert({
+        where: {
+          businessId_provider: {
+            businessId: state.businessId,
+            provider
+          }
+        },
+        update: {
+          status: IntegrationStatus.ERROR,
+          errorMessage: errorDescription ?? error ?? "Meta bağlantısı tamamlanamadı."
+        },
+        create: {
+          businessId: state.businessId,
+          provider,
+          status: IntegrationStatus.ERROR,
+          errorMessage: errorDescription ?? error ?? "Meta bağlantısı tamamlanamadı."
+        }
+      });
+
+      await safeCreateAuditLog({
+        businessId: state.businessId,
+        actorUserId: session.user.id,
+        actorRole: session.user.role,
+        category: AuditCategory.INTEGRATION,
+        action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
+        message: "Meta connection callback returned an error.",
+        metadata: {
+          error,
+          errorDescription
+        }
+      });
+
+      return NextResponse.redirect(buildRedirect(request.url, `error=${mapMetaCallbackError(state.provider, error, errorDescription)}`), { status: 303 });
+    }
+
     const payload =
       state.provider === "whatsapp"
         ? await completeWhatsAppConnection(code)
@@ -109,39 +110,14 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(buildRedirect(request.url, `connected=${provider}`), { status: 303 });
   } catch (callbackError) {
+    if (isDynamicServerError(callbackError)) {
+      throw callbackError;
+    }
+
     const message = callbackError instanceof Error ? callbackError.message : "Meta bağlantısı tamamlanamadı.";
-
-    await prisma.integrationConnection.upsert({
-      where: {
-        businessId_provider: {
-          businessId: state.businessId,
-          provider
-        }
-      },
-      update: {
-        status: IntegrationStatus.ERROR,
-        errorMessage: message
-      },
-      create: {
-        businessId: state.businessId,
-        provider,
-        status: IntegrationStatus.ERROR,
-        errorMessage: message
-      }
+    console.error("[meta:callback_failed]", {
+      error: message
     });
-
-    await safeCreateAuditLog({
-      businessId: state.businessId,
-      actorUserId: session.user.id,
-      actorRole: session.user.role,
-      category: AuditCategory.INTEGRATION,
-      action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
-      message: "Meta integration connection failed during code exchange.",
-      metadata: {
-        error: message
-      }
-    });
-
-    return NextResponse.redirect(buildRedirect(request.url, `error=${state.provider}_connect_failed`), { status: 303 });
+    return NextResponse.redirect(buildRedirect(request.url, "error=meta_callback_failed"), { status: 303 });
   }
 }

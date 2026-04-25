@@ -7,6 +7,25 @@ import { getAppBaseUrl } from "@/lib/billing";
 const META_GRAPH_VERSION = "v20.0";
 
 type MetaProvider = "whatsapp" | "instagram";
+type MetaEnvKey =
+  | "META_APP_ID"
+  | "META_APP_SECRET"
+  | "NEXT_PUBLIC_META_APP_ID"
+  | "META_WEBHOOK_VERIFY_TOKEN"
+  | "META_WEBHOOK_APP_SECRET"
+  | "META_ACCESS_TOKEN"
+  | "META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID"
+  | "META_INSTAGRAM_LOGIN_CONFIG_ID"
+  | "NEXT_PUBLIC_APP_URL";
+
+type MetaEnvDiagnostic = {
+  key: MetaEnvKey;
+  present: boolean;
+  valid: boolean;
+  maskedValue: string;
+  level: "ok" | "missing" | "warning";
+  message: string;
+};
 
 type MetaSetupStatus = {
   available: boolean;
@@ -21,6 +40,19 @@ type MetaSetupStatus = {
   instagramWebhookUrl: string;
 };
 
+type MetaEnvironmentDiagnostics = {
+  diagnostics: MetaEnvDiagnostic[];
+  missing: string[];
+  suspicious: string[];
+  redirectUri: string;
+  redirectUriExactMatch: boolean;
+  appIdsMatch: boolean;
+  webhookSecretMatchesAppSecret: boolean;
+  verifyTokenPreview: string;
+  whatsappConfigIdLooksValid: boolean;
+  instagramConfigIdLooksValid: boolean;
+};
+
 type MetaConnectionState = {
   provider: MetaProvider;
   businessId: string;
@@ -31,6 +63,22 @@ type MetaConnectionState = {
 function getMetaEnv(name: string) {
   const value = process.env[name];
   return value && value.length > 0 ? value : null;
+}
+
+function maskValue(value: string | null) {
+  if (!value) {
+    return "Eksik";
+  }
+
+  if (value.length <= 8) {
+    return `${value.slice(0, 2)}••••`;
+  }
+
+  return `${value.slice(0, 4)}••••${value.slice(-4)}`;
+}
+
+function looksLikeNumericId(value: string | null) {
+  return !!value && /^\d{8,}$/.test(value);
 }
 
 function getMetaRedirectBaseUrl() {
@@ -127,6 +175,122 @@ export function getMetaSetupStatus(): MetaSetupStatus {
     callbackUrl: `${getMetaRedirectBaseUrl()}/api/integrations/meta/callback`,
     whatsappWebhookUrl: `${getMetaRedirectBaseUrl()}/api/integrations/whatsapp/webhook`,
     instagramWebhookUrl: `${getMetaRedirectBaseUrl()}/api/integrations/instagram/webhook`
+  };
+}
+
+export function getMetaEnvironmentDiagnostics(): MetaEnvironmentDiagnostics {
+  const values = {
+    META_APP_ID: getMetaEnv("META_APP_ID"),
+    META_APP_SECRET: getMetaEnv("META_APP_SECRET"),
+    NEXT_PUBLIC_META_APP_ID: getMetaEnv("NEXT_PUBLIC_META_APP_ID"),
+    META_WEBHOOK_VERIFY_TOKEN: getMetaEnv("META_WEBHOOK_VERIFY_TOKEN"),
+    META_WEBHOOK_APP_SECRET: getMetaEnv("META_WEBHOOK_APP_SECRET"),
+    META_ACCESS_TOKEN: getMetaEnv("META_ACCESS_TOKEN"),
+    META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID: getMetaEnv("META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID"),
+    META_INSTAGRAM_LOGIN_CONFIG_ID: getMetaEnv("META_INSTAGRAM_LOGIN_CONFIG_ID"),
+    NEXT_PUBLIC_APP_URL: getMetaEnv("NEXT_PUBLIC_APP_URL")
+  } as const;
+
+  const redirectUri = `${getMetaRedirectBaseUrl()}/api/integrations/meta/callback`;
+  const redirectUriExactMatch = values.NEXT_PUBLIC_APP_URL === "https://limonmasa.com";
+  const appIdsMatch = !!values.META_APP_ID && values.META_APP_ID === values.NEXT_PUBLIC_META_APP_ID;
+  const webhookSecretMatchesAppSecret =
+    !!values.META_APP_SECRET &&
+    !!values.META_WEBHOOK_APP_SECRET &&
+    values.META_APP_SECRET === values.META_WEBHOOK_APP_SECRET;
+  const whatsappConfigIdLooksValid =
+    looksLikeNumericId(values.META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID) &&
+    values.META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID !== values.META_APP_ID;
+  const instagramConfigIdLooksValid =
+    looksLikeNumericId(values.META_INSTAGRAM_LOGIN_CONFIG_ID) &&
+    values.META_INSTAGRAM_LOGIN_CONFIG_ID !== values.META_APP_ID;
+
+  const diagnostics: MetaEnvDiagnostic[] = [
+    {
+      key: "META_APP_ID",
+      present: !!values.META_APP_ID,
+      valid: looksLikeNumericId(values.META_APP_ID),
+      maskedValue: maskValue(values.META_APP_ID),
+      level: !values.META_APP_ID ? "missing" : looksLikeNumericId(values.META_APP_ID) ? "ok" : "warning",
+      message: !values.META_APP_ID ? "Eksik." : looksLikeNumericId(values.META_APP_ID) ? "Hazır." : "App ID sayısal görünmüyor."
+    },
+    {
+      key: "META_APP_SECRET",
+      present: !!values.META_APP_SECRET,
+      valid: !!values.META_APP_SECRET && values.META_APP_SECRET.length >= 16,
+      maskedValue: maskValue(values.META_APP_SECRET),
+      level: !values.META_APP_SECRET ? "missing" : values.META_APP_SECRET.length >= 16 ? "ok" : "warning",
+      message: !values.META_APP_SECRET ? "Eksik." : values.META_APP_SECRET.length >= 16 ? "Hazır." : "Şüpheli derecede kısa görünüyor."
+    },
+    {
+      key: "NEXT_PUBLIC_META_APP_ID",
+      present: !!values.NEXT_PUBLIC_META_APP_ID,
+      valid: appIdsMatch,
+      maskedValue: maskValue(values.NEXT_PUBLIC_META_APP_ID),
+      level: !values.NEXT_PUBLIC_META_APP_ID ? "missing" : appIdsMatch ? "ok" : "warning",
+      message: !values.NEXT_PUBLIC_META_APP_ID ? "Eksik." : appIdsMatch ? "META_APP_ID ile eşleşiyor." : "META_APP_ID ile eşleşmiyor."
+    },
+    {
+      key: "META_WEBHOOK_VERIFY_TOKEN",
+      present: !!values.META_WEBHOOK_VERIFY_TOKEN,
+      valid: !!values.META_WEBHOOK_VERIFY_TOKEN && values.META_WEBHOOK_VERIFY_TOKEN === getMetaSetupStatus().verifyToken,
+      maskedValue: maskValue(values.META_WEBHOOK_VERIFY_TOKEN),
+      level: !values.META_WEBHOOK_VERIFY_TOKEN ? "missing" : "ok",
+      message: !values.META_WEBHOOK_VERIFY_TOKEN ? "Eksik." : "Webhook ekranında gösterilen token ile aynı olmalı."
+    },
+    {
+      key: "META_WEBHOOK_APP_SECRET",
+      present: !!values.META_WEBHOOK_APP_SECRET,
+      valid: webhookSecretMatchesAppSecret,
+      maskedValue: maskValue(values.META_WEBHOOK_APP_SECRET),
+      level: !values.META_WEBHOOK_APP_SECRET ? "missing" : webhookSecretMatchesAppSecret ? "ok" : "warning",
+      message: !values.META_WEBHOOK_APP_SECRET ? "Eksik." : webhookSecretMatchesAppSecret ? "App secret ile eşleşiyor." : "META_APP_SECRET ile farklı. Bilerek ayrılmadıysa kontrol edin."
+    },
+    {
+      key: "META_ACCESS_TOKEN",
+      present: !!values.META_ACCESS_TOKEN,
+      valid: !!values.META_ACCESS_TOKEN && values.META_ACCESS_TOKEN.length >= 16,
+      maskedValue: maskValue(values.META_ACCESS_TOKEN),
+      level: !values.META_ACCESS_TOKEN ? "warning" : values.META_ACCESS_TOKEN.length >= 16 ? "ok" : "warning",
+      message: !values.META_ACCESS_TOKEN ? "Eksik. Zorunlu değil ama test/Graph kontrolleri için faydalı." : "Hazır."
+    },
+    {
+      key: "META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID",
+      present: !!values.META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID,
+      valid: whatsappConfigIdLooksValid,
+      maskedValue: maskValue(values.META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID),
+      level: !values.META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID ? "missing" : whatsappConfigIdLooksValid ? "ok" : "warning",
+      message: !values.META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID ? "Eksik." : whatsappConfigIdLooksValid ? "Facebook Login for Business Configuration ID gibi görünüyor." : "App ID girilmiş olabilir veya format şüpheli."
+    },
+    {
+      key: "META_INSTAGRAM_LOGIN_CONFIG_ID",
+      present: !!values.META_INSTAGRAM_LOGIN_CONFIG_ID,
+      valid: instagramConfigIdLooksValid,
+      maskedValue: maskValue(values.META_INSTAGRAM_LOGIN_CONFIG_ID),
+      level: !values.META_INSTAGRAM_LOGIN_CONFIG_ID ? "missing" : instagramConfigIdLooksValid ? "ok" : "warning",
+      message: !values.META_INSTAGRAM_LOGIN_CONFIG_ID ? "Eksik." : instagramConfigIdLooksValid ? "Configuration ID gibi görünüyor." : "App ID girilmiş olabilir veya format şüpheli."
+    },
+    {
+      key: "NEXT_PUBLIC_APP_URL",
+      present: !!values.NEXT_PUBLIC_APP_URL,
+      valid: redirectUriExactMatch,
+      maskedValue: values.NEXT_PUBLIC_APP_URL ?? "Eksik",
+      level: !values.NEXT_PUBLIC_APP_URL ? "missing" : redirectUriExactMatch ? "ok" : "warning",
+      message: !values.NEXT_PUBLIC_APP_URL ? "Eksik." : redirectUriExactMatch ? "https://limonmasa.com olarak doğru." : "https://limonmasa.com olmalı."
+    }
+  ];
+
+  return {
+    diagnostics,
+    missing: diagnostics.filter((item) => item.level === "missing").map((item) => item.key),
+    suspicious: diagnostics.filter((item) => item.level === "warning").map((item) => item.key),
+    redirectUri,
+    redirectUriExactMatch,
+    appIdsMatch,
+    webhookSecretMatchesAppSecret,
+    verifyTokenPreview: maskValue(values.META_WEBHOOK_VERIFY_TOKEN),
+    whatsappConfigIdLooksValid,
+    instagramConfigIdLooksValid
   };
 }
 

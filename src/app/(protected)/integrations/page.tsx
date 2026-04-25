@@ -10,7 +10,7 @@ import { requireBusinessAccess } from "@/lib/auth";
 import { getAppBaseUrl, getBusinessEntitlement } from "@/lib/billing";
 import { reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
 import { getIntegrationsPageDataSafe } from "@/lib/data";
-import { getInstagramSetupStatus, getMetaSetupStatus, getWhatsappSetupStatus } from "@/lib/meta";
+import { getInstagramSetupStatus, getMetaEnvironmentDiagnostics, getMetaSetupStatus, getWhatsappSetupStatus } from "@/lib/meta";
 import { formatDateTime } from "@/lib/utils";
 import { getWhatsAppVerifyToken, WHATSAPP_SAMPLE_MESSAGE } from "@/lib/whatsapp";
 
@@ -47,6 +47,7 @@ export default async function IntegrationsPage({
     whatsapp: getWhatsappSetupStatus(),
     instagram: getInstagramSetupStatus()
   };
+  const metaDiagnostics = getMetaEnvironmentDiagnostics();
   const integrationErrorMessages: Record<string, string> = {
     whatsapp_setup_required: "WhatsApp self-serve bağlantısı için Meta uygulama kurulumu henüz tamamlanmadı.",
     instagram_setup_required: "Instagram self-serve bağlantısı için Meta Business Login yapılandırması eksik.",
@@ -57,7 +58,8 @@ export default async function IntegrationsPage({
     whatsapp_redirect_mismatch: "WhatsApp redirect URI Meta ayarlarındaki Valid OAuth Redirect URIs listesiyle eşleşmiyor.",
     instagram_redirect_mismatch: "Instagram redirect URI Meta ayarlarındaki Valid OAuth Redirect URIs listesiyle eşleşmiyor.",
     meta_state_invalid: "Bağlantı oturumu doğrulanamadı. Lütfen tekrar deneyin.",
-    meta_session_expired: "Bağlantı oturumu süresi doldu. Panelden tekrar bağlamayı deneyin."
+    meta_session_expired: "Bağlantı oturumu süresi doldu. Panelden tekrar bağlamayı deneyin.",
+    meta_callback_failed: "Meta callback işlendi ancak bağlantı tamamlanamadı. Env ve Meta izinlerini kontrol edin."
   };
 
   return (
@@ -116,6 +118,42 @@ export default async function IntegrationsPage({
         metaSetup={metaSetup}
         canManageConnections={entitlement.canWrite && session.user.role === UserRole.BUSINESS_ADMIN}
       />
+
+      {session.user.role === UserRole.BUSINESS_ADMIN ? (
+        <Panel>
+          <div className="section-title">Meta Diagnostics</div>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Bağlantı ayarları kontrolü</h2>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
+              <div className="font-semibold text-ink">Redirect URI</div>
+              <div className="mt-2 break-all">{metaDiagnostics.redirectUri}</div>
+              <div className="mt-2">{metaDiagnostics.redirectUriExactMatch ? "https://limonmasa.com ile uyumlu." : "NEXT_PUBLIC_APP_URL tam olarak https://limonmasa.com olmalı."}</div>
+            </div>
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
+              <div className="font-semibold text-ink">Temel Kontroller</div>
+              <div className="mt-2">App ID eşleşmesi: {metaDiagnostics.appIdsMatch ? "Evet" : "Hayır"}</div>
+              <div className="mt-1">Webhook secret eşleşmesi: {metaDiagnostics.webhookSecretMatchesAppSecret ? "Evet" : "Hayır / farklı"}</div>
+              <div className="mt-1">WhatsApp Config ID: {metaDiagnostics.whatsappConfigIdLooksValid ? "Uygun görünüyor" : "Şüpheli"}</div>
+              <div className="mt-1">Instagram Config ID: {metaDiagnostics.instagramConfigIdLooksValid ? "Uygun görünüyor" : "Şüpheli"}</div>
+              <div className="mt-1">Verify token önizleme: {metaDiagnostics.verifyTokenPreview}</div>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3">
+            {metaDiagnostics.diagnostics.map((item) => (
+              <div key={item.key} className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="font-semibold text-ink">{item.key}</div>
+                  <span className={`badge ${item.level === "ok" ? "bg-emerald-100 text-emerald-800" : item.level === "missing" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800"}`}>
+                    {item.level === "ok" ? "Hazır" : item.level === "missing" ? "Eksik" : "Kontrol Et"}
+                  </span>
+                </div>
+                <div className="mt-2 text-sage">{item.maskedValue}</div>
+                <div className="mt-1 text-sage">{item.message}</div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel id="ai-assistant-testing">
