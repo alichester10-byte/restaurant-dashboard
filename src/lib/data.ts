@@ -674,6 +674,38 @@ export async function getIntegrationsPageData(businessId: string) {
   };
 }
 
+export async function getIntegrationsPageDataSafe(businessId: string) {
+  try {
+    const data = await getIntegrationsPageData(businessId);
+    return {
+      ...data,
+      loadError: null as string | null
+    };
+  } catch (error) {
+    console.error("[integrations:data_load_failed]", {
+      businessId,
+      error: error instanceof Error ? error.message : "unknown_error"
+    });
+
+    const providers = Object.values(IntegrationProvider);
+    return {
+      cards: providers.map((provider) => ({
+        provider,
+        connection: {
+          provider,
+          status:
+            provider === IntegrationProvider.AI_ASSISTANT || provider === IntegrationProvider.GOOGLE_WEB
+              ? IntegrationStatus.NEEDS_CONFIGURATION
+              : IntegrationStatus.NOT_CONNECTED
+        },
+        latestRequest: null
+      })),
+      pendingRequests: [],
+      loadError: "Entegrasyon verileri şu anda yüklenemedi. Kurulum durumu veya veritabanı güncellemeleri kontrol edilirken sayfa güvenli modda açıldı."
+    };
+  }
+}
+
 export async function getBusinessSecurityData(businessId: string) {
   const [recentLogins, failedAttempts, passwordResetEvents] = await Promise.all([
     prisma.auditLog.findMany({

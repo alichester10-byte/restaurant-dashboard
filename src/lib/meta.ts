@@ -8,6 +8,19 @@ const META_GRAPH_VERSION = "v20.0";
 
 type MetaProvider = "whatsapp" | "instagram";
 
+type MetaSetupStatus = {
+  available: boolean;
+  status: "ready" | "setup_required";
+  missing: string[];
+  warnings: string[];
+  appId: string | null;
+  configId: string | null;
+  verifyToken: string | null;
+  callbackUrl: string;
+  whatsappWebhookUrl: string;
+  instagramWebhookUrl: string;
+};
+
 type MetaConnectionState = {
   provider: MetaProvider;
   businessId: string;
@@ -75,43 +88,72 @@ export function decryptMetaToken(value: string) {
   return decrypted.toString("utf8");
 }
 
-export function getMetaProviderSetup(provider: MetaProvider) {
+export function getMetaSetupStatus(): MetaSetupStatus {
   const shared = {
     appId: getMetaEnv("META_APP_ID"),
     appSecret: getMetaEnv("META_APP_SECRET"),
     publicAppId: getMetaEnv("NEXT_PUBLIC_META_APP_ID"),
     verifyToken: getMetaEnv("META_WEBHOOK_VERIFY_TOKEN"),
-    appWebhookSecret: getMetaEnv("META_WEBHOOK_APP_SECRET")
+    appWebhookSecret: getMetaEnv("META_WEBHOOK_APP_SECRET"),
+    accessToken: getMetaEnv("META_ACCESS_TOKEN")
   };
-
-  const configId =
-    provider === "whatsapp"
-      ? getMetaEnv("META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID")
-      : getMetaEnv("META_INSTAGRAM_LOGIN_CONFIG_ID");
 
   const missing = [
     !shared.appId ? "META_APP_ID" : null,
     !shared.appSecret ? "META_APP_SECRET" : null,
     !shared.publicAppId ? "NEXT_PUBLIC_META_APP_ID" : null,
-    !configId
-      ? provider === "whatsapp"
-        ? "META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID"
-        : "META_INSTAGRAM_LOGIN_CONFIG_ID"
-      : null,
     !shared.verifyToken ? "META_WEBHOOK_VERIFY_TOKEN" : null,
     !shared.appWebhookSecret ? "META_WEBHOOK_APP_SECRET" : null
   ].filter(Boolean) as string[];
 
+  const warnings = [
+    !shared.accessToken ? "META_ACCESS_TOKEN" : null
+  ].filter(Boolean) as string[];
+
   return {
     available: missing.length === 0,
+    status: missing.length === 0 ? "ready" : "setup_required",
     missing,
-    configId,
+    warnings,
+    configId: null,
     appId: shared.publicAppId,
     verifyToken: shared.verifyToken,
     callbackUrl: `${getAppBaseUrl()}/api/integrations/meta/callback`,
     whatsappWebhookUrl: `${getAppBaseUrl()}/api/integrations/whatsapp/webhook`,
     instagramWebhookUrl: `${getAppBaseUrl()}/api/integrations/instagram/webhook`
   };
+}
+
+export function getWhatsappSetupStatus() {
+  const base = getMetaSetupStatus();
+  const configId = getMetaEnv("META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID");
+  const missing = [...base.missing, !configId ? "META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID" : null].filter(Boolean) as string[];
+
+  return {
+    ...base,
+    configId,
+    available: missing.length === 0,
+    status: missing.length === 0 ? "ready" : "setup_required",
+    missing
+  };
+}
+
+export function getInstagramSetupStatus() {
+  const base = getMetaSetupStatus();
+  const configId = getMetaEnv("META_INSTAGRAM_LOGIN_CONFIG_ID");
+  const missing = [...base.missing, !configId ? "META_INSTAGRAM_LOGIN_CONFIG_ID" : null].filter(Boolean) as string[];
+
+  return {
+    ...base,
+    configId,
+    available: missing.length === 0,
+    status: missing.length === 0 ? "ready" : "setup_required",
+    missing
+  };
+}
+
+export function getMetaProviderSetup(provider: MetaProvider) {
+  return provider === "whatsapp" ? getWhatsappSetupStatus() : getInstagramSetupStatus();
 }
 
 export function createMetaConnectionState(input: Omit<MetaConnectionState, "issuedAt">) {
@@ -353,4 +395,3 @@ export async function completeInstagramConnection(code: string) {
     }
   };
 }
-

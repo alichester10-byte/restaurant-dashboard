@@ -9,8 +9,8 @@ import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { requireBusinessAccess } from "@/lib/auth";
 import { getAppBaseUrl, getBusinessEntitlement } from "@/lib/billing";
 import { reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
-import { getIntegrationsPageData } from "@/lib/data";
-import { getMetaProviderSetup } from "@/lib/meta";
+import { getIntegrationsPageDataSafe } from "@/lib/data";
+import { getInstagramSetupStatus, getMetaSetupStatus, getWhatsappSetupStatus } from "@/lib/meta";
 import { formatDateTime } from "@/lib/utils";
 import { getWhatsAppVerifyToken, WHATSAPP_SAMPLE_MESSAGE } from "@/lib/whatsapp";
 
@@ -41,10 +41,11 @@ export default async function IntegrationsPage({
     roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF]
   });
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
-  const data = await getIntegrationsPageData(session.user.businessId);
+  const data = await getIntegrationsPageDataSafe(session.user.businessId);
   const metaSetup = {
-    whatsapp: getMetaProviderSetup("whatsapp"),
-    instagram: getMetaProviderSetup("instagram")
+    meta: getMetaSetupStatus(),
+    whatsapp: getWhatsappSetupStatus(),
+    instagram: getInstagramSetupStatus()
   };
   const integrationErrorMessages: Record<string, string> = {
     whatsapp_setup_required: "WhatsApp self-serve bağlantısı için Meta uygulama kurulumu henüz tamamlanmadı.",
@@ -91,6 +92,13 @@ export default async function IntegrationsPage({
           <p className="mt-2 text-sm leading-6 text-rose-700">
             {integrationErrorMessages[searchParams.error] ?? "İşlem sırasında beklenmeyen bir hata oluştu."}
           </p>
+        </Panel>
+      ) : null}
+
+      {data.loadError ? (
+        <Panel className="border-amber-200 bg-amber-50/80">
+          <div className="section-title text-amber-800">Kurtarma Modu</div>
+          <p className="mt-2 text-sm leading-6 text-amber-800">{data.loadError}</p>
         </Panel>
       ) : null}
 
