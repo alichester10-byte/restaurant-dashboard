@@ -233,7 +233,7 @@ export default async function BillingPage({
             <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
               <div className="text-sm text-sage">Ödeme görünümü</div>
               <div className="mt-2 text-xl font-semibold text-ink">
-                {latestPayment?.status === BillingPaymentStatus.PENDING ? "Onay bekliyor" : latestPayment ? billingPaymentStatusLabels[latestPayment.status] : "Hazır"}
+                {latestPayment?.status === BillingPaymentStatus.PENDING ? "Ödeme işleniyor" : latestPayment ? billingPaymentStatusLabels[latestPayment.status] : "Hazır"}
               </div>
             </div>
           </div>
@@ -257,7 +257,7 @@ export default async function BillingPage({
                 <div className="text-sm text-sage">{formatCurrency(payment.amountMinor / 100)}</div>
                 <div className="text-sm font-semibold text-ink">{billingPaymentStatusLabels[payment.status]}</div>
                 <div className="text-sm text-sage">
-                  {payment.status === BillingPaymentStatus.PENDING ? "Ödeme tamamlanınca otomatik güncellenir" : formatDateTime(payment.updatedAt)}
+                  {payment.status === BillingPaymentStatus.PENDING ? "PAYTR ödemeyi doğruladığında Pro planı otomatik aktive edilir." : formatDateTime(payment.updatedAt)}
                 </div>
               </div>
             ))

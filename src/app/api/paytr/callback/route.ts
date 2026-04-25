@@ -1,5 +1,5 @@
-import { AuditCategory, BillingPaymentStatus, SubscriptionStatus } from "@prisma/client";
-import { createAuditLog } from "@/lib/audit";
+import { AuditCategory, AuditSeverity, BillingPaymentStatus, SubscriptionStatus } from "@prisma/client";
+import { safeCreateAuditLog } from "@/lib/audit";
 import { calculateSubscriptionPeriodEnd } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
@@ -37,11 +37,34 @@ export async function POST(request: Request) {
     return textResponse("PAYTR notification failed: missing fields", 400);
   }
 
+  const payment = await prisma.billingPayment.findUnique({
+    where: {
+      merchantOid
+    },
+    include: {
+      business: true
+    }
+  });
+
   if (!verifyPaytrCallbackHash({ merchantOid, status, totalAmount, hash })) {
     console.warn("[PAYTR:callback-bad-hash]", {
       merchantOid,
       status,
       totalAmount
+    });
+    await safeCreateAuditLog({
+      businessId: payment?.businessId,
+      category: AuditCategory.WEBHOOK,
+      action: "callback_hash_invalid",
+      message: "PAYTR callback hash validation failed.",
+      severity: AuditSeverity.WARN,
+      targetType: "BillingPayment",
+      targetId: payment?.id,
+      metadata: {
+        merchantOid,
+        status,
+        totalAmount
+      }
     });
     return textResponse("PAYTR notification failed: bad hash", 400);
   }
@@ -50,15 +73,6 @@ export async function POST(request: Request) {
     merchantOid,
     status,
     totalAmount
-  });
-
-  const payment = await prisma.billingPayment.findUnique({
-    where: {
-      merchantOid
-    },
-    include: {
-      business: true
-    }
   });
 
   if (!payment) {
@@ -108,13 +122,32 @@ export async function POST(request: Request) {
       })
     ]);
 
-    await createAuditLog({
+    await safeCreateAuditLog({
       businessId: payment.businessId,
       category: AuditCategory.BILLING,
-      action: "payment_succeeded",
-      message: "PAYTR payment callback activated subscription.",
+      action: "payment_success",
+      message: "PAYTR payment was confirmed successfully.",
       targetType: "BillingPayment",
-      targetId: payment.id
+      targetId: payment.id,
+      metadata: {
+        merchantOid,
+        activatedPlan: payment.plan,
+        totalAmount
+      }
+    });
+
+    await safeCreateAuditLog({
+      businessId: payment.businessId,
+      category: AuditCategory.BILLING,
+      action: "subscription_activated",
+      message: "Business subscription was activated automatically after successful PAYTR payment.",
+      targetType: "Business",
+      targetId: payment.businessId,
+      metadata: {
+        merchantOid,
+        plan: payment.plan,
+        nextPeriodEnd: nextPeriodEnd.toISOString()
+      }
     });
 
     console.info("[PAYTR:callback-success]", {
@@ -149,22 +182,20 @@ export async function POST(request: Request) {
         id: payment.businessId
       },
       data: {
-        subscriptionStatus: payment.business.subscriptionStatus === SubscriptionStatus.ACTIVE
-          ? SubscriptionStatus.PAST_DUE
-          : payment.business.subscriptionStatus,
         lastPaymentFailedAt: new Date()
       }
     })
   ]);
 
-  await createAuditLog({
+  await safeCreateAuditLog({
     businessId: payment.businessId,
     category: AuditCategory.BILLING,
     action: "payment_failed",
-    message: "PAYTR payment callback marked payment as failed.",
+    message: "PAYTR payment callback marked payment as failed without activating the subscription.",
     targetType: "BillingPayment",
     targetId: payment.id,
     metadata: {
+      merchantOid,
       failedReasonCode,
       failedReasonMessage
     }

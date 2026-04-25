@@ -10,7 +10,7 @@ export default async function PublicBillingSuccessPage() {
             <div className="rounded-[28px] bg-[linear-gradient(135deg,#214c3d_0%,#172f27_100%)] p-6 text-white">
               <div className="text-sm text-white/70">Ödeme Durumu</div>
               <div className="mt-2 font-[family-name:var(--font-display)] text-4xl">Ödeme başarılı</div>
-              <div className="mt-3 text-sm leading-6 text-white/75">Abonelik aktivasyonu şu anda işleniyor.</div>
+              <div className="mt-3 text-sm leading-6 text-white/75">PAYTR doğrulaması sonrası Pro aktivasyonu otomatik tamamlanır.</div>
             </div>
 
             <div className="space-y-4">
@@ -18,7 +18,7 @@ export default async function PublicBillingSuccessPage() {
                 <div className="text-sm text-sage">Güncel Plan</div>
                 <div className="mt-2 text-2xl font-semibold text-ink">Pro</div>
                 <p className="mt-4 text-sm leading-7 text-sage">
-                  Ödeme onayı alındı. Planınız kısa süre içinde güncellenecek ve Pro özellikleri hesabınızda açılacaktır.
+                  Ödeme alındı. Sunucu tarafındaki doğrulama tamamlandığında hesabınız Pro olarak aktifleşir. Gerekirse birkaç saniye sonra faturalama ekranını yenileyin.
                 </p>
               </div>
 

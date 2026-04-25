@@ -92,7 +92,7 @@ export default async function PaytrPaymentPage({
             </div>
 
             <div className="rounded-2xl bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
-              Ödemeniz onaylandığında planınız kısa süre içinde güncellenir. Ardından tüm Pro araçları kullanımınıza açılır.
+              PAYTR ödemeyi doğruladığında planınız otomatik olarak Pro&apos;ya geçer. Ek bir admin onayı gerekmez.
             </div>
 
             <Link href="/billing" className="btn-secondary w-full text-center">
