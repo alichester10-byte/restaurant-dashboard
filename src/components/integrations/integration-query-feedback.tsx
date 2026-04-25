@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Panel } from "@/components/ui/panel";
 
 const integrationErrorMessages: Record<string, string> = {
+  SESSION: "Kullanıcı oturumu bulunamadı. Lütfen tekrar giriş yapıp bağlantıyı yeniden başlatın.",
   whatsapp_setup_required: "WhatsApp self-serve bağlantısı için Meta uygulama kurulumu henüz tamamlanmadı.",
   instagram_setup_required: "Instagram self-serve bağlantısı için Meta Business Login yapılandırması eksik.",
   whatsapp_connect_failed: "WhatsApp bağlantısı tamamlanamadı. Meta izinlerini ve telefon numarası erişimini kontrol edin.",

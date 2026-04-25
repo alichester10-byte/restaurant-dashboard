@@ -85,8 +85,9 @@ export async function GET(request: Request) {
       userPresent: !!session?.user.id
     });
 
-    if (!session) {
-      return NextResponse.redirect(buildRedirect(request.url, "error=meta_callback_failed&step=SESSION"), { status: 303 });
+    if (!session?.user?.id || !session.user.businessId) {
+      console.log("❌ SESSION MISSING");
+      return NextResponse.redirect(buildRedirect(request.url, "error=SESSION&step=SESSION"), { status: 303 });
     }
 
     if (!state || state.userId !== session.user.id || state.businessId !== session.user.businessId) {
