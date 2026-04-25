@@ -21,7 +21,15 @@ function extractErrorStep(error: unknown) {
     return { step: "PARSE", message: message.slice("PARSE:".length).trim() || "Meta response parsing failed." };
   }
 
-  return { step: "DB", message };
+  if (message.startsWith("DB:")) {
+    return { step: "DB", message: message.slice("DB:".length).trim() || "Database write failed." };
+  }
+
+  if (message.startsWith("SESSION:")) {
+    return { step: "SESSION", message: message.slice("SESSION:".length).trim() || "Session validation failed." };
+  }
+
+  return { step: "UNKNOWN", message };
 }
 
 async function safeUpsertIntegrationConnection(input: {
@@ -58,20 +66,6 @@ async function safeUpsertIntegrationConnection(input: {
       error: error instanceof Error ? error.message : "unknown_error"
     };
   }
-}
-
-function mapMetaCallbackError(provider: "whatsapp" | "instagram", error: string | null, errorDescription: string | null) {
-  const combined = `${error ?? ""} ${errorDescription ?? ""}`.toLowerCase();
-
-  if (combined.includes("developer") || combined.includes("tester") || combined.includes("app isn't available") || combined.includes("app is not available")) {
-    return `${provider}_test_mode`;
-  }
-
-  if (combined.includes("redirect") || combined.includes("url blocked") || combined.includes("url is not whitelisted")) {
-    return `${provider}_redirect_mismatch`;
-  }
-
-  return `${provider}_connect_failed`;
 }
 
 export async function GET(request: Request) {
@@ -124,7 +118,7 @@ export async function GET(request: Request) {
         }
       });
 
-      return NextResponse.redirect(buildRedirect(request.url, `error=${mapMetaCallbackError(state.provider, error, errorDescription)}&step=SESSION`), { status: 303 });
+      return NextResponse.redirect(buildRedirect(request.url, "error=meta_callback_failed&step=TOKEN"), { status: 303 });
     }
 
     let payload;
@@ -215,6 +209,6 @@ export async function GET(request: Request) {
       step: failure.step,
       error: failure.message
     });
-    return NextResponse.redirect(buildRedirect(request.url, `error=meta_callback_failed&step=${failure.step}`), { status: 303 });
+    return NextResponse.redirect(buildRedirect(request.url, "error=meta_callback_failed&step=UNKNOWN"), { status: 303 });
   }
 }

@@ -3,6 +3,7 @@ import { reviewReservationRequestAction } from "@/actions/integration-actions";
 import { LockedAction } from "@/components/demo/locked-action";
 import { AiAssistantComposer } from "@/components/integrations/ai-assistant-composer";
 import { IntegrationCardGrid } from "@/components/integrations/integration-card-grid";
+import { IntegrationQueryFeedback } from "@/components/integrations/integration-query-feedback";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -32,11 +33,7 @@ function ConfidenceBadge({ score }: { score: number | null }) {
   return <span className={`badge ${tone}`}>Güven %{value}</span>;
 }
 
-export default async function IntegrationsPage({
-  searchParams
-}: {
-  searchParams?: { configured?: string; saved?: string; error?: string; connected?: string; success?: string; step?: string };
-}) {
+export default async function IntegrationsPage() {
   const session = await requireBusinessAccess({
     roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF]
   });
@@ -48,30 +45,6 @@ export default async function IntegrationsPage({
     instagram: getInstagramSetupStatus()
   };
   const metaDiagnostics = getMetaEnvironmentDiagnostics();
-  const integrationErrorMessages: Record<string, string> = {
-    whatsapp_setup_required: "WhatsApp self-serve bağlantısı için Meta uygulama kurulumu henüz tamamlanmadı.",
-    instagram_setup_required: "Instagram self-serve bağlantısı için Meta Business Login yapılandırması eksik.",
-    whatsapp_connect_failed: "WhatsApp bağlantısı tamamlanamadı. Meta izinlerini ve telefon numarası erişimini kontrol edin.",
-    instagram_connect_failed: "Instagram bağlantısı tamamlanamadı. Professional hesap ve Messaging izinlerini kontrol edin.",
-    whatsapp_test_mode: "Meta uygulaması şu anda development/test modunda görünüyor. Yalnızca app admins, developers veya testers bağlantıyı tamamlayabilir.",
-    instagram_test_mode: "Meta uygulaması şu anda development/test modunda görünüyor. Yalnızca app admins, developers veya testers bağlantıyı tamamlayabilir.",
-    whatsapp_redirect_mismatch: "WhatsApp redirect URI Meta ayarlarındaki Valid OAuth Redirect URIs listesiyle eşleşmiyor.",
-    instagram_redirect_mismatch: "Instagram redirect URI Meta ayarlarındaki Valid OAuth Redirect URIs listesiyle eşleşmiyor.",
-    meta_state_invalid: "Bağlantı oturumu doğrulanamadı. Lütfen tekrar deneyin.",
-    meta_session_expired: "Bağlantı oturumu süresi doldu. Panelden tekrar bağlamayı deneyin.",
-    meta_callback_failed: "Meta callback işlendi ancak bağlantı tamamlanamadı. Env ve Meta izinlerini kontrol edin."
-  };
-
-  const callbackStepLabel =
-    searchParams?.step === "TOKEN"
-      ? "TOKEN"
-      : searchParams?.step === "PARSE"
-        ? "PARSE"
-        : searchParams?.step === "DB"
-          ? "DB"
-          : searchParams?.step === "SESSION"
-            ? "SESSION"
-            : null;
 
   return (
     <div className="space-y-6">
@@ -85,42 +58,7 @@ export default async function IntegrationsPage({
         showUpgradeCta={entitlement.isDemo}
       />
 
-      {(searchParams?.configured || searchParams?.saved || searchParams?.connected || searchParams?.success) ? (
-        <Panel className="border-emerald-200 bg-emerald-50/80">
-          <div className="section-title text-emerald-700">Kanal Güncellendi</div>
-          <p className="mt-2 text-sm leading-6 text-emerald-700">
-            {searchParams.saved === "approved"
-              ? "Bekleyen talep onaylanarak rezervasyona dönüştürüldü."
-              : searchParams.saved === "rejected"
-                ? "Talep reddedildi ve nedeni kaydedildi."
-                : searchParams.saved === "created"
-                  ? "Mesaj AI asistanı tarafından çözümelendi ve onay bekleyen talep olarak eklendi."
-                  : searchParams.connected === "WHATSAPP"
-                    ? "WhatsApp Business bağlantısı tamamlandı. Gelen mesajlar artık pending request kuyruğuna düşebilir."
-                    : searchParams.connected === "INSTAGRAM"
-                      ? "Instagram hesabı bağlandı. Gelen DM’ler pending request olarak işlenmeye hazır."
-                  : searchParams.success === "whatsapp_connected"
-                    ? "WhatsApp Business bağlantısı tamamlandı. Gelen mesajlar artık pending request olarak işlenmeye hazır."
-                    : searchParams.success === "instagram_connected"
-                      ? "Instagram bağlantısı tamamlandı. DM talepleri artık onay kuyruğuna düşebilir."
-                : "Bağlantı akışı yapılandırma aşamasına alındı."}
-          </p>
-        </Panel>
-      ) : null}
-
-      {searchParams?.error ? (
-        <Panel className="border-rose-200 bg-rose-50/80">
-          <div className="section-title text-rose-700">Bağlantı Tamamlanamadı</div>
-          <p className="mt-2 text-sm leading-6 text-rose-700">
-            {integrationErrorMessages[searchParams.error] ?? "İşlem sırasında beklenmeyen bir hata oluştu."}
-          </p>
-          {callbackStepLabel ? (
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-700/80">
-              Hata adımı: {callbackStepLabel}
-            </p>
-          ) : null}
-        </Panel>
-      ) : null}
+      <IntegrationQueryFeedback />
 
       {data.loadError ? (
         <Panel className="border-amber-200 bg-amber-50/80">
