@@ -76,21 +76,32 @@ export async function GET(request: Request) {
     const state = verifyMetaConnectionState(url.searchParams.get("state"));
     const error = url.searchParams.get("error");
     const errorDescription = url.searchParams.get("error_description");
+    const actor =
+      state?.userId
+        ? await prisma.user.findFirst({
+            where: {
+              id: state.userId,
+              businessId: state.businessId
+            },
+            select: {
+              id: true,
+              role: true,
+              businessId: true
+            }
+          }).catch(() => null)
+        : null;
 
     console.info("[meta:callback_received]", {
       hasCode: !!code,
       error: error ?? null,
       hasState: !!url.searchParams.get("state"),
       businessPresent: !!session?.user.businessId,
-      userPresent: !!session?.user.id
+      userPresent: !!session?.user.id,
+      actorResolved: !!actor?.id
     });
 
-    if (!session?.user?.id || !session.user.businessId) {
-      console.log("❌ SESSION MISSING");
-      return NextResponse.redirect(buildRedirect(request.url, "error=SESSION&step=SESSION"), { status: 303 });
-    }
-
-    if (!state || state.userId !== session.user.id || state.businessId !== session.user.businessId) {
+    if (!state) {
+      console.log("❌ SESSION/STATE INVALID");
       return NextResponse.redirect(buildRedirect(request.url, "error=meta_callback_failed&step=SESSION"), { status: 303 });
     }
 
@@ -108,8 +119,8 @@ export async function GET(request: Request) {
 
       await safeCreateAuditLog({
         businessId: state.businessId,
-        actorUserId: session.user.id,
-        actorRole: session.user.role,
+        actorUserId: actor?.id,
+        actorRole: actor?.role ?? null,
         category: AuditCategory.INTEGRATION,
         action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
         message: "Meta connection callback returned an error.",
@@ -136,7 +147,7 @@ export async function GET(request: Request) {
         step: failure.step,
         error: failure.message,
         businessId: state.businessId,
-        userId: session.user.id
+        userId: actor?.id ?? state.userId
       });
 
       await safeUpsertIntegrationConnection({
@@ -150,8 +161,8 @@ export async function GET(request: Request) {
 
       await safeCreateAuditLog({
         businessId: state.businessId,
-        actorUserId: session.user.id,
-        actorRole: session.user.role,
+        actorUserId: actor?.id,
+        actorRole: actor?.role ?? null,
         category: AuditCategory.INTEGRATION,
         action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
         message: "Meta connection callback failed during token exchange or parsing.",
@@ -173,8 +184,8 @@ export async function GET(request: Request) {
     if (!dbWrite.ok) {
       await safeCreateAuditLog({
         businessId: state.businessId,
-        actorUserId: session.user.id,
-        actorRole: session.user.role,
+        actorUserId: actor?.id,
+        actorRole: actor?.role ?? null,
         category: AuditCategory.INTEGRATION,
         action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
         message: "Meta connection callback failed during database write.",
@@ -189,8 +200,8 @@ export async function GET(request: Request) {
 
     await safeCreateAuditLog({
       businessId: state.businessId,
-      actorUserId: session.user.id,
-      actorRole: session.user.role,
+      actorUserId: actor?.id,
+      actorRole: actor?.role ?? null,
       category: AuditCategory.INTEGRATION,
       action: state.provider === "whatsapp" ? "whatsapp_connected" : "instagram_connected",
       message: "Meta integration connected successfully."
