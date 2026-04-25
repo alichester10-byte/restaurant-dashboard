@@ -38,7 +38,7 @@ function getSessionCookieDomain() {
       return undefined;
     }
 
-    return hostname;
+    return hostname.replace(/^www\./, "");
   } catch {
     return undefined;
   }

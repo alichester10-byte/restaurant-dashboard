@@ -131,7 +131,6 @@ export function getCanonicalAppUrl() {
 
   try {
     const url = new URL(baseUrl);
-    url.hostname = url.hostname.replace(/^www\./, "");
     url.pathname = "";
     url.search = "";
     url.hash = "";

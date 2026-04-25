@@ -26,7 +26,6 @@ function getCanonicalOrigin() {
 
   try {
     const url = new URL(appUrl);
-    url.hostname = url.hostname.replace(/^www\./, "");
     url.pathname = "";
     url.search = "";
     url.hash = "";
@@ -44,10 +43,9 @@ export function middleware(request: NextRequest) {
   if (canonicalOrigin) {
     const currentUrl = new URL(request.url);
     const canonicalUrl = new URL(canonicalOrigin);
-    const normalizedHost = currentUrl.hostname.replace(/^www\./, "");
 
     if (
-      normalizedHost === canonicalUrl.hostname &&
+      currentUrl.hostname !== canonicalUrl.hostname &&
       currentUrl.origin !== canonicalUrl.origin
     ) {
       const redirectUrl = new URL(request.url);
