@@ -68,6 +68,28 @@ async function safeUpsertIntegrationConnection(input: {
   }
 }
 
+async function resolvePendingProviderFromSession(businessId: string) {
+  const pendingConnections = await prisma.integrationConnection.findMany({
+    where: {
+      businessId,
+      provider: {
+        in: [IntegrationProvider.WHATSAPP, IntegrationProvider.INSTAGRAM]
+      },
+      status: IntegrationStatus.CONNECTING
+    },
+    orderBy: {
+      updatedAt: "desc"
+    },
+    take: 2
+  }).catch(() => []);
+
+  if (pendingConnections.length !== 1) {
+    return null;
+  }
+
+  return pendingConnections[0].provider;
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -76,12 +98,23 @@ export async function GET(request: Request) {
     const state = verifyMetaConnectionState(url.searchParams.get("state"));
     const error = url.searchParams.get("error");
     const errorDescription = url.searchParams.get("error_description");
+    const fallbackProvider =
+      !state && session?.user?.businessId
+        ? await resolvePendingProviderFromSession(session.user.businessId)
+        : null;
+    const resolvedProvider = state
+      ? state.provider === "whatsapp"
+        ? IntegrationProvider.WHATSAPP
+        : IntegrationProvider.INSTAGRAM
+      : fallbackProvider;
+    const resolvedBusinessId = state?.businessId ?? session?.user?.businessId ?? null;
+    const resolvedUserId = state?.userId ?? session?.user?.id ?? null;
     const actor =
-      state?.userId
+      resolvedUserId && resolvedBusinessId
         ? await prisma.user.findFirst({
             where: {
-              id: state.userId,
-              businessId: state.businessId
+              id: resolvedUserId,
+              businessId: resolvedBusinessId
             },
             select: {
               id: true,
@@ -97,19 +130,20 @@ export async function GET(request: Request) {
       hasState: !!url.searchParams.get("state"),
       businessPresent: !!session?.user.businessId,
       userPresent: !!session?.user.id,
-      actorResolved: !!actor?.id
+      actorResolved: !!actor?.id,
+      fallbackProvider
     });
 
-    if (!state) {
+    if (!resolvedProvider || !resolvedBusinessId) {
       console.log("❌ SESSION/STATE INVALID");
       return NextResponse.redirect(buildRedirect(request.url, "error=meta_callback_failed&step=SESSION"), { status: 303 });
     }
 
-    const provider = state.provider === "whatsapp" ? IntegrationProvider.WHATSAPP : IntegrationProvider.INSTAGRAM;
+    const provider = resolvedProvider;
 
     if (error || !code) {
       await safeUpsertIntegrationConnection({
-        businessId: state.businessId,
+        businessId: resolvedBusinessId,
         provider,
         update: {
           status: IntegrationStatus.ERROR,
@@ -118,11 +152,11 @@ export async function GET(request: Request) {
       });
 
       await safeCreateAuditLog({
-        businessId: state.businessId,
+        businessId: resolvedBusinessId,
         actorUserId: actor?.id,
         actorRole: actor?.role ?? null,
         category: AuditCategory.INTEGRATION,
-        action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
+        action: provider === IntegrationProvider.WHATSAPP ? "whatsapp_connect_failed" : "instagram_connect_failed",
         message: "Meta connection callback returned an error.",
         metadata: {
           error,
@@ -136,22 +170,22 @@ export async function GET(request: Request) {
     let payload;
     try {
       payload =
-        state.provider === "whatsapp"
+        provider === IntegrationProvider.WHATSAPP
           ? await completeWhatsAppConnection(code)
           : await completeInstagramConnection(code);
     } catch (error) {
       const failure = extractErrorStep(error);
 
       console.error("[meta:callback_connection_failed]", {
-        provider: state.provider,
+        provider,
         step: failure.step,
         error: failure.message,
-        businessId: state.businessId,
-        userId: actor?.id ?? state.userId
+        businessId: resolvedBusinessId,
+        userId: actor?.id ?? resolvedUserId
       });
 
       await safeUpsertIntegrationConnection({
-        businessId: state.businessId,
+        businessId: resolvedBusinessId,
         provider,
         update: {
           status: IntegrationStatus.ERROR,
@@ -160,11 +194,11 @@ export async function GET(request: Request) {
       });
 
       await safeCreateAuditLog({
-        businessId: state.businessId,
+        businessId: resolvedBusinessId,
         actorUserId: actor?.id,
         actorRole: actor?.role ?? null,
         category: AuditCategory.INTEGRATION,
-        action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
+        action: provider === IntegrationProvider.WHATSAPP ? "whatsapp_connect_failed" : "instagram_connect_failed",
         message: "Meta connection callback failed during token exchange or parsing.",
         metadata: {
           step: failure.step,
@@ -176,18 +210,18 @@ export async function GET(request: Request) {
     }
 
     const dbWrite = await safeUpsertIntegrationConnection({
-      businessId: state.businessId,
+      businessId: resolvedBusinessId,
       provider,
       update: payload
     });
 
     if (!dbWrite.ok) {
       await safeCreateAuditLog({
-        businessId: state.businessId,
+        businessId: resolvedBusinessId,
         actorUserId: actor?.id,
         actorRole: actor?.role ?? null,
         category: AuditCategory.INTEGRATION,
-        action: state.provider === "whatsapp" ? "whatsapp_connect_failed" : "instagram_connect_failed",
+        action: provider === IntegrationProvider.WHATSAPP ? "whatsapp_connect_failed" : "instagram_connect_failed",
         message: "Meta connection callback failed during database write.",
         metadata: {
           step: "DB",
@@ -199,16 +233,16 @@ export async function GET(request: Request) {
     }
 
     await safeCreateAuditLog({
-      businessId: state.businessId,
+      businessId: resolvedBusinessId,
       actorUserId: actor?.id,
       actorRole: actor?.role ?? null,
       category: AuditCategory.INTEGRATION,
-      action: state.provider === "whatsapp" ? "whatsapp_connected" : "instagram_connected",
+      action: provider === IntegrationProvider.WHATSAPP ? "whatsapp_connected" : "instagram_connected",
       message: "Meta integration connected successfully."
     });
 
     return NextResponse.redirect(
-      buildRedirect(request.url, `success=${state.provider === "whatsapp" ? "whatsapp_connected" : "instagram_connected"}`),
+      buildRedirect(request.url, `success=${provider === IntegrationProvider.WHATSAPP ? "whatsapp_connected" : "instagram_connected"}`),
       { status: 303 }
     );
   } catch (callbackError) {
