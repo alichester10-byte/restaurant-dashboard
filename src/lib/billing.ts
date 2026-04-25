@@ -126,6 +126,21 @@ export function getAppBaseUrl() {
   );
 }
 
+export function getCanonicalAppUrl() {
+  const baseUrl = getAppBaseUrl();
+
+  try {
+    const url = new URL(baseUrl);
+    url.hostname = url.hostname.replace(/^www\./, "");
+    url.pathname = "";
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return baseUrl.replace(/\/+$/, "");
+  }
+}
+
 export function calculateSubscriptionPeriodEnd(plan: SubscriptionPlan, currentPeriodEndsAt?: Date | null) {
   const durationDays = planCatalog[plan].durationDays;
   const base = currentPeriodEndsAt && currentPeriodEndsAt > new Date() ? new Date(currentPeriodEndsAt) : new Date();

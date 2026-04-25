@@ -4,7 +4,7 @@ import { AuditCategory, AuditSeverity, UserRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { safeCreateAuditLog } from "@/lib/audit";
-import { getBusinessEntitlement, hasBusinessAccess } from "@/lib/billing";
+import { getBusinessEntitlement, getCanonicalAppUrl, hasBusinessAccess } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import { getRequestIp } from "@/lib/security";
 import { verifyTotpToken } from "@/lib/two-factor";
@@ -24,6 +24,37 @@ function getSessionSecret() {
     throw new Error("SESSION_SECRET is not configured.");
   }
   return secret;
+}
+
+function getSessionCookieDomain() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) {
+    return undefined;
+  }
+
+  try {
+    const hostname = new URL(getCanonicalAppUrl()).hostname;
+    if (hostname === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+      return undefined;
+    }
+
+    return hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+function getSessionCookieOptions(expires: Date) {
+  const domain = getSessionCookieDomain();
+
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires,
+    ...(domain ? { domain } : {})
+  };
 }
 
 export async function createSession(userId: string, options?: { impersonatedByUserId?: string | null }) {
@@ -47,13 +78,7 @@ export async function createSession(userId: string, options?: { impersonatedByUs
     }
   });
 
-  cookies().set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt
-  });
+  cookies().set(SESSION_COOKIE, token, getSessionCookieOptions(expiresAt));
 }
 
 export async function destroySession() {
@@ -67,11 +92,7 @@ export async function destroySession() {
     });
   }
 
-  cookies().set(SESSION_COOKIE, "", {
-    httpOnly: true,
-    path: "/",
-    expires: new Date(0)
-  });
+  cookies().set(SESSION_COOKIE, "", getSessionCookieOptions(new Date(0)));
 }
 
 export async function getCurrentSession() {

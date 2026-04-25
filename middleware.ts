@@ -18,9 +18,45 @@ function withSecurityHeaders(response: NextResponse) {
   return response;
 }
 
+function getCanonicalOrigin() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) {
+    return null;
+  }
+
+  try {
+    const url = new URL(appUrl);
+    url.hostname = url.hostname.replace(/^www\./, "");
+    url.pathname = "";
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const session = request.cookies.get("restaurant_ops_session")?.value;
   const { pathname } = request.nextUrl;
+  const canonicalOrigin = getCanonicalOrigin();
+
+  if (canonicalOrigin) {
+    const currentUrl = new URL(request.url);
+    const canonicalUrl = new URL(canonicalOrigin);
+    const normalizedHost = currentUrl.hostname.replace(/^www\./, "");
+
+    if (
+      normalizedHost === canonicalUrl.hostname &&
+      currentUrl.origin !== canonicalUrl.origin
+    ) {
+      const redirectUrl = new URL(request.url);
+      redirectUrl.protocol = canonicalUrl.protocol;
+      redirectUrl.hostname = canonicalUrl.hostname;
+      redirectUrl.port = canonicalUrl.port;
+      return withSecurityHeaders(NextResponse.redirect(redirectUrl, { status: 308 }));
+    }
+  }
 
   const isPublicBillingPath = publicBillingPaths.has(pathname);
   const isProtected = !isPublicBillingPath && protectedPaths.some((path) => pathname.startsWith(path));
