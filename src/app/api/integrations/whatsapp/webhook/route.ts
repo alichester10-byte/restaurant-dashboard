@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSource } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { createAuditLog } from "@/lib/audit";
-import { extractReservationRequest } from "@/lib/ai-reservation";
+import { safeCreateAuditLog } from "@/lib/audit";
+import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { logSuspiciousActivity, sanitizeText } from "@/lib/security";
@@ -68,73 +68,89 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: false }, { status: 400 });
   }
-  const businessId = sanitizeText(payload?.businessId);
-  const businessSlug = sanitizeText(payload?.businessSlug);
-  const message = sanitizeText(payload?.message ?? payload?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body);
+  const entry = payload?.entry?.[0];
+  const change = entry?.changes?.[0];
+  const value = change?.value;
+  const firstMessage = value?.messages?.[0];
+  const phoneNumberId = sanitizeText(value?.metadata?.phone_number_id);
+  const wabaId = sanitizeText(entry?.id);
+  const message = sanitizeText(firstMessage?.text?.body);
+  const sourceMessageId = sanitizeText(firstMessage?.id);
+  const sourceConversationId = sanitizeText(value?.contacts?.[0]?.wa_id ?? firstMessage?.from);
 
-  if ((!businessId && !businessSlug) || !message) {
+  if ((!phoneNumberId && !wabaId) || !message) {
     await logSuspiciousActivity({
       action: "whatsapp_webhook_invalid",
       message: "WhatsApp webhook received incomplete payload.",
       metadata: {
-        hasBusinessId: Boolean(businessId),
-        hasBusinessSlug: Boolean(businessSlug)
+        hasPhoneNumberId: Boolean(phoneNumberId),
+        hasWabaId: Boolean(wabaId)
       }
     });
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const business = businessId
-    ? await prisma.business.findUnique({ where: { id: businessId } })
-    : await prisma.business.findUnique({ where: { slug: businessSlug } });
+  const lookupFilters = [];
+  if (phoneNumberId) {
+    lookupFilters.push({ phoneNumberId });
+  }
+  if (wabaId) {
+    lookupFilters.push({ wabaId });
+  }
 
-  if (!business) {
+  const connection = await prisma.integrationConnection.findFirst({
+    where: {
+      provider: IntegrationProvider.WHATSAPP,
+      OR: lookupFilters
+    },
+    include: {
+      business: true
+    }
+  });
+
+  if (!connection?.business) {
+    await logSuspiciousActivity({
+      action: "whatsapp_webhook_business_missing",
+      message: "WhatsApp webhook could not be mapped to a business.",
+      metadata: {
+        phoneNumberId,
+        wabaId
+      }
+    });
     return NextResponse.json({ ok: false }, { status: 404 });
   }
 
-  const connection = await prisma.integrationConnection.upsert({
+  await prisma.integrationConnection.update({
     where: {
-      businessId_provider: {
-        businessId: business.id,
-        provider: IntegrationProvider.WHATSAPP
-      }
+      id: connection.id
     },
-    update: {
-      status: IntegrationStatus.CONNECTED,
-      lastSyncedAt: new Date()
-    },
-    create: {
-      businessId: business.id,
-      provider: IntegrationProvider.WHATSAPP,
-      status: IntegrationStatus.CONNECTED,
-      lastSyncedAt: new Date()
-    }
-  });
-
-  const extracted = await extractReservationRequest(message, ReservationSource.WHATSAPP);
-  await prisma.reservationRequest.create({
     data: {
-      businessId: business.id,
-      source: ReservationSource.WHATSAPP,
-      guestName: extracted.guestName || "WhatsApp talebi",
-      guestPhone: extracted.guestPhone,
-      requestedDate: extracted.requestedDate,
-      requestedTime: extracted.requestedTime,
-      guestCount: extracted.guestCount,
-      notes: "WhatsApp üzerinden alındı.",
-      confidenceScore: extracted.confidenceScore,
-      extractedData: extracted,
-      rawMessage: message
+      status: IntegrationStatus.CONNECTED,
+      lastSyncedAt: new Date(),
+      lastWebhookReceivedAt: new Date(),
+      errorMessage: null
     }
   });
 
-  await createAuditLog({
-    businessId: business.id,
+  const result = await createPendingReservationRequestFromExternalMessage({
+    businessId: connection.business.id,
+    source: ReservationSource.WHATSAPP,
+    rawMessage: message,
+    sourceConversationId,
+    sourceMessageId,
+    guestPhoneHint: sanitizeText(firstMessage?.from),
+    notes: "WhatsApp üzerinden alındı."
+  });
+
+  await safeCreateAuditLog({
+    businessId: connection.business.id,
     category: AuditCategory.WEBHOOK,
     action: "whatsapp_request_received",
     message: "Incoming WhatsApp reservation request stored as pending.",
     metadata: {
-      connectionId: connection.id
+      connectionId: connection.id,
+      duplicate: result.duplicate,
+      sourceMessageId
     }
   });
 

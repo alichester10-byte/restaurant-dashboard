@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusinessAccess, requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
-import { extractReservationRequest } from "@/lib/ai-reservation";
+import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
 import { prisma } from "@/lib/prisma";
 import { sanitizeNullableText, sanitizeText } from "@/lib/security";
 import { buildReminderSchedule } from "@/lib/reminders";
@@ -163,7 +163,7 @@ export async function reviewReservationRequestAction(formData: FormData) {
       customerId: customer.id,
       guestName: approvedGuestName,
       guestPhone: approvedGuestPhone || customer.phone,
-      source: ReservationSource.AI,
+      source: request.source,
       status: ReservationStatus.CONFIRMED,
       startAt,
       endAt,
@@ -187,7 +187,7 @@ export async function reviewReservationRequestAction(formData: FormData) {
       requestedTime: approvedRequestedTime,
       guestCount: approvedGuestCount,
       notes: approvedNotes,
-      source: ReservationSource.AI
+      source: request.source
     }
   });
 
@@ -228,22 +228,11 @@ export async function createManualReservationRequestAction(formData: FormData) {
     redirect("/integrations?error=request_create");
   }
 
-  const extracted = await extractReservationRequest(parsed.data.message, parsed.data.source);
-
-  await prisma.reservationRequest.create({
-    data: {
-      businessId,
-      source: ReservationSource.AI,
-      guestName: extracted.guestName || "AI talebi",
-      guestPhone: extracted.guestPhone,
-      requestedDate: extracted.requestedDate,
-      requestedTime: extracted.requestedTime,
-      guestCount: extracted.guestCount,
-      notes: extracted.notes ?? "Manuel AI asistan talebi",
-      confidenceScore: extracted.confidenceScore,
-      extractedData: extracted,
-      rawMessage: parsed.data.message
-    }
+  await createPendingReservationRequestFromExternalMessage({
+    businessId,
+    source: ReservationSource.AI,
+    rawMessage: parsed.data.message,
+    notes: "Manuel AI asistan talebi"
   });
 
   await prisma.integrationConnection.upsert({

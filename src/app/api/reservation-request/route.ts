@@ -1,7 +1,7 @@
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSource } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { createAuditLog } from "@/lib/audit";
-import { extractReservationRequest } from "@/lib/ai-reservation";
+import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { sanitizeNullableText, sanitizeText, verifySameOrigin } from "@/lib/security";
@@ -57,30 +57,12 @@ export async function POST(request: Request) {
     }
   });
 
-  const extracted = await extractReservationRequest(
-    `${guestName} ${guestPhone} ${requestedDate} ${requestedTime} ${guestCount ?? ""} ${notes}`,
-    source
-  );
-  await prisma.reservationRequest.create({
-    data: {
-      businessId: business.id,
-      source,
-      guestName,
-      guestPhone: guestPhone || extracted.guestPhone,
-      requestedDate: requestedDate || extracted.requestedDate,
-      requestedTime: requestedTime || extracted.requestedTime,
-      guestCount: guestCount || extracted.guestCount,
-      notes: notes || null,
-      confidenceScore: extracted.confidenceScore,
-      extractedData: {
-        guestName,
-        guestPhone,
-        requestedDate,
-        requestedTime,
-        guestCount
-      },
-      rawMessage: notes || null
-    }
+  await createPendingReservationRequestFromExternalMessage({
+    businessId: business.id,
+    source,
+    rawMessage: `${guestName} ${guestPhone} ${requestedDate} ${requestedTime} ${guestCount ?? ""} ${notes}`.trim(),
+    guestPhoneHint: guestPhone || null,
+    notes: notes || null
   });
 
   await createAuditLog({

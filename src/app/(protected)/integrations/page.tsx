@@ -10,6 +10,7 @@ import { requireBusinessAccess } from "@/lib/auth";
 import { getAppBaseUrl, getBusinessEntitlement } from "@/lib/billing";
 import { reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
 import { getIntegrationsPageData } from "@/lib/data";
+import { getMetaProviderSetup } from "@/lib/meta";
 import { formatDateTime } from "@/lib/utils";
 import { getWhatsAppVerifyToken, WHATSAPP_SAMPLE_MESSAGE } from "@/lib/whatsapp";
 
@@ -34,13 +35,24 @@ function ConfidenceBadge({ score }: { score: number | null }) {
 export default async function IntegrationsPage({
   searchParams
 }: {
-  searchParams?: { configured?: string; saved?: string; error?: string };
+  searchParams?: { configured?: string; saved?: string; error?: string; connected?: string };
 }) {
   const session = await requireBusinessAccess({
     roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF]
   });
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const data = await getIntegrationsPageData(session.user.businessId);
+  const metaSetup = {
+    whatsapp: getMetaProviderSetup("whatsapp"),
+    instagram: getMetaProviderSetup("instagram")
+  };
+  const integrationErrorMessages: Record<string, string> = {
+    whatsapp_setup_required: "WhatsApp self-serve bağlantısı için Meta uygulama kurulumu henüz tamamlanmadı.",
+    instagram_setup_required: "Instagram self-serve bağlantısı için Meta Business Login yapılandırması eksik.",
+    whatsapp_connect_failed: "WhatsApp bağlantısı tamamlanamadı. Meta izinlerini ve telefon numarası erişimini kontrol edin.",
+    instagram_connect_failed: "Instagram bağlantısı tamamlanamadı. Professional hesap ve Messaging izinlerini kontrol edin.",
+    meta_state_invalid: "Bağlantı oturumu doğrulanamadı. Lütfen tekrar deneyin."
+  };
 
   return (
     <div className="space-y-6">
@@ -54,7 +66,7 @@ export default async function IntegrationsPage({
         showUpgradeCta={entitlement.isDemo}
       />
 
-      {(searchParams?.configured || searchParams?.saved) ? (
+      {(searchParams?.configured || searchParams?.saved || searchParams?.connected) ? (
         <Panel className="border-emerald-200 bg-emerald-50/80">
           <div className="section-title text-emerald-700">Kanal Güncellendi</div>
           <p className="mt-2 text-sm leading-6 text-emerald-700">
@@ -64,7 +76,20 @@ export default async function IntegrationsPage({
                 ? "Talep reddedildi ve nedeni kaydedildi."
                 : searchParams.saved === "created"
                   ? "Mesaj AI asistanı tarafından çözümelendi ve onay bekleyen talep olarak eklendi."
+                  : searchParams.connected === "WHATSAPP"
+                    ? "WhatsApp Business bağlantısı tamamlandı. Gelen mesajlar artık pending request kuyruğuna düşebilir."
+                    : searchParams.connected === "INSTAGRAM"
+                      ? "Instagram hesabı bağlandı. Gelen DM’ler pending request olarak işlenmeye hazır."
                 : "Bağlantı akışı yapılandırma aşamasına alındı."}
+          </p>
+        </Panel>
+      ) : null}
+
+      {searchParams?.error ? (
+        <Panel className="border-rose-200 bg-rose-50/80">
+          <div className="section-title text-rose-700">Bağlantı Tamamlanamadı</div>
+          <p className="mt-2 text-sm leading-6 text-rose-700">
+            {integrationErrorMessages[searchParams.error] ?? "İşlem sırasında beklenmeyen bir hata oluştu."}
           </p>
         </Panel>
       ) : null}
@@ -75,6 +100,8 @@ export default async function IntegrationsPage({
         baseUrl={getAppBaseUrl()}
         whatsappVerifyToken={getWhatsAppVerifyToken()}
         whatsappSampleMessage={WHATSAPP_SAMPLE_MESSAGE}
+        metaSetup={metaSetup}
+        canManageConnections={entitlement.canWrite && session.user.role === UserRole.BUSINESS_ADMIN}
       />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">

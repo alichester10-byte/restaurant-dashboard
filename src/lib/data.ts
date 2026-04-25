@@ -603,7 +603,7 @@ export async function getSuperAdminData(input?: {
 
 export async function getIntegrationsPageData(businessId: string) {
   const providers = Object.values(IntegrationProvider);
-  const [connections, pendingRequests] = await Promise.all([
+  const [connections, pendingRequests, recentRequests] = await Promise.all([
     prisma.integrationConnection.findMany({
       where: { businessId },
       orderBy: { provider: "asc" }
@@ -617,10 +617,42 @@ export async function getIntegrationsPageData(businessId: string) {
         createdAt: "desc"
       },
       take: 12
+    }),
+    prisma.reservationRequest.findMany({
+      where: {
+        businessId,
+        source: {
+          in: [
+            ReservationSource.WHATSAPP,
+            ReservationSource.INSTAGRAM,
+            ReservationSource.WEBSITE,
+            ReservationSource.GOOGLE,
+            ReservationSource.AI
+          ]
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 30
     })
   ]);
 
   const connectionMap = new Map(connections.map((connection) => [connection.provider, connection]));
+  const latestRequestMap = new Map<string, (typeof recentRequests)[number]>();
+  for (const request of recentRequests) {
+    const key =
+      request.source === ReservationSource.WEBSITE || request.source === ReservationSource.GOOGLE
+        ? IntegrationProvider.GOOGLE_WEB
+        : request.source === ReservationSource.AI
+          ? IntegrationProvider.AI_ASSISTANT
+          : request.source;
+
+    if (!latestRequestMap.has(key)) {
+      latestRequestMap.set(key, request);
+    }
+  }
+
   const cards = providers.map((provider) => ({
     provider,
     connection:
@@ -632,6 +664,8 @@ export async function getIntegrationsPageData(businessId: string) {
             ? IntegrationStatus.NEEDS_CONFIGURATION
             : IntegrationStatus.NOT_CONNECTED
       } as const)
+    ,
+    latestRequest: latestRequestMap.get(provider) ?? null
   }));
 
   return {

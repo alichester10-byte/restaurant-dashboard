@@ -18,7 +18,7 @@ export const integrationDescriptions: Record<
   INSTAGRAM: {
     title: "Instagram DM",
     description: "Instagram Professional hesaplarından gelen DM taleplerini toplar, uygun bilgileri çıkarır ve ekip onayına sunar.",
-    buttonLabel: "Instagram'ı Yapılandır",
+    buttonLabel: "Instagram'ı Bağla",
     source: ReservationSource.INSTAGRAM
   },
   GOOGLE_WEB: {

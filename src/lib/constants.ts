@@ -113,8 +113,10 @@ export const integrationProviderLabels: Record<IntegrationProvider, string> = {
 
 export const integrationStatusLabels: Record<IntegrationStatus, string> = {
   NOT_CONNECTED: "Bağlı değil",
+  CONNECTING: "Bağlanıyor",
   CONNECTED: "Bağlı",
-  NEEDS_CONFIGURATION: "Yapılandırma gerekli"
+  NEEDS_CONFIGURATION: "Yapılandırma gerekli",
+  ERROR: "Bağlantı hatası"
 };
 
 export const reservationRequestStatusLabels: Record<ReservationRequestStatus, string> = {

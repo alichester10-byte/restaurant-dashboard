@@ -62,8 +62,10 @@ enum IntegrationProvider {
 
 enum IntegrationStatus {
   NOT_CONNECTED
+  CONNECTING
   CONNECTED
   NEEDS_CONFIGURATION
+  ERROR
 }
 
 enum ReservationRequestStatus {
@@ -423,6 +425,18 @@ model IntegrationConnection {
   provider          IntegrationProvider
   status            IntegrationStatus @default(NOT_CONNECTED)
   externalAccountId String?
+  metaBusinessId    String?
+  wabaId            String?
+  phoneNumberId     String?
+  displayPhoneNumber String?
+  facebookPageId    String?
+  instagramAccountId String?
+  instagramUsername String?
+  accessTokenEncrypted String?
+  tokenExpiresAt    DateTime?
+  webhookSubscribedAt DateTime?
+  lastWebhookReceivedAt DateTime?
+  errorMessage      String?
   config            Json?
   lastSyncedAt      DateTime?
   business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -430,6 +444,10 @@ model IntegrationConnection {
   updatedAt         DateTime          @updatedAt
 
   @@unique([businessId, provider])
+  @@index([provider, phoneNumberId])
+  @@index([provider, wabaId])
+  @@index([provider, facebookPageId])
+  @@index([provider, instagramAccountId])
   @@index([businessId])
 }
 
@@ -438,6 +456,8 @@ model ReservationRequest {
   businessId        String
   source            ReservationSource
   status            ReservationRequestStatus @default(PENDING)
+  sourceConversationId String?
+  sourceMessageId   String?
   guestName         String
   guestPhone        String?
   requestedDate     String?
@@ -456,6 +476,7 @@ model ReservationRequest {
 
   @@index([businessId, status])
   @@index([businessId, source])
+  @@unique([businessId, sourceMessageId])
 }
 
 model AuditLog {

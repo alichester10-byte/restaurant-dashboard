@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSource } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { createAuditLog } from "@/lib/audit";
-import { extractReservationRequest } from "@/lib/ai-reservation";
+import { safeCreateAuditLog } from "@/lib/audit";
+import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { logSuspiciousActivity, sanitizeText } from "@/lib/security";
@@ -67,71 +67,79 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: false }, { status: 400 });
   }
-  const businessId = sanitizeText(payload?.businessId);
-  const businessSlug = sanitizeText(payload?.businessSlug);
-  const message = sanitizeText(payload?.message ?? payload?.entry?.[0]?.messaging?.[0]?.message?.text);
+  const entry = payload?.entry?.[0];
+  const messaging = entry?.messaging?.[0];
+  const message = sanitizeText(messaging?.message?.text);
+  const pageId = sanitizeText(entry?.id ?? messaging?.recipient?.id);
+  const sourceMessageId = sanitizeText(messaging?.message?.mid);
+  const sourceConversationId = sanitizeText(messaging?.sender?.id);
 
-  if ((!businessId && !businessSlug) || !message) {
+  if (!pageId || !message) {
     await logSuspiciousActivity({
       action: "instagram_webhook_invalid",
       message: "Instagram webhook received incomplete payload.",
       metadata: {
-        hasBusinessId: Boolean(businessId),
-        hasBusinessSlug: Boolean(businessSlug)
+        hasPageId: Boolean(pageId)
       }
     });
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const business = businessId
-    ? await prisma.business.findUnique({ where: { id: businessId } })
-    : await prisma.business.findUnique({ where: { slug: businessSlug } });
+  const connection = await prisma.integrationConnection.findFirst({
+    where: {
+      provider: IntegrationProvider.INSTAGRAM,
+      OR: [
+        { facebookPageId: pageId },
+        { instagramAccountId: pageId }
+      ]
+    },
+    include: {
+      business: true
+    }
+  });
 
-  if (!business) {
+  if (!connection?.business) {
+    await logSuspiciousActivity({
+      action: "instagram_webhook_business_missing",
+      message: "Instagram webhook could not be mapped to a business.",
+      metadata: {
+        pageId
+      }
+    });
     return NextResponse.json({ ok: false }, { status: 404 });
   }
 
-  await prisma.integrationConnection.upsert({
+  await prisma.integrationConnection.update({
     where: {
-      businessId_provider: {
-        businessId: business.id,
-        provider: IntegrationProvider.INSTAGRAM
-      }
+      id: connection.id
     },
-    update: {
-      status: IntegrationStatus.CONNECTED,
-      lastSyncedAt: new Date()
-    },
-    create: {
-      businessId: business.id,
-      provider: IntegrationProvider.INSTAGRAM,
-      status: IntegrationStatus.CONNECTED,
-      lastSyncedAt: new Date()
-    }
-  });
-
-  const extracted = await extractReservationRequest(message, ReservationSource.INSTAGRAM);
-  await prisma.reservationRequest.create({
     data: {
-      businessId: business.id,
-      source: ReservationSource.INSTAGRAM,
-      guestName: extracted.guestName || "Instagram talebi",
-      guestPhone: extracted.guestPhone,
-      requestedDate: extracted.requestedDate,
-      requestedTime: extracted.requestedTime,
-      guestCount: extracted.guestCount,
-      notes: "Instagram DM üzerinden alındı.",
-      confidenceScore: extracted.confidenceScore,
-      extractedData: extracted,
-      rawMessage: message
+      status: IntegrationStatus.CONNECTED,
+      lastSyncedAt: new Date(),
+      lastWebhookReceivedAt: new Date(),
+      errorMessage: null
     }
   });
 
-  await createAuditLog({
-    businessId: business.id,
+  const result = await createPendingReservationRequestFromExternalMessage({
+    businessId: connection.business.id,
+    source: ReservationSource.INSTAGRAM,
+    rawMessage: message,
+    sourceConversationId,
+    sourceMessageId,
+    notes: "Instagram DM üzerinden alındı."
+  });
+
+  await safeCreateAuditLog({
+    businessId: connection.business.id,
     category: AuditCategory.WEBHOOK,
     action: "instagram_request_received",
-    message: "Incoming Instagram reservation request stored as pending."
+    message: "Incoming Instagram reservation request stored as pending.",
+    metadata: {
+      connectionId: connection.id,
+      duplicate: result.duplicate,
+      sourceMessageId
+    }
   });
 
   return NextResponse.json({ ok: true });
