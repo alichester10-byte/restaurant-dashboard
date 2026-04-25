@@ -35,7 +35,7 @@ function ConfidenceBadge({ score }: { score: number | null }) {
 export default async function IntegrationsPage({
   searchParams
 }: {
-  searchParams?: { configured?: string; saved?: string; error?: string; connected?: string };
+  searchParams?: { configured?: string; saved?: string; error?: string; connected?: string; success?: string; step?: string };
 }) {
   const session = await requireBusinessAccess({
     roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF]
@@ -62,6 +62,17 @@ export default async function IntegrationsPage({
     meta_callback_failed: "Meta callback işlendi ancak bağlantı tamamlanamadı. Env ve Meta izinlerini kontrol edin."
   };
 
+  const callbackStepLabel =
+    searchParams?.step === "TOKEN"
+      ? "TOKEN"
+      : searchParams?.step === "PARSE"
+        ? "PARSE"
+        : searchParams?.step === "DB"
+          ? "DB"
+          : searchParams?.step === "SESSION"
+            ? "SESSION"
+            : null;
+
   return (
     <div className="space-y-6">
       <AppHeader
@@ -74,7 +85,7 @@ export default async function IntegrationsPage({
         showUpgradeCta={entitlement.isDemo}
       />
 
-      {(searchParams?.configured || searchParams?.saved || searchParams?.connected) ? (
+      {(searchParams?.configured || searchParams?.saved || searchParams?.connected || searchParams?.success) ? (
         <Panel className="border-emerald-200 bg-emerald-50/80">
           <div className="section-title text-emerald-700">Kanal Güncellendi</div>
           <p className="mt-2 text-sm leading-6 text-emerald-700">
@@ -88,6 +99,10 @@ export default async function IntegrationsPage({
                     ? "WhatsApp Business bağlantısı tamamlandı. Gelen mesajlar artık pending request kuyruğuna düşebilir."
                     : searchParams.connected === "INSTAGRAM"
                       ? "Instagram hesabı bağlandı. Gelen DM’ler pending request olarak işlenmeye hazır."
+                  : searchParams.success === "whatsapp_connected"
+                    ? "WhatsApp Business bağlantısı tamamlandı. Gelen mesajlar artık pending request olarak işlenmeye hazır."
+                    : searchParams.success === "instagram_connected"
+                      ? "Instagram bağlantısı tamamlandı. DM talepleri artık onay kuyruğuna düşebilir."
                 : "Bağlantı akışı yapılandırma aşamasına alındı."}
           </p>
         </Panel>
@@ -99,6 +114,11 @@ export default async function IntegrationsPage({
           <p className="mt-2 text-sm leading-6 text-rose-700">
             {integrationErrorMessages[searchParams.error] ?? "İşlem sırasında beklenmeyen bir hata oluştu."}
           </p>
+          {callbackStepLabel ? (
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-700/80">
+              Hata adımı: {callbackStepLabel}
+            </p>
+          ) : null}
         </Panel>
       ) : null}
 

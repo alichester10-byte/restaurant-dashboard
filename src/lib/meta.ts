@@ -447,6 +447,14 @@ async function fetchMetaJson<T>(path: string, input: { accessToken?: string; sea
   return payload as T;
 }
 
+function getPayloadKeys(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  return Object.keys(payload as Record<string, unknown>);
+}
+
 export async function exchangeMetaCodeForToken(code: string) {
   const appId = getMetaEnv("META_APP_ID");
   const appSecret = getMetaEnv("META_APP_SECRET");
@@ -457,14 +465,27 @@ export async function exchangeMetaCodeForToken(code: string) {
     throw new Error("Meta app credentials are not configured.");
   }
 
-  return fetchMetaJson<{ access_token: string; token_type?: string; expires_in?: number }>("/oauth/access_token", {
-    searchParams: {
-      client_id: appId,
-      client_secret: appSecret,
-      redirect_uri: redirectUri,
-      code
-    }
-  });
+  try {
+    const token = await fetchMetaJson<{ access_token: string; token_type?: string; expires_in?: number }>("/oauth/access_token", {
+      searchParams: {
+        client_id: appId,
+        client_secret: appSecret,
+        redirect_uri: redirectUri,
+        code
+      }
+    });
+
+    console.info("[meta:token_exchange_result]", {
+      redirectUri,
+      payloadKeys: getPayloadKeys(token),
+      hasAccessToken: !!token?.access_token,
+      hasExpiresIn: typeof token?.expires_in === "number"
+    });
+
+    return token;
+  } catch (error) {
+    throw new Error(`TOKEN:${error instanceof Error ? error.message : "Meta token exchange failed."}`);
+  }
 }
 
 async function subscribeAppToTarget(targetId: string, accessToken: string) {
@@ -487,6 +508,11 @@ async function getWhatsAppMetadata(accessToken: string) {
     }
   });
 
+  console.info("[meta:whatsapp_businesses_result]", {
+    payloadKeys: getPayloadKeys(businesses),
+    businessCount: businesses.data?.length ?? 0
+  });
+
   for (const business of businesses.data ?? []) {
     const owned = await fetchMetaJson<{ data: Array<{ id: string; name?: string; phone_numbers?: { data?: Array<{ id: string; display_phone_number?: string; verified_name?: string }> } }> }>(
       `/${business.id}/owned_whatsapp_business_accounts`,
@@ -497,6 +523,12 @@ async function getWhatsAppMetadata(accessToken: string) {
         }
       }
     ).catch(() => ({ data: [] }));
+
+    console.info("[meta:whatsapp_owned_waba_result]", {
+      businessId: business.id,
+      payloadKeys: getPayloadKeys(owned),
+      wabaCount: owned.data?.length ?? 0
+    });
 
     const waba = owned.data?.[0];
     const phone = waba?.phone_numbers?.data?.[0];
@@ -536,7 +568,17 @@ async function getInstagramMetadata(accessToken: string) {
 
 export async function completeWhatsAppConnection(code: string) {
   const token = await exchangeMetaCodeForToken(code);
-  const metadata = await getWhatsAppMetadata(token.access_token);
+  if (!token.access_token) {
+    throw new Error("TOKEN:Meta token response is missing access_token.");
+  }
+
+  let metadata;
+  try {
+    metadata = await getWhatsAppMetadata(token.access_token);
+  } catch (error) {
+    throw new Error(`PARSE:${error instanceof Error ? error.message : "WhatsApp metadata could not be parsed."}`);
+  }
+
   const webhookSubscribedAt = metadata.wabaId
     ? await subscribeAppToTarget(metadata.wabaId, token.access_token)
     : null;
@@ -561,7 +603,17 @@ export async function completeWhatsAppConnection(code: string) {
 
 export async function completeInstagramConnection(code: string) {
   const token = await exchangeMetaCodeForToken(code);
-  const metadata = await getInstagramMetadata(token.access_token);
+  if (!token.access_token) {
+    throw new Error("TOKEN:Meta token response is missing access_token.");
+  }
+
+  let metadata;
+  try {
+    metadata = await getInstagramMetadata(token.access_token);
+  } catch (error) {
+    throw new Error(`PARSE:${error instanceof Error ? error.message : "Instagram metadata could not be parsed."}`);
+  }
+
   const webhookSubscribedAt = metadata.facebookPageId
     ? await subscribeAppToTarget(metadata.facebookPageId, metadata.pageAccessToken)
     : null;
