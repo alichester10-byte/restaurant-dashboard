@@ -2,7 +2,6 @@ import "server-only";
 
 import crypto from "node:crypto";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
-import { getAppBaseUrl } from "@/lib/billing";
 
 const META_GRAPH_VERSION = "v20.0";
 
@@ -83,7 +82,7 @@ function looksLikeNumericId(value: string | null) {
 
 function getMetaRedirectBaseUrl() {
   const publicAppUrl = getMetaEnv("NEXT_PUBLIC_APP_URL");
-  return publicAppUrl ? publicAppUrl.replace(/\/+$/, "") : getAppBaseUrl().replace(/\/+$/, "");
+  return publicAppUrl ? publicAppUrl.replace(/\/+$/, "") : null;
 }
 
 function getStateSecret() {
@@ -142,6 +141,7 @@ export function decryptMetaToken(value: string) {
 }
 
 export function getMetaSetupStatus(): MetaSetupStatus {
+  const baseUrl = getMetaRedirectBaseUrl();
   const shared = {
     appId: getMetaEnv("META_APP_ID"),
     appSecret: getMetaEnv("META_APP_SECRET"),
@@ -172,9 +172,9 @@ export function getMetaSetupStatus(): MetaSetupStatus {
     configId: null,
     appId: shared.publicAppId,
     verifyToken: shared.verifyToken,
-    callbackUrl: `${getMetaRedirectBaseUrl()}/api/integrations/meta/callback`,
-    whatsappWebhookUrl: `${getMetaRedirectBaseUrl()}/api/integrations/whatsapp/webhook`,
-    instagramWebhookUrl: `${getMetaRedirectBaseUrl()}/api/integrations/instagram/webhook`
+    callbackUrl: baseUrl ? `${baseUrl}/api/integrations/meta/callback` : "",
+    whatsappWebhookUrl: baseUrl ? `${baseUrl}/api/integrations/whatsapp/webhook` : "",
+    instagramWebhookUrl: baseUrl ? `${baseUrl}/api/integrations/instagram/webhook` : ""
   };
 }
 
@@ -191,7 +191,8 @@ export function getMetaEnvironmentDiagnostics(): MetaEnvironmentDiagnostics {
     NEXT_PUBLIC_APP_URL: getMetaEnv("NEXT_PUBLIC_APP_URL")
   } as const;
 
-  const redirectUri = `${getMetaRedirectBaseUrl()}/api/integrations/meta/callback`;
+  const baseUrl = getMetaRedirectBaseUrl();
+  const redirectUri = baseUrl ? `${baseUrl}/api/integrations/meta/callback` : "";
   const redirectUriExactMatch = values.NEXT_PUBLIC_APP_URL === "https://limonmasa.com";
   const appIdsMatch = !!values.META_APP_ID && values.META_APP_ID === values.NEXT_PUBLIC_META_APP_ID;
   const webhookSecretMatchesAppSecret =
@@ -410,6 +411,7 @@ export function getMetaAuthorizationDebugInfo(provider: MetaProvider, state: str
   const setup = getMetaProviderSetup(provider);
   return {
     provider,
+    baseUrlUsed: getMetaRedirectBaseUrl(),
     clientId: setup.appId,
     configId: setup.configId,
     redirectUri: setup.callbackUrl,
@@ -448,9 +450,10 @@ async function fetchMetaJson<T>(path: string, input: { accessToken?: string; sea
 export async function exchangeMetaCodeForToken(code: string) {
   const appId = getMetaEnv("META_APP_ID");
   const appSecret = getMetaEnv("META_APP_SECRET");
-  const redirectUri = `${getAppBaseUrl()}/api/integrations/meta/callback`;
+  const baseUrl = getMetaRedirectBaseUrl();
+  const redirectUri = baseUrl ? `${baseUrl}/api/integrations/meta/callback` : null;
 
-  if (!appId || !appSecret) {
+  if (!appId || !appSecret || !redirectUri) {
     throw new Error("Meta app credentials are not configured.");
   }
 
