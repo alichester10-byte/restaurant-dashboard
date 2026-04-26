@@ -90,25 +90,73 @@ async function resolvePendingProviderFromSession(businessId: string) {
   return pendingConnections[0].provider;
 }
 
+function readConfigString(config: unknown, key: string) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return null;
+  }
+
+  const value = (config as Record<string, unknown>)[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+async function resolvePendingConnectionFromRawState(rawState: string | null) {
+  if (!rawState) {
+    return null;
+  }
+
+  const pendingConnections = await prisma.integrationConnection.findMany({
+    where: {
+      provider: {
+        in: [IntegrationProvider.WHATSAPP, IntegrationProvider.INSTAGRAM]
+      },
+      status: IntegrationStatus.CONNECTING
+    },
+    orderBy: {
+      updatedAt: "desc"
+    },
+    take: 8
+  }).catch(() => []);
+
+  const matched = pendingConnections.filter(
+    (connection) => readConfigString(connection.config, "oauthState") === rawState
+  );
+
+  if (matched.length !== 1) {
+    return null;
+  }
+
+  return matched[0];
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const session = await getCurrentSession();
     const code = url.searchParams.get("code");
-    const state = verifyMetaConnectionState(url.searchParams.get("state"));
+    const rawState = url.searchParams.get("state");
+    const state = verifyMetaConnectionState(rawState);
     const error = url.searchParams.get("error");
     const errorDescription = url.searchParams.get("error_description");
+    const pendingConnectionFromState = !state ? await resolvePendingConnectionFromRawState(rawState) : null;
     const fallbackProvider =
-      !state && session?.user?.businessId
+      !state && !pendingConnectionFromState && session?.user?.businessId
         ? await resolvePendingProviderFromSession(session.user.businessId)
         : null;
     const resolvedProvider = state
       ? state.provider === "whatsapp"
         ? IntegrationProvider.WHATSAPP
         : IntegrationProvider.INSTAGRAM
-      : fallbackProvider;
-    const resolvedBusinessId = state?.businessId ?? session?.user?.businessId ?? null;
-    const resolvedUserId = state?.userId ?? session?.user?.id ?? null;
+      : pendingConnectionFromState?.provider ?? fallbackProvider;
+    const resolvedBusinessId =
+      state?.businessId ??
+      pendingConnectionFromState?.businessId ??
+      session?.user?.businessId ??
+      null;
+    const resolvedUserId =
+      state?.userId ??
+      readConfigString(pendingConnectionFromState?.config, "oauthUserId") ??
+      session?.user?.id ??
+      null;
     const actor =
       resolvedUserId && resolvedBusinessId
         ? await prisma.user.findFirst({
@@ -127,11 +175,12 @@ export async function GET(request: Request) {
     console.info("[meta:callback_received]", {
       hasCode: !!code,
       error: error ?? null,
-      hasState: !!url.searchParams.get("state"),
+      hasState: !!rawState,
       businessPresent: !!session?.user.businessId,
       userPresent: !!session?.user.id,
       actorResolved: !!actor?.id,
-      fallbackProvider
+      fallbackProvider,
+      pendingConnectionRecovered: !!pendingConnectionFromState
     });
 
     if (!resolvedProvider || !resolvedBusinessId) {

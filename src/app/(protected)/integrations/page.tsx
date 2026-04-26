@@ -85,7 +85,11 @@ export default async function IntegrationsPage() {
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
               <div className="font-semibold text-ink">Redirect URI</div>
               <div className="mt-2 break-all">{metaDiagnostics.redirectUri}</div>
-              <div className="mt-2">{metaDiagnostics.redirectUriExactMatch ? "https://limonmasa.com ile uyumlu." : "NEXT_PUBLIC_APP_URL tam olarak https://limonmasa.com olmalı."}</div>
+              <div className="mt-2">
+                {metaDiagnostics.redirectUriExactMatch
+                  ? `${metaDiagnostics.expectedBaseUrl} ile uyumlu.`
+                  : `NEXT_PUBLIC_APP_URL tam olarak ${metaDiagnostics.expectedBaseUrl} olmalı.`}
+              </div>
             </div>
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
               <div className="font-semibold text-ink">Temel Kontroller</div>

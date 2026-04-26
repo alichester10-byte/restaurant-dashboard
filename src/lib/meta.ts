@@ -50,6 +50,7 @@ type MetaEnvironmentDiagnostics = {
   verifyTokenPreview: string;
   whatsappConfigIdLooksValid: boolean;
   instagramConfigIdLooksValid: boolean;
+  expectedBaseUrl: string;
 };
 
 type MetaConnectionState = {
@@ -192,8 +193,9 @@ export function getMetaEnvironmentDiagnostics(): MetaEnvironmentDiagnostics {
   } as const;
 
   const baseUrl = getMetaRedirectBaseUrl();
+  const expectedBaseUrl = "https://www.limonmasa.com";
   const redirectUri = baseUrl ? `${baseUrl}/api/integrations/meta/callback` : "";
-  const redirectUriExactMatch = values.NEXT_PUBLIC_APP_URL === "https://limonmasa.com";
+  const redirectUriExactMatch = values.NEXT_PUBLIC_APP_URL === expectedBaseUrl;
   const appIdsMatch = !!values.META_APP_ID && values.META_APP_ID === values.NEXT_PUBLIC_META_APP_ID;
   const webhookSecretMatchesAppSecret =
     !!values.META_APP_SECRET &&
@@ -277,7 +279,7 @@ export function getMetaEnvironmentDiagnostics(): MetaEnvironmentDiagnostics {
       valid: redirectUriExactMatch,
       maskedValue: values.NEXT_PUBLIC_APP_URL ?? "Eksik",
       level: !values.NEXT_PUBLIC_APP_URL ? "missing" : redirectUriExactMatch ? "ok" : "warning",
-      message: !values.NEXT_PUBLIC_APP_URL ? "Eksik." : redirectUriExactMatch ? "https://limonmasa.com olarak doğru." : "https://limonmasa.com olmalı."
+      message: !values.NEXT_PUBLIC_APP_URL ? "Eksik." : redirectUriExactMatch ? `${expectedBaseUrl} olarak doğru.` : `${expectedBaseUrl} olmalı.`
     }
   ];
 
@@ -291,7 +293,8 @@ export function getMetaEnvironmentDiagnostics(): MetaEnvironmentDiagnostics {
     webhookSecretMatchesAppSecret,
     verifyTokenPreview: maskValue(values.META_WEBHOOK_VERIFY_TOKEN),
     whatsappConfigIdLooksValid,
-    instagramConfigIdLooksValid
+    instagramConfigIdLooksValid,
+    expectedBaseUrl
   };
 }
 

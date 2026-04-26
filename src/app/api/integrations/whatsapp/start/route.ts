@@ -64,12 +64,24 @@ export async function GET(request: Request) {
         },
         update: {
           status: IntegrationStatus.CONNECTING,
-          errorMessage: null
+          errorMessage: null,
+          config: {
+            oauthState: state,
+            oauthStartedAt: new Date().toISOString(),
+            oauthUserId: session.user.id,
+            oauthBusinessId: session.user.businessId
+          }
         },
         create: {
           businessId: session.user.businessId,
           provider: IntegrationProvider.WHATSAPP,
-          status: IntegrationStatus.CONNECTING
+          status: IntegrationStatus.CONNECTING,
+          config: {
+            oauthState: state,
+            oauthStartedAt: new Date().toISOString(),
+            oauthUserId: session.user.id,
+            oauthBusinessId: session.user.businessId
+          }
         }
       });
     } catch (databaseError) {
