@@ -9,7 +9,9 @@ const phoneSchema = z
 export const loginSchema = z.object({
   email: z.string().email("Geçerli bir e-posta girin."),
   password: z.string().min(8, "Şifre en az 8 karakter olmalı."),
-  otpCode: z.string().trim().regex(/^\d{6}$/,"Kod 6 haneli olmalı.").optional().or(z.literal(""))
+  otpCode: z.string().trim().regex(/^\d{6}$/, "Kod 6 haneli olmalı.").optional().or(z.literal("")),
+  challengeToken: z.string().min(20).optional().or(z.literal("")),
+  intent: z.enum(["login", "verify_email_2fa", "resend_email_2fa"]).default("login")
 });
 
 export const forgotPasswordSchema = z.object({

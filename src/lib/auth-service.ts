@@ -1,10 +1,16 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { AuditCategory, Prisma, SubscriptionStatus } from "@prisma/client";
+import { AuditCategory, Prisma, SubscriptionStatus, UserRole } from "@prisma/client";
 import { getAppBaseUrl, hasBusinessAccess } from "@/lib/billing";
 import { createSession } from "@/lib/auth";
 import { safeCreateAuditLog } from "@/lib/audit";
-import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "@/lib/email";
+import {
+  isEmailDeliveryConfigured,
+  sendEmailTwoFactorCode,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  sendWelcomeEmail
+} from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { getRequestIp, sanitizeNullableText, sanitizeText } from "@/lib/security";
@@ -14,6 +20,8 @@ import { CreateBusinessError, createBusinessWithAdmin } from "@/lib/tenant";
 
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const EMAIL_TWO_FACTOR_TTL_MS = 10 * 60 * 1000;
+const EMAIL_TWO_FACTOR_RESEND_COOLDOWN_MS = 60 * 1000;
 const prismaAuth = prisma as any;
 
 export class AuthFlowError extends Error {
@@ -25,6 +33,8 @@ export class AuthFlowError extends Error {
     | "invalid_token"
     | "expired_token"
     | "rate_limited"
+    | "two_factor_required"
+    | "two_factor_setup_required"
     | "database_issue"
     | "unknown";
 
@@ -37,6 +47,8 @@ export class AuthFlowError extends Error {
       | "invalid_token"
       | "expired_token"
       | "rate_limited"
+      | "two_factor_required"
+      | "two_factor_setup_required"
       | "database_issue"
       | "unknown",
     message: string
@@ -58,6 +70,187 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function createSixDigitCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function createEmailTwoFactorChallenge(input: {
+  userId: string;
+  businessId: string;
+  role: UserRole;
+  email: string;
+  name: string;
+  ipAddress: string | null;
+}) {
+  if (!isEmailDeliveryConfigured()) {
+    throw new AuthFlowError("two_factor_setup_required", "Email 2FA kurulumu gerekli. Lütfen e-posta gönderim ayarlarını tamamlayın.");
+  }
+
+  await prisma.emailTwoFactorCode.deleteMany({
+    where: {
+      userId: input.userId
+    }
+  });
+
+  const challengeToken = createPlainToken();
+  const plainCode = createSixDigitCode();
+  const expiresAt = new Date(Date.now() + EMAIL_TWO_FACTOR_TTL_MS);
+  const delivery = await sendEmailTwoFactorCode({
+    to: input.email,
+    name: input.name,
+    code: plainCode
+  });
+
+  if (!delivery.ok) {
+    throw new AuthFlowError("two_factor_setup_required", "Email 2FA kurulumu gerekli. Lütfen e-posta gönderim ayarlarını tamamlayın.");
+  }
+
+  await prisma.emailTwoFactorCode.create({
+    data: {
+      userId: input.userId,
+      challengeHash: hashToken(challengeToken),
+      codeHash: hashToken(plainCode),
+      expiresAt,
+      lastSentAt: new Date()
+    }
+  });
+
+  await safeCreateAuditLog({
+    businessId: input.businessId,
+    actorUserId: input.userId,
+    actorRole: input.role,
+    category: AuditCategory.AUTH,
+    action: "email_two_factor_code_sent",
+    message: "Email-based two-factor code sent during login.",
+    ipAddress: input.ipAddress
+  });
+
+  return {
+    challengeToken,
+    expiresAt
+  };
+}
+
+async function resendEmailTwoFactorChallenge(input: {
+  challengeToken: string;
+  expectedUserId?: string;
+  ipAddress: string | null;
+}) {
+  const challenge = await prisma.emailTwoFactorCode.findUnique({
+    where: {
+      challengeHash: hashToken(input.challengeToken)
+    },
+    include: {
+      user: true
+    }
+  });
+
+  if (!challenge || challenge.consumedAt || challenge.expiresAt < new Date()) {
+    throw new AuthFlowError("expired_token", "Doğrulama kodunun süresi doldu. Lütfen yeniden giriş yapın.");
+  }
+
+  if (input.expectedUserId && challenge.userId !== input.expectedUserId) {
+    throw new AuthFlowError("invalid_credentials", "Doğrulama oturumu eşleşmedi. Lütfen yeniden giriş yapın.");
+  }
+
+  if (!isEmailDeliveryConfigured()) {
+    throw new AuthFlowError("two_factor_setup_required", "Email 2FA kurulumu gerekli. Lütfen e-posta gönderim ayarlarını tamamlayın.");
+  }
+
+  const waitMs = challenge.lastSentAt.getTime() + EMAIL_TWO_FACTOR_RESEND_COOLDOWN_MS - Date.now();
+  if (waitMs > 0) {
+    throw new AuthFlowError("rate_limited", `Yeni kodu tekrar istemek için ${Math.ceil(waitMs / 1000)} saniye bekleyin.`);
+  }
+
+  const nextCode = createSixDigitCode();
+  const delivery = await sendEmailTwoFactorCode({
+    to: challenge.user.email,
+    name: challenge.user.name,
+    code: nextCode
+  });
+
+  if (!delivery.ok) {
+    throw new AuthFlowError("two_factor_setup_required", "Email 2FA kurulumu gerekli. Lütfen e-posta gönderim ayarlarını tamamlayın.");
+  }
+
+  await prisma.emailTwoFactorCode.update({
+    where: {
+      id: challenge.id
+    },
+    data: {
+      codeHash: hashToken(nextCode),
+      expiresAt: new Date(Date.now() + EMAIL_TWO_FACTOR_TTL_MS),
+      lastSentAt: new Date()
+    }
+  });
+
+  await safeCreateAuditLog({
+    businessId: challenge.user.businessId,
+    actorUserId: challenge.userId,
+    actorRole: challenge.user.role,
+    category: AuditCategory.AUTH,
+    action: "email_two_factor_code_resent",
+    message: "Email-based two-factor code resent during login.",
+    ipAddress: input.ipAddress
+  });
+
+  return {
+    challengeToken: input.challengeToken
+  };
+}
+
+async function verifyEmailTwoFactorChallenge(input: {
+  challengeToken: string;
+  otpCode: string;
+  expectedUserId?: string;
+  ipAddress: string | null;
+}) {
+  const challenge = await prisma.emailTwoFactorCode.findUnique({
+    where: {
+      challengeHash: hashToken(input.challengeToken)
+    },
+    include: {
+      user: {
+        include: {
+          business: true
+        }
+      }
+    }
+  });
+
+  if (!challenge || challenge.consumedAt || challenge.expiresAt < new Date()) {
+    throw new AuthFlowError("expired_token", "Doğrulama kodunun süresi doldu. Lütfen yeniden giriş yapın.");
+  }
+
+  if (input.expectedUserId && challenge.userId !== input.expectedUserId) {
+    throw new AuthFlowError("invalid_credentials", "Doğrulama oturumu eşleşmedi. Lütfen yeniden giriş yapın.");
+  }
+
+  if (challenge.codeHash !== hashToken(input.otpCode)) {
+    await safeCreateAuditLog({
+      businessId: challenge.user.businessId,
+      actorUserId: challenge.userId,
+      actorRole: challenge.user.role,
+      category: AuditCategory.AUTH,
+      action: "email_two_factor_failed",
+      message: "Email-based two-factor verification failed.",
+      ipAddress: input.ipAddress
+    });
+    throw new AuthFlowError("invalid_credentials", "Doğrulama kodu geçersiz.");
+  }
+
+  await prisma.emailTwoFactorCode.update({
+    where: {
+      id: challenge.id
+    },
+    data: {
+      consumedAt: new Date()
+    }
+  });
+
+  return challenge.user;
+}
+
 function getFirstValidationMessage(error: {
   flatten: () => {
     formErrors: string[];
@@ -72,7 +265,10 @@ function getFirstValidationMessage(error: {
 export async function loginWithEmail(formData: FormData) {
   const parsed = loginSchema.safeParse({
     email: sanitizeText(formData.get("email")).toLowerCase(),
-    password: formData.get("password")
+    password: formData.get("password"),
+    otpCode: sanitizeNullableText(formData.get("otpCode")),
+    challengeToken: sanitizeNullableText(formData.get("challengeToken")),
+    intent: sanitizeText(formData.get("intent")) || "login"
   });
 
   if (!parsed.success) {
@@ -81,6 +277,26 @@ export async function loginWithEmail(formData: FormData) {
 
   const email = normalizeEmail(parsed.data.email);
   const ipAddress = getRequestIp();
+
+  if (parsed.data.intent === "resend_email_2fa") {
+    const challengeToken = parsed.data.challengeToken?.trim() ?? "";
+    if (!challengeToken) {
+      throw new AuthFlowError("expired_token", "Doğrulama oturumu bulunamadı. Lütfen yeniden giriş yapın.");
+    }
+
+    const resend = await resendEmailTwoFactorChallenge({
+      challengeToken,
+      ipAddress
+    });
+
+    return {
+      requiresTwoFactor: true as const,
+      challengeMethod: "email" as const,
+      challengeToken: resend.challengeToken,
+      challengeMessage: "Yeni doğrulama kodu e-posta adresinize gönderildi."
+    };
+  }
+
   const limiter = await rateLimitPlaceholder(email, "login");
   if (!limiter.allowed) {
     throw new AuthFlowError("rate_limited", "Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.");
@@ -155,8 +371,49 @@ export async function loginWithEmail(formData: FormData) {
     throw new AuthFlowError("invalid_credentials", "E-posta veya şifre hatalı.");
   }
 
-  if (user.twoFactorEnabled) {
+  let authenticatedUser = user;
+
+  if (user.emailTwoFactorEnabled) {
+    if (parsed.data.intent === "verify_email_2fa") {
+      const challengeToken = parsed.data.challengeToken?.trim() ?? "";
+      const otpCode = parsed.data.otpCode?.trim() ?? "";
+      if (!challengeToken || !otpCode) {
+        throw new AuthFlowError("two_factor_required", "E-postanıza gönderilen 6 haneli kodu girin.");
+      }
+
+      authenticatedUser = await verifyEmailTwoFactorChallenge({
+        challengeToken,
+        otpCode,
+        expectedUserId: user.id,
+        ipAddress
+      });
+    } else {
+      const challenge = await createEmailTwoFactorChallenge({
+        userId: user.id,
+        businessId: user.businessId,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+        ipAddress
+      });
+
+      return {
+        requiresTwoFactor: true as const,
+        challengeMethod: "email" as const,
+        challengeToken: challenge.challengeToken,
+        challengeMessage: "Giriş kodunu e-posta adresinize gönderdik."
+      };
+    }
+  } else if (user.twoFactorEnabled) {
     const otpCode = parsed.data.otpCode?.trim() ?? "";
+    if (!otpCode) {
+      return {
+        requiresTwoFactor: true as const,
+        challengeMethod: "totp" as const,
+        challengeMessage: "Yönetici 2FA kodunuzu girin."
+      };
+    }
+
     if (!user.twoFactorSecret || !verifyTotpToken({ secret: user.twoFactorSecret, token: otpCode })) {
       await safeCreateAuditLog({
         businessId: user.businessId,
@@ -171,13 +428,13 @@ export async function loginWithEmail(formData: FormData) {
     }
   }
 
-  await createSession(user.id);
+  await createSession(authenticatedUser.id);
   await prisma.business.update({
-    where: { id: user.businessId },
+    where: { id: authenticatedUser.businessId },
     data: { lastActivityAt: new Date() }
   });
   await prisma.user.update({
-    where: { id: user.id },
+    where: { id: authenticatedUser.id },
     data: {
       failedLoginAttempts: 0,
       lockedUntil: null,
@@ -186,9 +443,9 @@ export async function loginWithEmail(formData: FormData) {
     }
   });
   await safeCreateAuditLog({
-    businessId: user.businessId,
-    actorUserId: user.id,
-    actorRole: user.role,
+    businessId: authenticatedUser.businessId,
+    actorUserId: authenticatedUser.id,
+    actorRole: authenticatedUser.role,
     category: AuditCategory.AUTH,
     action: "login_success",
     message: "User logged in successfully.",
@@ -197,12 +454,12 @@ export async function loginWithEmail(formData: FormData) {
 
   return {
     redirectTo:
-      user.role === "SUPER_ADMIN"
+      authenticatedUser.role === "SUPER_ADMIN"
         ? "/super-admin"
-        : hasBusinessAccess(user.business, user.role)
+        : hasBusinessAccess(authenticatedUser.business, authenticatedUser.role)
           ? "/dashboard"
           : "/billing",
-    user
+    user: authenticatedUser
   };
 }
 

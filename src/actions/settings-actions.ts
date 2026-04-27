@@ -3,8 +3,9 @@
 import { AuditCategory, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireBusinessWriteAccess } from "@/lib/auth";
+import { requireBusinessAccess, requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
+import { isEmailDeliveryConfigured } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { sanitizeNullableText, sanitizeText } from "@/lib/security";
 import { settingsSchema } from "@/lib/validation";
@@ -91,4 +92,68 @@ export async function updateSettingsAction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/settings");
   redirect("/settings?saved=1");
+}
+
+export async function enableEmailTwoFactorAction() {
+  const session = await requireBusinessAccess({
+    roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF]
+  });
+
+  if (!isEmailDeliveryConfigured()) {
+    redirect("/settings?security=email_2fa_setup_required");
+  }
+
+  await prisma.user.update({
+    where: {
+      id: session.user.id
+    },
+    data: {
+      emailTwoFactorEnabled: true
+    }
+  });
+
+  await createAuditLog({
+    businessId: session.user.businessId,
+    actorUserId: session.user.id,
+    actorRole: session.user.role,
+    category: AuditCategory.SECURITY,
+    action: "email_two_factor_enabled",
+    message: "User enabled email-based two-factor authentication."
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?security=email_2fa_enabled");
+}
+
+export async function disableEmailTwoFactorAction() {
+  const session = await requireBusinessAccess({
+    roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF]
+  });
+
+  await prisma.emailTwoFactorCode.deleteMany({
+    where: {
+      userId: session.user.id
+    }
+  });
+
+  await prisma.user.update({
+    where: {
+      id: session.user.id
+    },
+    data: {
+      emailTwoFactorEnabled: false
+    }
+  });
+
+  await createAuditLog({
+    businessId: session.user.businessId,
+    actorUserId: session.user.id,
+    actorRole: session.user.role,
+    category: AuditCategory.SECURITY,
+    action: "email_two_factor_disabled",
+    message: "User disabled email-based two-factor authentication."
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?security=email_2fa_disabled");
 }

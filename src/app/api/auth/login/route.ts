@@ -10,6 +10,16 @@ export async function POST(request: Request) {
 
   try {
     const result = await loginWithEmail(formData);
+    if ("requiresTwoFactor" in result && result.requiresTwoFactor) {
+      return NextResponse.json({
+        ok: true,
+        requiresTwoFactor: true,
+        challengeMethod: result.challengeMethod,
+        challengeToken: result.challengeToken,
+        message: result.challengeMessage
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       redirectTo: result.redirectTo

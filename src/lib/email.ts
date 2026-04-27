@@ -15,6 +15,10 @@ function getEmailConfig() {
   };
 }
 
+export function isEmailDeliveryConfigured() {
+  return Boolean(getEmailConfig().apiKey);
+}
+
 export async function sendEmail(input: SendEmailInput) {
   const config = getEmailConfig();
 
@@ -125,6 +129,33 @@ export async function sendPasswordResetEmail(input: {
         <a href="${input.resetUrl}" style="display:inline-block;margin-top:16px;background:#214c3d;color:#fff;text-decoration:none;padding:12px 18px;border-radius:14px;font-weight:600;">
           Yeni Şifre Belirle
         </a>
+      </div>
+    `
+  });
+}
+
+export async function sendEmailTwoFactorCode(input: {
+  to: string;
+  name: string;
+  code: string;
+}) {
+  return sendEmail({
+    to: input.to,
+    subject: "Limon Masa giriş doğrulama kodunuz",
+    text: `Merhaba ${input.name}, girişinizi tamamlamak için doğrulama kodunuz: ${input.code}. Kod 10 dakika boyunca geçerlidir.`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#14211b;">
+        <div style="font-size:12px;letter-spacing:0.28em;text-transform:uppercase;color:#607268;">Limon Masa Ops</div>
+        <h1 style="margin-top:16px;font-size:28px;">Giriş doğrulama kodunuz</h1>
+        <p style="font-size:16px;line-height:1.7;color:#607268;">
+          Merhaba ${input.name}, hesabınıza girişinizi tamamlamak için aşağıdaki 6 haneli kodu kullanın.
+        </p>
+        <div style="margin-top:18px;display:inline-block;background:#214c3d;color:#fff;padding:14px 18px;border-radius:16px;font-size:28px;font-weight:700;letter-spacing:0.24em;">
+          ${input.code}
+        </div>
+        <p style="font-size:15px;line-height:1.7;color:#607268;margin-top:18px;">
+          Kod 10 dakika boyunca geçerlidir. Bu girişi siz başlatmadıysanız e-postayı yok sayabilirsiniz.
+        </p>
       </div>
     `
   });

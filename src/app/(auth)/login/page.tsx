@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AuthToast } from "@/components/auth/auth-toast";
 import { LoginForm } from "@/components/auth/login-form";
+import { getCurrentSession } from "@/lib/auth";
+import { hasBusinessAccess } from "@/lib/billing";
 
 const loginToasts: Record<string, { title: string; description: string; tone?: "success" | "info" | "error" }> = {
   account_created: {
@@ -20,11 +23,22 @@ const loginToasts: Record<string, { title: string; description: string; tone?: "
   }
 };
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams
 }: {
   searchParams?: { toast?: string };
 }) {
+  const session = await getCurrentSession();
+  if (session) {
+    redirect(
+      session.user.role === "SUPER_ADMIN"
+        ? "/super-admin"
+        : hasBusinessAccess(session.user.business, session.user.role)
+          ? "/dashboard"
+          : "/billing"
+    );
+  }
+
   const toast = searchParams?.toast ? loginToasts[searchParams.toast] : null;
 
   return (
@@ -67,10 +81,7 @@ export default function LoginPage({
           </div>
           <div className="mt-4 grid gap-3">
             <Link href="/register" className="btn-secondary w-full">
-              Hesap Oluştur
-            </Link>
-            <Link href="/onboarding" className="text-center text-sm font-semibold text-moss transition hover:text-ink">
-              Yeni işletme çalışma alanı başlat
+              Ücretsiz Başla
             </Link>
           </div>
           <div className="mt-6 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4 text-sm text-sage">

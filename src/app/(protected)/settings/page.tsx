@@ -1,20 +1,32 @@
 import Link from "next/link";
 import { ReminderChannel } from "@prisma/client";
-import { updateSettingsAction } from "@/actions/settings-actions";
+import { disableEmailTwoFactorAction, enableEmailTwoFactorAction, updateSettingsAction } from "@/actions/settings-actions";
 import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
 import { LockedAction } from "@/components/demo/locked-action";
 import { AppHeader } from "@/components/layout/app-header";
+import { FormMessage } from "@/components/ui/form-message";
 import { Panel } from "@/components/ui/panel";
 import { requireBusinessUser } from "@/lib/auth";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { reminderChannelLabels } from "@/lib/constants";
 import { getSettingsData } from "@/lib/data";
 
-export default async function SettingsPage() {
+const securityMessages: Record<string, { tone: "success" | "error"; text: string }> = {
+  email_2fa_enabled: { tone: "success", text: "E-posta ile iki adımlı doğrulama etkinleştirildi." },
+  email_2fa_disabled: { tone: "success", text: "E-posta ile iki adımlı doğrulama kapatıldı." },
+  email_2fa_setup_required: { tone: "error", text: "Email 2FA setup required. Önce e-posta gönderim ayarlarını tamamlayın." }
+};
+
+export default async function SettingsPage({
+  searchParams
+}: {
+  searchParams?: { security?: string };
+}) {
   const session = await requireBusinessUser();
   const settings = await getSettingsData(session.user.businessId);
   const openingHours = settings.openingHours as Record<string, string>;
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
+  const securityFeedback = searchParams?.security ? securityMessages[searchParams.security] : null;
 
   return (
     <div className="space-y-6">
@@ -173,6 +185,54 @@ export default async function SettingsPage() {
             <Link href="/security" className="btn-secondary">
               Güvenlik & Veri
             </Link>
+          </div>
+
+          <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+            <div className="section-title">Güvenlik</div>
+            <h3 className="mt-2 text-lg font-semibold text-ink">E-posta ile iki adımlı doğrulama</h3>
+            <p className="mt-2 text-sm leading-6 text-sage">
+              İsterseniz girişten sonra e-posta adresinize tek kullanımlık 6 haneli bir kod gönderilir. Kod 10 dakika geçerlidir ve
+              doğrulama tamamlanmadan panel açılmaz.
+            </p>
+            <div className="mt-4 rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-ink">
+              Durum:{" "}
+              <span className="font-semibold">
+                {session.user.emailTwoFactorEnabled ? "Etkin" : "Kapalı"}
+              </span>
+            </div>
+            {securityFeedback ? (
+              securityFeedback.tone === "error" ? (
+                <div className="mt-4">
+                  <FormMessage message={securityFeedback.text} />
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  {securityFeedback.text}
+                </div>
+              )
+            ) : null}
+            <div className="mt-4">
+              {session.user.emailTwoFactorEnabled ? (
+                <form action={disableEmailTwoFactorAction}>
+                  <button className="btn-secondary w-full" type="submit">
+                    E-posta 2FA&apos;yı Kapat
+                  </button>
+                </form>
+              ) : entitlement.isDemo ? (
+                <LockedAction
+                  fullWidth
+                  href="/billing?upgrade=security"
+                  title="Gelişmiş güvenlik için Pro gerekir"
+                  description="Demo modunda güvenlik akışını görüntüleyebilirsiniz. Etkinleştirmek için Pro planına geçin."
+                />
+              ) : (
+                <form action={enableEmailTwoFactorAction}>
+                  <button className="btn-primary w-full" type="submit">
+                    E-posta 2FA&apos;yı Etkinleştir
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
 
           <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
