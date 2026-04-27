@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusinessAccess, requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
+import { getEmailTwoFactorSchemaStatus } from "@/lib/email-two-factor-runtime";
 import { isEmailDeliveryConfigured } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { sanitizeNullableText, sanitizeText } from "@/lib/security";
@@ -98,6 +99,11 @@ export async function enableEmailTwoFactorAction() {
   const session = await requireBusinessAccess({
     roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF]
   });
+  const schema = await getEmailTwoFactorSchemaStatus();
+
+  if (!schema.ready) {
+    redirect("/settings?security=email_2fa_schema_missing");
+  }
 
   if (!isEmailDeliveryConfigured()) {
     redirect("/settings?security=email_2fa_setup_required");
@@ -129,6 +135,11 @@ export async function disableEmailTwoFactorAction() {
   const session = await requireBusinessAccess({
     roles: [UserRole.BUSINESS_ADMIN, UserRole.STAFF]
   });
+  const schema = await getEmailTwoFactorSchemaStatus();
+
+  if (!schema.ready) {
+    redirect("/settings?security=email_2fa_schema_missing");
+  }
 
   await prisma.emailTwoFactorCode.deleteMany({
     where: {

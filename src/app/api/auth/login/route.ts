@@ -26,6 +26,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof AuthFlowError) {
+      console.warn("[auth:login-failed]", {
+        code: error.code,
+        message: error.message
+      });
       return NextResponse.json(
         {
           ok: false,
@@ -37,6 +41,10 @@ export async function POST(request: Request) {
         }
       );
     }
+
+    console.error("[auth:login-unexpected]", {
+      error: error instanceof Error ? error.message : "unknown_error"
+    });
 
     return NextResponse.json(
       {

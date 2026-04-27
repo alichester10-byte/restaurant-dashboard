@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { FormMessage } from "@/components/ui/form-message";
 import { Panel } from "@/components/ui/panel";
 import { requireBusinessUser } from "@/lib/auth";
+import { getEmailTwoFactorSettingsState } from "@/lib/auth-service";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { reminderChannelLabels } from "@/lib/constants";
 import { getSettingsData } from "@/lib/data";
@@ -14,7 +15,8 @@ import { getSettingsData } from "@/lib/data";
 const securityMessages: Record<string, { tone: "success" | "error"; text: string }> = {
   email_2fa_enabled: { tone: "success", text: "E-posta ile iki adımlı doğrulama etkinleştirildi." },
   email_2fa_disabled: { tone: "success", text: "E-posta ile iki adımlı doğrulama kapatıldı." },
-  email_2fa_setup_required: { tone: "error", text: "Email 2FA setup required. Önce e-posta gönderim ayarlarını tamamlayın." }
+  email_2fa_setup_required: { tone: "error", text: "Email 2FA setup required. Önce e-posta gönderim ayarlarını tamamlayın." },
+  email_2fa_schema_missing: { tone: "error", text: "Email 2FA veritabanı migration'ı henüz uygulanmadı." }
 };
 
 export default async function SettingsPage({
@@ -24,6 +26,7 @@ export default async function SettingsPage({
 }) {
   const session = await requireBusinessUser();
   const settings = await getSettingsData(session.user.businessId);
+  const emailTwoFactorState = await getEmailTwoFactorSettingsState();
   const openingHours = settings.openingHours as Record<string, string>;
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const securityFeedback = searchParams?.security ? securityMessages[searchParams.security] : null;
@@ -197,9 +200,14 @@ export default async function SettingsPage({
             <div className="mt-4 rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-ink">
               Durum:{" "}
               <span className="font-semibold">
-                {session.user.emailTwoFactorEnabled ? "Etkin" : "Kapalı"}
+                {emailTwoFactorState.available && session.user.emailTwoFactorEnabled ? "Etkin" : "Kapalı"}
               </span>
             </div>
+            {!emailTwoFactorState.available && emailTwoFactorState.warning ? (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {emailTwoFactorState.warning}
+              </div>
+            ) : null}
             {securityFeedback ? (
               securityFeedback.tone === "error" ? (
                 <div className="mt-4">
@@ -212,7 +220,11 @@ export default async function SettingsPage({
               )
             ) : null}
             <div className="mt-4">
-              {session.user.emailTwoFactorEnabled ? (
+              {!emailTwoFactorState.available ? (
+                <button className="btn-secondary w-full cursor-not-allowed opacity-70" type="button" disabled>
+                  Migration Bekleniyor
+                </button>
+              ) : session.user.emailTwoFactorEnabled ? (
                 <form action={disableEmailTwoFactorAction}>
                   <button className="btn-secondary w-full" type="submit">
                     E-posta 2FA&apos;yı Kapat

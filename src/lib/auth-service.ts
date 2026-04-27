@@ -4,6 +4,7 @@ import { AuditCategory, Prisma, SubscriptionStatus, UserRole } from "@prisma/cli
 import { getAppBaseUrl, hasBusinessAccess } from "@/lib/billing";
 import { createSession } from "@/lib/auth";
 import { safeCreateAuditLog } from "@/lib/audit";
+import { findAuthUserByEmail, getEmailTwoFactorSchemaStatus } from "@/lib/email-two-factor-runtime";
 import {
   isEmailDeliveryConfigured,
   sendEmailTwoFactorCode,
@@ -302,14 +303,7 @@ export async function loginWithEmail(formData: FormData) {
     throw new AuthFlowError("rate_limited", "Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.");
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      email
-    },
-    include: {
-      business: true
-    }
-  });
+  const { user, schemaReady } = await findAuthUserByEmail(email);
 
   if (!user) {
     await safeCreateAuditLog({
@@ -373,7 +367,7 @@ export async function loginWithEmail(formData: FormData) {
 
   let authenticatedUser = user;
 
-  if (user.emailTwoFactorEnabled) {
+  if (user.emailTwoFactorEnabled && schemaReady) {
     if (parsed.data.intent === "verify_email_2fa") {
       const challengeToken = parsed.data.challengeToken?.trim() ?? "";
       const otpCode = parsed.data.otpCode?.trim() ?? "";
@@ -404,6 +398,11 @@ export async function loginWithEmail(formData: FormData) {
         challengeMessage: "Giriş kodunu e-posta adresinize gönderdik."
       };
     }
+  } else if (user.emailTwoFactorEnabled && !schemaReady) {
+    console.warn("[auth:email-2fa-disabled-by-migration-gap]", {
+      email,
+      reason: "email_two_factor_schema_not_ready"
+    });
   } else if (user.twoFactorEnabled) {
     const otpCode = parsed.data.otpCode?.trim() ?? "";
     if (!otpCode) {
@@ -526,6 +525,16 @@ export async function registerBusinessAccount(formData: FormData) {
   return {
     redirectTo: `${parsed.data.redirectTo}?toast=account_created&email=${encodeURIComponent(email)}`,
     email
+  };
+}
+
+export async function getEmailTwoFactorSettingsState() {
+  const schema = await getEmailTwoFactorSchemaStatus();
+  return {
+    available: schema.ready,
+    warning: schema.ready
+      ? null
+      : "Email 2FA altyapısı henüz veritabanına uygulanmadı. Migration tamamlanana kadar giriş akışı 2FA kapalı gibi çalışır."
   };
 }
 

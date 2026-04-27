@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { getBusinessEntitlement, getCanonicalAppUrl, hasBusinessAccess } from "@/lib/billing";
+import { findSessionWithUser } from "@/lib/email-two-factor-runtime";
 import { prisma } from "@/lib/prisma";
 import { getRequestIp } from "@/lib/security";
 import { verifyTotpToken } from "@/lib/two-factor";
@@ -101,18 +102,7 @@ export async function getCurrentSession() {
     return null;
   }
 
-  const session = await prisma.session.findUnique({
-    where: {
-      tokenHash: hashToken(token)
-    },
-    include: {
-      user: {
-        include: {
-          business: true
-        }
-      }
-    }
-  });
+  const { session } = await findSessionWithUser(hashToken(token));
 
   if (!session || session.expiresAt < new Date()) {
     return null;
