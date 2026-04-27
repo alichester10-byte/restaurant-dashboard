@@ -4,6 +4,9 @@ import { createAuditLog } from "@/lib/audit";
 import { dispatchDueReservationReminders } from "@/lib/reminders";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
