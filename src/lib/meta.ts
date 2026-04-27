@@ -31,6 +31,7 @@ type MetaSetupStatus = {
   status: "ready" | "setup_required";
   missing: string[];
   warnings: string[];
+  errors: string[];
   appId: string | null;
   configId: string | null;
   verifyToken: string | null;
@@ -79,6 +80,10 @@ function maskValue(value: string | null) {
 
 function looksLikeNumericId(value: string | null) {
   return !!value && /^\d{8,}$/.test(value);
+}
+
+function isInvalidConfigId(configId: string | null, appId: string | null) {
+  return !!configId && !!appId && configId === appId;
 }
 
 function getMetaRedirectBaseUrl() {
@@ -170,6 +175,7 @@ export function getMetaSetupStatus(): MetaSetupStatus {
     status: missing.length === 0 ? "ready" : "setup_required",
     missing,
     warnings,
+    errors: [],
     configId: null,
     appId: shared.publicAppId,
     verifyToken: shared.verifyToken,
@@ -301,28 +307,34 @@ export function getMetaEnvironmentDiagnostics(): MetaEnvironmentDiagnostics {
 export function getWhatsappSetupStatus() {
   const base = getMetaSetupStatus();
   const configId = getMetaEnv("META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID");
+  const invalidConfigId = isInvalidConfigId(configId, base.appId);
   const missing = [...base.missing, !configId ? "META_WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID" : null].filter(Boolean) as string[];
+  const errors = [...base.errors, invalidConfigId ? "Invalid config_id" : null].filter(Boolean) as string[];
 
   return {
     ...base,
     configId,
-    available: missing.length === 0,
-    status: missing.length === 0 ? "ready" : "setup_required",
-    missing
+    available: missing.length === 0 && errors.length === 0,
+    status: missing.length === 0 && errors.length === 0 ? "ready" : "setup_required",
+    missing,
+    errors
   };
 }
 
 export function getInstagramSetupStatus() {
   const base = getMetaSetupStatus();
   const configId = getMetaEnv("META_INSTAGRAM_LOGIN_CONFIG_ID");
+  const invalidConfigId = isInvalidConfigId(configId, base.appId);
   const missing = [...base.missing, !configId ? "META_INSTAGRAM_LOGIN_CONFIG_ID" : null].filter(Boolean) as string[];
+  const errors = [...base.errors, invalidConfigId ? "Invalid config_id" : null].filter(Boolean) as string[];
 
   return {
     ...base,
     configId,
-    available: missing.length === 0,
-    status: missing.length === 0 ? "ready" : "setup_required",
-    missing
+    available: missing.length === 0 && errors.length === 0,
+    status: missing.length === 0 && errors.length === 0 ? "ready" : "setup_required",
+    missing,
+    errors
   };
 }
 
@@ -390,13 +402,15 @@ export function buildMetaAuthorizationUrl(provider: MetaProvider, state: string)
     throw new Error("Meta credentials are not fully configured.");
   }
 
+  if (setup.configId === setup.appId) {
+    throw new Error("Invalid config_id");
+  }
+
   const url = new URL("https://www.facebook.com/dialog/oauth");
   url.searchParams.set("client_id", setup.appId);
   url.searchParams.set("redirect_uri", setup.callbackUrl);
   url.searchParams.set("state", state);
-  url.searchParams.set("scope", getProviderScopes(provider).join(","));
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("override_default_response_type", "true");
   url.searchParams.set("display", "popup");
   url.searchParams.set("config_id", setup.configId);
 
@@ -405,6 +419,9 @@ export function buildMetaAuthorizationUrl(provider: MetaProvider, state: string)
       feature: "whatsapp_embedded_signup",
       sessionInfoVersion: 3
     }));
+  } else {
+    url.searchParams.set("scope", getProviderScopes(provider).join(","));
+    url.searchParams.set("override_default_response_type", "true");
   }
 
   return url.toString();
@@ -412,14 +429,42 @@ export function buildMetaAuthorizationUrl(provider: MetaProvider, state: string)
 
 export function getMetaAuthorizationDebugInfo(provider: MetaProvider, state: string) {
   const setup = getMetaProviderSetup(provider);
+  const oauthUrl = setup.appId && setup.configId && setup.callbackUrl
+    ? new URL("https://www.facebook.com/dialog/oauth")
+    : null;
+
+  if (oauthUrl && setup.appId && setup.configId) {
+    const clientId = setup.appId;
+    const configId = setup.configId;
+    const redirectUri = setup.callbackUrl;
+
+    oauthUrl.searchParams.set("client_id", clientId);
+    oauthUrl.searchParams.set("redirect_uri", redirectUri);
+    oauthUrl.searchParams.set("response_type", "code");
+    oauthUrl.searchParams.set("display", "popup");
+    oauthUrl.searchParams.set("config_id", configId);
+    oauthUrl.searchParams.set("state", "REDACTED");
+
+    if (provider === "whatsapp") {
+      oauthUrl.searchParams.set("extras", JSON.stringify({
+        feature: "whatsapp_embedded_signup",
+        sessionInfoVersion: 3
+      }));
+    } else {
+      oauthUrl.searchParams.set("scope", getProviderScopes(provider).join(","));
+      oauthUrl.searchParams.set("override_default_response_type", "true");
+    }
+  }
+
   return {
     provider,
     baseUrlUsed: getMetaRedirectBaseUrl(),
     clientId: setup.appId,
     configId: setup.configId,
     redirectUri: setup.callbackUrl,
-    scopes: getProviderScopes(provider),
-    statePreview: state.slice(0, 18)
+    scopes: provider === "instagram" ? getProviderScopes(provider) : [],
+    statePreview: state.slice(0, 18),
+    oauthUrl: oauthUrl?.toString() ?? null
   };
 }
 
