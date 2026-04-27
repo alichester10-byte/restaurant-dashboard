@@ -8,6 +8,10 @@ const publicBillingPaths = new Set([
   "/billing/result/success",
   "/billing/result/fail"
 ]);
+const middlewareBypassPaths = new Set([
+  "/facebook-domain-verification.html",
+  "/lhoil3nq0z7a6kc1t1dwgq72cv2w0y.html"
+]);
 
 function withSecurityHeaders(response: NextResponse) {
   response.headers.set("X-Frame-Options", "SAMEORIGIN");
@@ -40,11 +44,17 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const canonicalOrigin = getCanonicalOrigin();
 
+  if (middlewareBypassPaths.has(pathname)) {
+    return withSecurityHeaders(NextResponse.next());
+  }
+
   if (canonicalOrigin) {
     const currentUrl = new URL(request.url);
     const canonicalUrl = new URL(canonicalOrigin);
+    const shouldPreserveRootHtml = pathname === "/";
 
     if (
+      !shouldPreserveRootHtml &&
       currentUrl.hostname !== canonicalUrl.hostname &&
       currentUrl.origin !== canonicalUrl.origin
     ) {
