@@ -19,6 +19,22 @@ function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+async function updateUserAuthFields(
+  userId: string,
+  data: {
+    failedLoginAttempts?: number;
+    lockedUntil?: Date | null;
+    lastLoginAt?: Date;
+    lastLoginIp?: string | null;
+  }
+) {
+  return prisma.user.update({
+    where: { id: userId },
+    data,
+    select: { id: true }
+  });
+}
+
 function getSessionSecret() {
   const secret = process.env.SESSION_SECRET;
   if (!secret) {
@@ -256,12 +272,9 @@ export async function authenticate(formData: FormData) {
     const nextAttemptCount = user.failedLoginAttempts + 1;
     const lockedUntil = nextAttemptCount >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginAttempts: nextAttemptCount,
-        lockedUntil
-      }
+    await updateUserAuthFields(user.id, {
+      failedLoginAttempts: nextAttemptCount,
+      lockedUntil
     });
 
     await safeCreateAuditLog({
@@ -318,16 +331,11 @@ export async function authenticate(formData: FormData) {
       lastActivityAt: new Date()
     }
   });
-  await prisma.user.update({
-    where: {
-      id: user.id
-    },
-    data: {
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      lastLoginAt: new Date(),
-      lastLoginIp: ipAddress
-    }
+  await updateUserAuthFields(user.id, {
+    failedLoginAttempts: 0,
+    lockedUntil: null,
+    lastLoginAt: new Date(),
+    lastLoginIp: ipAddress
   });
   await safeCreateAuditLog({
     businessId: user.businessId,

@@ -75,6 +75,22 @@ function createSixDigitCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+async function updateUserLoginFields(
+  userId: string,
+  data: {
+    failedLoginAttempts?: number;
+    lockedUntil?: Date | null;
+    lastLoginAt?: Date;
+    lastLoginIp?: string | null;
+  }
+) {
+  return prisma.user.update({
+    where: { id: userId },
+    data,
+    select: { id: true }
+  });
+}
+
 async function createEmailTwoFactorChallenge(input: {
   userId: string;
   businessId: string;
@@ -279,6 +295,12 @@ export async function loginWithEmail(formData: FormData) {
   const email = normalizeEmail(parsed.data.email);
   const ipAddress = getRequestIp();
 
+  console.info("[auth:login-step]", {
+    step: "start",
+    email,
+    intent: parsed.data.intent
+  });
+
   if (parsed.data.intent === "resend_email_2fa") {
     const challengeToken = parsed.data.challengeToken?.trim() ?? "";
     if (!challengeToken) {
@@ -304,6 +326,12 @@ export async function loginWithEmail(formData: FormData) {
   }
 
   const { user, schemaReady } = await findAuthUserByEmail(email);
+  console.info("[auth:login-step]", {
+    step: "user_lookup",
+    email,
+    userFound: Boolean(user),
+    migrationCompatibilityMode: !schemaReady
+  });
 
   if (!user) {
     await safeCreateAuditLog({
@@ -335,18 +363,19 @@ export async function loginWithEmail(formData: FormData) {
   }
 
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
+  console.info("[auth:login-step]", {
+    step: "password_compare",
+    email,
+    passwordCompareOk: isValid,
+    migrationCompatibilityMode: !schemaReady
+  });
   if (!isValid) {
     const nextAttemptCount = user.failedLoginAttempts + 1;
     const lockedUntil = nextAttemptCount >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
 
-    await prisma.user.update({
-      where: {
-        id: user.id
-      },
-      data: {
-        failedLoginAttempts: nextAttemptCount,
-        lockedUntil
-      }
+    await updateUserLoginFields(user.id, {
+      failedLoginAttempts: nextAttemptCount,
+      lockedUntil
     });
 
     await safeCreateAuditLog({
@@ -428,18 +457,20 @@ export async function loginWithEmail(formData: FormData) {
   }
 
   await createSession(authenticatedUser.id);
+  console.info("[auth:login-step]", {
+    step: "session_created",
+    email,
+    migrationCompatibilityMode: !schemaReady
+  });
   await prisma.business.update({
     where: { id: authenticatedUser.businessId },
     data: { lastActivityAt: new Date() }
   });
-  await prisma.user.update({
-    where: { id: authenticatedUser.id },
-    data: {
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      lastLoginAt: new Date(),
-      lastLoginIp: ipAddress
-    }
+  await updateUserLoginFields(authenticatedUser.id, {
+    failedLoginAttempts: 0,
+    lockedUntil: null,
+    lastLoginAt: new Date(),
+    lastLoginIp: ipAddress
   });
   await safeCreateAuditLog({
     businessId: authenticatedUser.businessId,
