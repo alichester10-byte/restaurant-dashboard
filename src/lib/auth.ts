@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { AuditCategory, AuditSeverity, UserRole } from "@prisma/client";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { getBusinessEntitlement, getCanonicalAppUrl, hasBusinessAccess } from "@/lib/billing";
@@ -44,15 +44,33 @@ function getSessionSecret() {
 }
 
 function getSessionCookieDomain() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) {
+  const requestHost = headers().get("host");
+  if (!requestHost) {
     return undefined;
   }
 
   try {
-    const hostname = new URL(getCanonicalAppUrl()).hostname;
+    const hostname = requestHost.split(":")[0].toLowerCase();
     if (hostname === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
       return undefined;
+    }
+
+    if (hostname.endsWith(".vercel.app")) {
+      return undefined;
+    }
+
+    if (hostname === "limonmasa.com" || hostname.endsWith(".limonmasa.com")) {
+      return "limonmasa.com";
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) {
+      return undefined;
+    }
+
+    const canonicalHost = new URL(getCanonicalAppUrl()).hostname.toLowerCase();
+    if (hostname === canonicalHost || hostname.endsWith(`.${canonicalHost}`)) {
+      return canonicalHost.replace(/^www\./, "");
     }
 
     return hostname.replace(/^www\./, "");
@@ -76,6 +94,10 @@ function getSessionCookieOptions(expires: Date) {
 
 export async function createSession(userId: string, options?: { impersonatedByUserId?: string | null }) {
   getSessionSecret();
+  console.info("[auth:login-step]", {
+    step: "session_create_start",
+    userId
+  });
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
@@ -94,8 +116,20 @@ export async function createSession(userId: string, options?: { impersonatedByUs
       expiresAt
     }
   });
+  console.info("[auth:login-step]", {
+    step: "session_created",
+    userId
+  });
 
-  cookies().set(SESSION_COOKIE, token, getSessionCookieOptions(expiresAt));
+  const cookieOptions = getSessionCookieOptions(expiresAt);
+  cookies().set(SESSION_COOKIE, token, cookieOptions);
+  console.info("[auth:login-step]", {
+    step: "cookie_set",
+    userId,
+    domain: cookieOptions.domain ?? "host-only",
+    path: cookieOptions.path,
+    secure: cookieOptions.secure
+  });
 }
 
 export async function destroySession() {

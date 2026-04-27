@@ -1,8 +1,7 @@
 "use client";
 
-import type { Route } from "next";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { FormMessage } from "@/components/ui/form-message";
 
@@ -18,13 +17,14 @@ type LoginPayload = {
 };
 
 export function LoginForm() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [challengeMethod, setChallengeMethod] = useState<"email" | "totp" | null>(null);
   const [challengeToken, setChallengeToken] = useState("");
   const [isPending, startTransition] = useTransition();
+  const debug = searchParams.get("debug") === "1";
 
   return (
     <form
@@ -33,6 +33,9 @@ export function LoginForm() {
       onSubmit={(event) => {
         event.preventDefault();
         setError(null);
+        if (debug) {
+          setInfo("Giriş isteği gönderiliyor...");
+        }
 
         const form = event.currentTarget;
         const formData = new FormData(form);
@@ -66,8 +69,8 @@ export function LoginForm() {
             return;
           }
 
-          router.replace(payload.redirectTo as Route);
-          router.refresh();
+          setInfo("Login success, redirecting...");
+          window.location.assign(payload.redirectTo);
         });
       }}
     >

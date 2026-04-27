@@ -296,7 +296,7 @@ export async function loginWithEmail(formData: FormData) {
   const ipAddress = getRequestIp();
 
   console.info("[auth:login-step]", {
-    step: "start",
+    step: "login_start",
     email,
     intent: parsed.data.intent
   });
@@ -327,7 +327,7 @@ export async function loginWithEmail(formData: FormData) {
 
   const { user, schemaReady } = await findAuthUserByEmail(email);
   console.info("[auth:login-step]", {
-    step: "user_lookup",
+    step: "user_found",
     email,
     userFound: Boolean(user),
     migrationCompatibilityMode: !schemaReady
@@ -364,7 +364,7 @@ export async function loginWithEmail(formData: FormData) {
 
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
   console.info("[auth:login-step]", {
-    step: "password_compare",
+    step: "password_ok",
     email,
     passwordCompareOk: isValid,
     migrationCompatibilityMode: !schemaReady
@@ -482,13 +482,22 @@ export async function loginWithEmail(formData: FormData) {
     ipAddress
   });
 
+  const redirectTo =
+    authenticatedUser.role === "SUPER_ADMIN"
+      ? "/super-admin"
+      : hasBusinessAccess(authenticatedUser.business, authenticatedUser.role)
+        ? "/dashboard"
+        : "/billing";
+
+  console.info("[auth:login-step]", {
+    step: "redirect_to_dashboard",
+    email,
+    redirectTo,
+    migrationCompatibilityMode: !schemaReady
+  });
+
   return {
-    redirectTo:
-      authenticatedUser.role === "SUPER_ADMIN"
-        ? "/super-admin"
-        : hasBusinessAccess(authenticatedUser.business, authenticatedUser.role)
-          ? "/dashboard"
-          : "/billing",
+    redirectTo,
     user: authenticatedUser
   };
 }
