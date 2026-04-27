@@ -10,7 +10,7 @@ const publicBillingPaths = new Set([
 ]);
 const middlewareBypassPaths = new Set([
   "/facebook-domain-verification.html",
-  "/lhoil3nq0z7a6kc1t1dwgq72cv2w0y.html"
+  "/lhoil3nq0z7a6kc1t1dwqg72cv2w0y.html"
 ]);
 
 function withSecurityHeaders(response: NextResponse) {
