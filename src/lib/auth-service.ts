@@ -91,6 +91,17 @@ async function updateUserLoginFields(
   });
 }
 
+async function enforceSuperAdminEmailTwoFactor(userId: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      emailTwoFactorEnabled: true,
+      emailTwoFactorRequiredByAdmin: true
+    },
+    select: { id: true }
+  });
+}
+
 async function createEmailTwoFactorChallenge(input: {
   userId: string;
   businessId: string;
@@ -362,6 +373,23 @@ export async function loginWithEmail(formData: FormData) {
     throw new AuthFlowError("rate_limited", "Hesap geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin.");
   }
 
+  if (user.disabledAt) {
+    await safeCreateAuditLog({
+      businessId: user.businessId,
+      actorUserId: user.id,
+      actorRole: user.role,
+      category: AuditCategory.SECURITY,
+      action: "login_blocked_disabled_account",
+      message: "Login blocked because account is disabled.",
+      metadata: {
+        disabledAt: user.disabledAt.toISOString(),
+        disabledReason: user.disabledReason ?? null
+      },
+      ipAddress
+    });
+    throw new AuthFlowError("invalid_credentials", "Hesap erişimi devre dışı bırakılmış. Lütfen destek ile iletişime geçin.");
+  }
+
   const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
   console.info("[auth:login-step]", {
     step: "password_ok",
@@ -395,8 +423,27 @@ export async function loginWithEmail(formData: FormData) {
   }
 
   let authenticatedUser = user;
+  const requiresEmailTwoFactor = schemaReady
+    ? user.role === UserRole.SUPER_ADMIN || user.emailTwoFactorRequiredByAdmin || user.emailTwoFactorEnabled
+    : false;
 
-  if (user.emailTwoFactorEnabled && schemaReady) {
+  if (user.role === UserRole.SUPER_ADMIN && !schemaReady) {
+    throw new AuthFlowError(
+      "two_factor_setup_required",
+      "Super Admin güvenlik güncellemesi bekleniyor. Lütfen veritabanı migration'ını uygulayın."
+    );
+  }
+
+  if (requiresEmailTwoFactor && schemaReady) {
+    if (user.role === UserRole.SUPER_ADMIN && (!user.emailTwoFactorEnabled || !user.emailTwoFactorRequiredByAdmin)) {
+      await enforceSuperAdminEmailTwoFactor(user.id);
+      authenticatedUser = {
+        ...authenticatedUser,
+        emailTwoFactorEnabled: true,
+        emailTwoFactorRequiredByAdmin: true
+      };
+    }
+
     if (parsed.data.intent === "verify_email_2fa") {
       const challengeToken = parsed.data.challengeToken?.trim() ?? "";
       const otpCode = parsed.data.otpCode?.trim() ?? "";
@@ -412,11 +459,11 @@ export async function loginWithEmail(formData: FormData) {
       });
     } else {
       const challenge = await createEmailTwoFactorChallenge({
-        userId: user.id,
-        businessId: user.businessId,
-        role: user.role,
-        email: user.email,
-        name: user.name,
+        userId: authenticatedUser.id,
+        businessId: authenticatedUser.businessId,
+        role: authenticatedUser.role,
+        email: authenticatedUser.email,
+        name: authenticatedUser.name,
         ipAddress
       });
 
@@ -427,7 +474,7 @@ export async function loginWithEmail(formData: FormData) {
         challengeMessage: "Giriş kodunu e-posta adresinize gönderdik."
       };
     }
-  } else if (user.emailTwoFactorEnabled && !schemaReady) {
+  } else if ((user.emailTwoFactorEnabled || user.emailTwoFactorRequiredByAdmin) && !schemaReady) {
     console.warn("[auth:email-2fa-disabled-by-migration-gap]", {
       email,
       reason: "email_two_factor_schema_not_ready"

@@ -141,6 +141,10 @@ export async function disableEmailTwoFactorAction() {
     redirect("/settings?security=email_2fa_schema_missing");
   }
 
+  if (session.user.emailTwoFactorRequiredByAdmin) {
+    redirect("/settings?security=email_2fa_forced");
+  }
+
   await prisma.emailTwoFactorCode.deleteMany({
     where: {
       userId: session.user.id

@@ -70,13 +70,13 @@ export async function superAdminCreateBusinessAction(formData: FormData) {
     notes: sanitizeNullableText(formData.get("notes")),
     adminPassword: formData.get("adminPassword"),
     createDefaultTables: formData.get("createDefaultTables") ?? "true",
-    redirectTo: "/super-admin",
+    redirectTo: formData.get("redirectTo") ?? "/super-admin",
     plan: formData.get("plan"),
     subscriptionStatus: formData.get("subscriptionStatus")
   });
 
   if (!parsed.success) {
-    redirect(getCreateBusinessErrorRedirect("/super-admin", "validation"));
+    redirect(getCreateBusinessErrorRedirect(String(formData.get("redirectTo") ?? "/super-admin"), "validation"));
   }
 
   try {
@@ -105,14 +105,15 @@ export async function superAdminCreateBusinessAction(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof CreateBusinessError) {
-      redirect(getCreateBusinessErrorRedirect("/super-admin", error.code));
+      redirect(getCreateBusinessErrorRedirect(parsed.data.redirectTo, error.code));
     }
 
-    redirect(getCreateBusinessErrorRedirect("/super-admin", "unknown"));
+    redirect(getCreateBusinessErrorRedirect(parsed.data.redirectTo, "unknown"));
   }
 
   revalidatePath("/super-admin");
-  redirect("/super-admin?created=1");
+  revalidatePath("/super-admin/businesses");
+  redirect(`${parsed.data.redirectTo}?created=1`);
 }
 
 export async function updateBusinessStatusAction(formData: FormData) {

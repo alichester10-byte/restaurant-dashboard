@@ -48,6 +48,9 @@ export type AuthUserCompat = {
   twoFactorEnabled: boolean;
   twoFactorSecret: string | null;
   emailTwoFactorEnabled: boolean;
+  emailTwoFactorRequiredByAdmin: boolean;
+  disabledAt: Date | null;
+  disabledReason: string | null;
   business: BusinessSnapshot;
 };
 
@@ -155,6 +158,9 @@ async function fetchLegacyAuthUser(where: { id?: string; email?: string }) {
     lastLoginIp: string | null;
     twoFactorEnabled: boolean;
     twoFactorSecret: string | null;
+    emailTwoFactorRequiredByAdmin: boolean | null;
+    disabledAt: Date | null;
+    disabledReason: string | null;
   }>>(
     Prisma.sql`
       SELECT
@@ -170,7 +176,10 @@ async function fetchLegacyAuthUser(where: { id?: string; email?: string }) {
         "lastLoginAt",
         "lastLoginIp",
         "twoFactorEnabled",
-        "twoFactorSecret"
+        "twoFactorSecret",
+        false as "emailTwoFactorRequiredByAdmin",
+        "disabledAt",
+        "disabledReason"
       FROM "User"
       WHERE ${where.id ? Prisma.sql`id = ${where.id}` : Prisma.sql`email = ${where.email!}`}
       LIMIT 1
@@ -188,6 +197,7 @@ async function fetchLegacyAuthUser(where: { id?: string; email?: string }) {
     ...row,
     role: mapRole(row.role),
     emailTwoFactorEnabled: false,
+    emailTwoFactorRequiredByAdmin: false,
     business
   } satisfies AuthUserCompat;
 }

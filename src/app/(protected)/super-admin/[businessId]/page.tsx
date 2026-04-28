@@ -59,7 +59,7 @@ export default async function SuperAdminBusinessDetailPage({
       ) : null}
 
       <div className="flex flex-wrap gap-3">
-        <Link href="/super-admin" className="btn-secondary">
+        <Link href="/super-admin/businesses" className="btn-secondary">
           Tüm İşletmelere Dön
         </Link>
         <form action={impersonateBusinessAdminAction}>

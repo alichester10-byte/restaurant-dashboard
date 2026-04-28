@@ -18,9 +18,15 @@ const businessItems = [
 ];
 
 const superAdminItems = [
-  { href: "/super-admin" as Route, label: "İşletmeler", short: "SA" },
-  { href: "/admin/security" as Route, label: "Güvenlik", short: "GV" },
-  { href: "/onboarding" as Route, label: "Onboarding", short: "OB" }
+  { href: "/super-admin" as Route, label: "Genel Bakış", short: "GB" },
+  { href: "/super-admin/businesses" as Route, label: "İşletmeler", short: "IS" },
+  { href: "/super-admin/users" as Route, label: "Kullanıcılar", short: "KR" },
+  { href: "/super-admin/security" as Route, label: "Güvenlik", short: "GV" },
+  { href: "/super-admin/meta" as Route, label: "Meta", short: "MT" },
+  { href: "/super-admin/billing" as Route, label: "Faturalama", short: "BL" },
+  { href: "/super-admin/legal" as Route, label: "Hukuk", short: "HK" },
+  { href: "/super-admin/audit" as Route, label: "Audit", short: "AU" },
+  { href: "/super-admin/system" as Route, label: "Sistem", short: "SY" }
 ];
 
 export function Sidebar({

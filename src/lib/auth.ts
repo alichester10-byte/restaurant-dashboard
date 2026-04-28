@@ -158,6 +158,16 @@ export async function getCurrentSession() {
     return null;
   }
 
+  if (session.user.disabledAt) {
+    await prisma.session.deleteMany({
+      where: {
+        id: session.id
+      }
+    });
+    cookies().set(SESSION_COOKIE, "", getSessionCookieOptions(new Date(0)));
+    return null;
+  }
+
   await prisma.session.update({
     where: {
       id: session.id

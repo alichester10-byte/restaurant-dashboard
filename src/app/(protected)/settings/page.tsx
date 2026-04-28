@@ -16,7 +16,8 @@ const securityMessages: Record<string, { tone: "success" | "error"; text: string
   email_2fa_enabled: { tone: "success", text: "E-posta ile iki adımlı doğrulama etkinleştirildi." },
   email_2fa_disabled: { tone: "success", text: "E-posta ile iki adımlı doğrulama kapatıldı." },
   email_2fa_setup_required: { tone: "error", text: "Email 2FA setup required. Önce e-posta gönderim ayarlarını tamamlayın." },
-  email_2fa_schema_missing: { tone: "error", text: "Email 2FA veritabanı migration'ı henüz uygulanmadı." }
+  email_2fa_schema_missing: { tone: "error", text: "Email 2FA veritabanı migration'ı henüz uygulanmadı." },
+  email_2fa_forced: { tone: "error", text: "Bu hesap için e-posta doğrulaması yönetici tarafından zorunlu tutuluyor." }
 };
 
 export default async function SettingsPage({
@@ -200,9 +201,16 @@ export default async function SettingsPage({
             <div className="mt-4 rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-ink">
               Durum:{" "}
               <span className="font-semibold">
-                {emailTwoFactorState.available && session.user.emailTwoFactorEnabled ? "Etkin" : "Kapalı"}
+                {emailTwoFactorState.available && (session.user.emailTwoFactorEnabled || session.user.emailTwoFactorRequiredByAdmin)
+                  ? "Etkin"
+                  : "Kapalı"}
               </span>
             </div>
+            {session.user.emailTwoFactorRequiredByAdmin ? (
+              <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                Bu hesap için e-posta ile iki adımlı doğrulama işletme veya platform yöneticisi tarafından zorunlu tutuluyor.
+              </div>
+            ) : null}
             {!emailTwoFactorState.available && emailTwoFactorState.warning ? (
               <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 {emailTwoFactorState.warning}
@@ -223,6 +231,10 @@ export default async function SettingsPage({
               {!emailTwoFactorState.available ? (
                 <button className="btn-secondary w-full cursor-not-allowed opacity-70" type="button" disabled>
                   Migration Bekleniyor
+                </button>
+              ) : session.user.emailTwoFactorRequiredByAdmin ? (
+                <button className="btn-secondary w-full cursor-not-allowed opacity-70" type="button" disabled>
+                  Yönetici Tarafından Zorunlu
                 </button>
               ) : session.user.emailTwoFactorEnabled ? (
                 <form action={disableEmailTwoFactorAction}>
