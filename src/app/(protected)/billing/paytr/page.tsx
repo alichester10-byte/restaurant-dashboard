@@ -4,7 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
-import { getBusinessEntitlement, getPlanPricing } from "@/lib/billing";
+import { getAppBaseUrl, getBusinessEntitlement, getPlanPricing } from "@/lib/billing";
 import { requireBusinessAccess } from "@/lib/auth";
 import { billingPaymentStatusLabels } from "@/lib/constants";
 import { createPaytrIframeToken, formatMinorAmount, getRequestIp } from "@/lib/paytr";
@@ -54,7 +54,9 @@ export default async function PaytrPaymentPage({
         userName: session.user.name,
         userPhone: business.settings[0]?.phone ?? "+90 000 000 00 00",
         userAddress: business.settings[0]?.address ?? "Istanbul",
-        userIp: getRequestIp(headers())
+        userIp: getRequestIp(headers()),
+        okUrl: `${getAppBaseUrl()}/billing/success?payment=${payment.id}`,
+        failUrl: `${getAppBaseUrl()}/billing/fail?payment=${payment.id}`
       });
       iframeToken = tokenResult.token;
     } catch (error) {

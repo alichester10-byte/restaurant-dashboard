@@ -87,9 +87,13 @@ export async function createPaytrIframeToken(input: {
   userPhone: string;
   userAddress: string;
   userIp: string;
+  okUrl?: string;
+  failUrl?: string;
 }) {
   const pricing = getPlanPricing(input.plan);
   const config = getPaytrConfig();
+  const okUrl = input.okUrl ? normalizePaytrReturnUrl(input.okUrl, "/billing/success") : config.okUrl;
+  const failUrl = input.failUrl ? normalizePaytrReturnUrl(input.failUrl, "/billing/fail") : config.failUrl;
   const paymentAmount = String(pricing.amountMinor);
   const userBasket = encodeBasket(input.plan);
   const noInstallment = "1";
@@ -120,8 +124,8 @@ export async function createPaytrIframeToken(input: {
     user_name: input.userName,
     user_address: input.userAddress,
     user_phone: input.userPhone,
-    merchant_ok_url: config.okUrl,
-    merchant_fail_url: config.failUrl,
+    merchant_ok_url: okUrl,
+    merchant_fail_url: failUrl,
     timeout_limit: timeoutLimit,
     currency,
     test_mode: testMode,
@@ -131,8 +135,8 @@ export async function createPaytrIframeToken(input: {
   console.info("[PAYTR:initiate]", {
     merchantOid: input.merchantOid,
     plan: input.plan,
-    okUrl: config.okUrl,
-    failUrl: config.failUrl,
+    okUrl,
+    failUrl,
     callbackUrl: config.callbackUrl,
     callbackReminder: "For iFrame API, callback URL must also be configured in the PAYTR merchant panel."
   });
