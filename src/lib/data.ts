@@ -31,6 +31,14 @@ const answeredCallOutcomes = new Set<CallOutcome>([
   CallOutcome.INFO_REQUEST
 ]);
 
+const externalReservationSources = [
+  ReservationSource.WHATSAPP,
+  ReservationSource.INSTAGRAM,
+  ReservationSource.WEBSITE,
+  ReservationSource.GOOGLE,
+  ReservationSource.AI
+] satisfies ReservationSource[];
+
 const reservationInclude = {
   customer: true,
   assignedTable: true
@@ -202,13 +210,25 @@ export async function getDashboardDataForBusiness(businessId: string) {
 }
 
 export async function getReservationsPageData(businessId: string, selectedId?: string) {
-  const [reservations, tables, customers, selectedReservation, settings] = await Promise.all([
+  const [reservations, channelRequests, tables, customers, selectedReservation, settings] = await Promise.all([
     prisma.reservation.findMany({
       where: {
         businessId
       },
       include: reservationInclude,
       orderBy: [{ createdAt: "desc" }, { startAt: "asc" }]
+    }),
+    prisma.reservationRequest.findMany({
+      where: {
+        businessId,
+        source: {
+          in: externalReservationSources
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 24
     }),
     prisma.diningTable.findMany({
       where: {
@@ -253,6 +273,7 @@ export async function getReservationsPageData(businessId: string, selectedId?: s
 
   return {
     reservations,
+    channelRequests,
     tables,
     customers,
     selectedReservation,
@@ -603,7 +624,7 @@ export async function getSuperAdminData(input?: {
 
 export async function getIntegrationsPageData(businessId: string) {
   const providers = Object.values(IntegrationProvider);
-  const [connections, pendingRequests, recentRequests] = await Promise.all([
+  const [connections, pendingRequests] = await Promise.all([
     prisma.integrationConnection.findMany({
       where: { businessId },
       orderBy: { provider: "asc" }
@@ -617,41 +638,10 @@ export async function getIntegrationsPageData(businessId: string) {
         createdAt: "desc"
       },
       take: 12
-    }),
-    prisma.reservationRequest.findMany({
-      where: {
-        businessId,
-        source: {
-          in: [
-            ReservationSource.WHATSAPP,
-            ReservationSource.INSTAGRAM,
-            ReservationSource.WEBSITE,
-            ReservationSource.GOOGLE,
-            ReservationSource.AI
-          ]
-        }
-      },
-      orderBy: {
-        createdAt: "desc"
-      },
-      take: 30
     })
   ]);
 
   const connectionMap = new Map(connections.map((connection) => [connection.provider, connection]));
-  const latestRequestMap = new Map<string, (typeof recentRequests)[number]>();
-  for (const request of recentRequests) {
-    const key =
-      request.source === ReservationSource.WEBSITE || request.source === ReservationSource.GOOGLE
-        ? IntegrationProvider.GOOGLE_WEB
-        : request.source === ReservationSource.AI
-          ? IntegrationProvider.AI_ASSISTANT
-          : request.source;
-
-    if (!latestRequestMap.has(key)) {
-      latestRequestMap.set(key, request);
-    }
-  }
 
   const cards = providers.map((provider) => ({
     provider,
@@ -664,8 +654,7 @@ export async function getIntegrationsPageData(businessId: string) {
             ? IntegrationStatus.NEEDS_CONFIGURATION
             : IntegrationStatus.NOT_CONNECTED
       } as const)
-    ,
-    latestRequest: latestRequestMap.get(provider) ?? null
+    
   }));
 
   return {
@@ -697,8 +686,7 @@ export async function getIntegrationsPageDataSafe(businessId: string) {
             provider === IntegrationProvider.AI_ASSISTANT || provider === IntegrationProvider.GOOGLE_WEB
               ? IntegrationStatus.NEEDS_CONFIGURATION
               : IntegrationStatus.NOT_CONNECTED
-        },
-        latestRequest: null
+        }
       })),
       pendingRequests: [],
       loadError: "Entegrasyon verileri şu anda yüklenemedi. Kurulum durumu veya veritabanı güncellemeleri kontrol edilirken sayfa güvenli modda açıldı."

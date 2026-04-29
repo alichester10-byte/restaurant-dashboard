@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS "PlatformConfig" (
   "metaAppReviewStatus" TEXT,
   "deploymentMarker" TEXT,
   "complianceNotes" TEXT,
-  "updatedAt" TIMESTAMP(3) NOT NULL,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "PlatformConfig_pkey" PRIMARY KEY ("id")
 );
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS "ComplianceRequest" (
   "notes" TEXT,
   "completedAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "ComplianceRequest_pkey" PRIMARY KEY ("id")
 );
 
@@ -59,4 +59,4 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
-INSERT INTO "PlatformConfig" ("id") VALUES ('platform') ON CONFLICT ("id") DO NOTHING;
+INSERT INTO "PlatformConfig" ("id", "updatedAt") VALUES ('platform', CURRENT_TIMESTAMP) ON CONFLICT ("id") DO NOTHING;

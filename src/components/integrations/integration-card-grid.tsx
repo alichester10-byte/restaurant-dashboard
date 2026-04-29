@@ -22,11 +22,6 @@ type CardItem = {
     lastWebhookReceivedAt?: string | Date | null;
     errorMessage?: string | null;
   };
-  latestRequest?: {
-    guestName: string;
-    rawMessage?: string | null;
-    createdAt: string | Date;
-  } | null;
 };
 
 type MetaSetup = {
@@ -148,7 +143,8 @@ export function IntegrationCardGrid({
   whatsappVerifyToken,
   whatsappSampleMessage,
   metaSetup,
-  canManageConnections
+  canManageConnections,
+  pendingRequestCount
 }: {
   cards: CardItem[];
   businessSlug: string;
@@ -160,6 +156,7 @@ export function IntegrationCardGrid({
     instagram: MetaSetup;
   };
   canManageConnections: boolean;
+  pendingRequestCount: number;
 }) {
   const [openProvider, setOpenProvider] = useState<IntegrationProvider | null>(null);
   const [actionPending, setActionPending] = useState<string | null>(null);
@@ -329,12 +326,17 @@ export function IntegrationCardGrid({
                 )}
               </div>
 
-              {item.latestRequest ? (
-                <div className="mt-4 rounded-2xl border border-[color:var(--border)] bg-white/85 px-4 py-4 text-sm leading-6 text-sage">
-                  <div className="font-semibold text-ink">{item.latestRequest.guestName}</div>
-                  <div className="mt-1 line-clamp-3">{item.latestRequest.rawMessage ?? "Son talep içeriği burada görünür."}</div>
+              <div className="mt-4 rounded-2xl border border-[color:var(--border)] bg-white/85 px-4 py-4 text-sm leading-6 text-sage">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-ink">{pendingRequestCount} bekleyen talep</div>
+                    <div className="mt-1 text-sage">Dış kanallardan gelen talepleri artık Rezervasyonlar sayfasındaki Kanal Talepleri bölümünden yönetin.</div>
+                  </div>
+                  <Link href="/reservations#channel-requests" className="btn-secondary shrink-0 text-center">
+                    Rezervasyonlarda Gör
+                  </Link>
                 </div>
-              ) : null}
+              </div>
 
               <div className="mt-auto pt-5">
                 {item.provider === IntegrationProvider.AI_ASSISTANT ? (
