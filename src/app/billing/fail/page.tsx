@@ -1,9 +1,6 @@
 import Link from "next/link";
-import { destroyCurrentSessionIfPresent } from "@/lib/auth";
 
 export default async function PublicBillingFailPage() {
-  await destroyCurrentSessionIfPresent();
-
   return (
     <main className="app-shell min-h-screen p-4 md:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -19,15 +16,15 @@ export default async function PublicBillingFailPage() {
             <div className="space-y-4">
               <div className="rounded-[28px] border border-[color:var(--border)] bg-white/90 p-6">
                 <div className="text-sm text-sage">Güvenli Sonraki Adım</div>
-                <div className="mt-2 text-2xl font-semibold text-ink">Oturum sıfırlandı</div>
+                <div className="mt-2 text-2xl font-semibold text-ink">Doğru hesapla devam edin</div>
                 <p className="mt-4 text-sm leading-7 text-sage">
-                  Yanlış işletme paneline dönmemek için mevcut panel oturumu kapatıldı. Doğru işletme hesabıyla tekrar giriş yaparak faturalama ekranından ödemeyi yeniden başlatabilirsiniz.
+                  Ödemeyi yeniden başlatmadan önce doğru işletme hesabında olduğunuzu kontrol edin. Gerekirse çıkış yapıp tekrar giriş yaparak faturalama ekranına dönün.
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <Link href="/login" className="btn-primary">
-                  Doğru Hesapla Giriş Yap
+                  Giriş Yap
                 </Link>
                 <Link href="/" className="btn-secondary">
                   Ana Sayfa

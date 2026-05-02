@@ -146,20 +146,6 @@ export async function destroySession() {
   cookies().set(SESSION_COOKIE, "", getSessionCookieOptions(new Date(0)));
 }
 
-export async function destroyCurrentSessionIfPresent() {
-  const token = cookies().get(SESSION_COOKIE)?.value;
-
-  if (token) {
-    await prisma.session.deleteMany({
-      where: {
-        tokenHash: hashToken(token)
-      }
-    });
-  }
-
-  cookies().set(SESSION_COOKIE, "", getSessionCookieOptions(new Date(0)));
-}
-
 export async function getCurrentSession() {
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) {
