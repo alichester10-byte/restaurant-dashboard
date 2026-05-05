@@ -11,13 +11,26 @@ type ChatMessage = {
   content: string;
 };
 
+type QuickLink = {
+  label: string;
+  href: string;
+};
+
+type OperatorSummary = {
+  pendingCount: number;
+  totalCount: number;
+  latestRequestLabel?: string | null;
+};
+
 type RestaurantChatWidgetProps = {
   restaurantId: string;
   restaurantName: string;
   assistantEnabled: boolean;
   welcomeMessage: string;
-  mode?: "floating" | "inline";
+  mode?: "floating" | "operator";
   className?: string;
+  quickLinks?: QuickLink[];
+  operatorSummary?: OperatorSummary;
 };
 
 type ChatApiResponse = {
@@ -28,8 +41,14 @@ type ChatApiResponse = {
   requestCreated?: boolean;
 };
 
-function buildStorageKey(restaurantId: string) {
-  return `limonmasa-chat:${restaurantId}`;
+const OPERATOR_EXAMPLES = [
+  "Müşteriden gelen mesaj: Yarın akşam 20.30 için 4 kişilik masa rica ediyoruz. Adım Elif, telefonum 0555 222 33 44.",
+  "Bu rezervasyon mesajında eksik bilgi var mı? Cumartesi 19.00 için 2 kişiyiz, adım Burak.",
+  "Yeni bir rezervasyon talebi hazırlamak istiyorum: Cuma 21.00, 6 kişi, Ahmet, 0532 444 55 66."
+];
+
+function buildStorageKey(restaurantId: string, mode: "floating" | "operator") {
+  return `limonmasa-chat:${mode}:${restaurantId}`;
 }
 
 function assistantMessage(content: string): ChatMessage {
@@ -48,15 +67,32 @@ function userMessage(content: string): ChatMessage {
   };
 }
 
+function CompactMetric({
+  label,
+  value
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3">
+      <div className="text-[11px] uppercase tracking-[0.22em] text-moss">{label}</div>
+      <div className="mt-2 text-2xl font-semibold text-ink">{value}</div>
+    </div>
+  );
+}
+
 export function RestaurantChatWidget({
   restaurantId,
   restaurantName,
   assistantEnabled,
   welcomeMessage,
   mode = "floating",
-  className
+  className,
+  quickLinks = [],
+  operatorSummary
 }: RestaurantChatWidgetProps) {
-  const storageKey = useMemo(() => buildStorageKey(restaurantId), [restaurantId]);
+  const storageKey = useMemo(() => buildStorageKey(restaurantId, mode), [mode, restaurantId]);
   const [open, setOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [draft, setDraft] = useState("");
@@ -113,7 +149,7 @@ export function RestaurantChatWidget({
         })
       );
     } catch {
-      // Ignore localStorage quota or privacy mode issues.
+      // Ignore localStorage issues.
     }
   }, [hydrated, messages, requestCreated, sessionId, storageKey]);
 
@@ -145,7 +181,7 @@ export function RestaurantChatWidget({
           restaurantId,
           sessionId,
           message: content,
-          source: "WEBSITE_CHATBOT"
+          source: mode === "operator" ? "WEBSITE_OPERATOR_PANEL" : "WEBSITE_CHATBOT"
         })
       });
 
@@ -174,117 +210,235 @@ export function RestaurantChatWidget({
     }
   }
 
-  const disabledMessage = "AI asistanı şu anda bu restoran için aktif değil. Yandaki form üzerinden rezervasyon talebinizi bırakabilirsiniz.";
-  const header = (
-    <div className="flex items-start justify-between gap-4 border-b border-[color:var(--border)] px-5 py-4">
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-moss">AI Assistant</div>
-        <div className="mt-1 text-lg font-semibold text-ink">{restaurantName}</div>
-        <div className="mt-1 text-sm leading-6 text-sage">
-          Rezervasyon detaylarını toplayıp ekibe onay için iletirim.
-        </div>
-      </div>
-      {mode === "floating" ? (
+  const disabledMessage =
+    mode === "operator"
+      ? "AI operasyon asistanı şu anda aktif değil. Kanal taleplerini manuel akışla yönetmeye devam edebilirsiniz."
+      : "AI asistanı şu anda bu restoran için aktif değil. Yandaki form üzerinden rezervasyon talebinizi bırakabilirsiniz.";
+
+  const panelTitle = mode === "operator" ? "AI Operasyon Asistanı" : "AI Assistant";
+  const panelDescription =
+    mode === "operator"
+      ? "Restoran sahibinin günlük ihtiyaçları için müşteri mesajlarını talebe dönüştürür, eksik alanları tespit eder ve ekibin onay akışını hızlandırır."
+      : "Rezervasyon detaylarını toplayıp ekibe onay için iletirim.";
+  const inputPlaceholder =
+    mode === "operator"
+      ? "Müşteri mesajını yapıştırın veya yeni rezervasyon talebini tarif edin."
+      : "Örn: Yarın akşam 20.30 için 4 kişiyiz. Adım Elif, telefonum 0555 222 33 44.";
+  const helperText =
+    mode === "operator"
+      ? "Rezervasyonu kesinleştirmez; yalnızca talebi toparlayıp onay akışına hazırlar."
+      : "AI asistan talebi toplar; rezervasyon, restoran onayı olmadan kesinleşmez.";
+
+  const examples = mode === "operator" ? OPERATOR_EXAMPLES : [];
+
+  const drawer = (
+    <>
+      {mode === "operator" ? (
         <button
           type="button"
+          className="fixed inset-0 z-40 bg-ink/30 backdrop-blur-[2px]"
+          aria-label="AI asistan panelini kapat"
           onClick={() => setOpen(false)}
-          className="rounded-full border border-[color:var(--border)] bg-white px-3 py-2 text-xs font-semibold text-sage transition hover:text-ink"
-        >
-          Kapat
-        </button>
+        />
       ) : null}
-    </div>
-  );
-
-  const conversation = (
-    <div className={cn("flex flex-col", mode === "inline" ? "min-h-[520px]" : "max-h-[58vh] min-h-[380px]")}>
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-        {!assistantEnabled ? (
-          <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
-            {disabledMessage}
-          </div>
-        ) : null}
-
-        {messages.length === 0 ? (
-          <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/70 px-4 py-5 text-sm leading-6 text-sage">
-            Sohbet başlatmak için mesajınızı yazın. İsim, telefon, tarih, saat ve kişi sayısı bilgilerini toplarım.
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[88%] rounded-[24px] px-4 py-3 text-sm leading-6 ${
-                  message.role === "user"
-                    ? "bg-moss text-white shadow-[0_14px_30px_rgba(53,92,62,0.18)]"
-                    : "border border-[color:var(--border)] bg-white/90 text-ink"
-                }`}
-              >
-                {message.content}
-              </div>
-            </div>
-          ))
-        )}
-
-        {isSending ? (
-          <div className="flex justify-start">
-            <div className="inline-flex items-center gap-2 rounded-[24px] border border-[color:var(--border)] bg-white/90 px-4 py-3 text-sm text-sage">
-              <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-moss/80" />
-              <span>Asistan yazıyor...</span>
-            </div>
-          </div>
-        ) : null}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div className="border-t border-[color:var(--border)] px-4 py-4">
-        {requestCreated ? (
-          <div className="mb-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">
-            Talebiniz alındı. Restoran ekibi son uygunluğu kontrol edip rezervasyonu onaylayacaktır.
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="mb-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-700">{error}</div>
-        ) : null}
-
-        <form className="space-y-3" onSubmit={handleSubmit}>
-          <textarea
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            disabled={!assistantEnabled || isSending}
-            className="field min-h-28 resize-none"
-            placeholder="Örn: Yarın akşam 20.30 için 4 kişiyiz. Adım Elif, telefonum 0555 222 33 44."
-          />
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-xs leading-5 text-sage">
-              AI asistan talebi toplar; rezervasyon, restoran onayı olmadan kesinleşmez.
-            </div>
-            <button
-              type="submit"
-              disabled={!assistantEnabled || isSending || draft.trim().length === 0}
-              className="inline-flex min-w-[132px] items-center justify-center gap-2 rounded-full bg-moss px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink disabled:cursor-not-allowed disabled:bg-moss/40"
-            >
-              {isSending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/35 border-t-white" /> : null}
-              {isSending ? "Gönderiliyor" : "Gönder"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-
-  if (mode === "inline") {
-    return (
       <div
         id="restaurant-chat-widget"
         className={cn(
-          "overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(248,244,236,0.98)_0%,rgba(244,238,227,0.97)_100%)] shadow-[0_25px_60px_rgba(44,62,45,0.10)]",
+          mode === "operator"
+            ? "fixed inset-y-0 right-0 z-50 flex w-full max-w-[460px] flex-col border-l border-white/70 bg-[linear-gradient(180deg,rgba(248,244,236,0.99)_0%,rgba(244,238,227,0.98)_100%)] shadow-[-24px_0_60px_rgba(44,62,45,0.16)]"
+            : "fixed inset-x-3 bottom-20 z-40 max-h-[78vh] rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(248,244,236,0.98)_0%,rgba(244,238,227,0.97)_100%)] shadow-[0_25px_60px_rgba(44,62,45,0.16)] backdrop-blur sm:inset-x-auto sm:right-6 sm:w-[390px]",
           className
         )}
       >
-        {header}
-        {conversation}
+        <div className="flex items-start justify-between gap-4 border-b border-[color:var(--border)] px-5 py-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-moss">{panelTitle}</div>
+            <div className="mt-1 text-lg font-semibold text-ink">{restaurantName}</div>
+            <div className="mt-1 text-sm leading-6 text-sage">{panelDescription}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-full border border-[color:var(--border)] bg-white px-3 py-2 text-xs font-semibold text-sage transition hover:text-ink"
+          >
+            Kapat
+          </button>
+        </div>
+
+        {mode === "operator" ? (
+          <div className="border-b border-[color:var(--border)] px-5 py-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <CompactMetric label="Toplam AI Talebi" value={operatorSummary?.totalCount ?? 0} />
+              <CompactMetric label="Onay Bekleyen" value={operatorSummary?.pendingCount ?? 0} />
+            </div>
+
+            {quickLinks.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {quickLinks.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="rounded-full border border-[color:var(--border)] bg-white px-3 py-2 text-xs font-semibold text-ink transition hover:border-moss hover:text-moss"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+
+            {operatorSummary?.latestRequestLabel ? (
+              <div className="mt-4 rounded-2xl bg-white/85 px-4 py-3 text-sm leading-6 text-sage">
+                <span className="font-semibold text-ink">Son talep:</span> {operatorSummary.latestRequestLabel}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className={cn("flex flex-col", mode === "operator" ? "min-h-0 flex-1" : "max-h-[58vh] min-h-[380px]")}>
+          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            {!assistantEnabled ? (
+              <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
+                {disabledMessage}
+              </div>
+            ) : null}
+
+            {mode === "operator" ? (
+              <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 px-4 py-4">
+                <div className="text-sm font-semibold text-ink">Neler yapabilir?</div>
+                <div className="mt-3 space-y-2 text-sm leading-6 text-sage">
+                  <div>Müşteri mesajlarını rezervasyon talebine dönüştürür.</div>
+                  <div>Eksik isim, telefon, tarih, saat ve kişi sayısını tespit eder.</div>
+                  <div>Kanal Talepleri akışına hazır içerik üretir.</div>
+                  <div>Son kararı yine restoran ekibi verir.</div>
+                </div>
+              </div>
+            ) : null}
+
+            {messages.length === 0 ? (
+              <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/70 px-4 py-5 text-sm leading-6 text-sage">
+                Sohbet başlatmak için mesajınızı yazın. İsim, telefon, tarih, saat ve kişi sayısı bilgilerini toplarım.
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[88%] rounded-[24px] px-4 py-3 text-sm leading-6 ${
+                      message.role === "user"
+                        ? "bg-moss text-white shadow-[0_14px_30px_rgba(53,92,62,0.18)]"
+                        : "border border-[color:var(--border)] bg-white/90 text-ink"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                </div>
+              ))
+            )}
+
+            {isSending ? (
+              <div className="flex justify-start">
+                <div className="inline-flex items-center gap-2 rounded-[24px] border border-[color:var(--border)] bg-white/90 px-4 py-3 text-sm text-sage">
+                  <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-moss/80" />
+                  <span>Asistan yazıyor...</span>
+                </div>
+              </div>
+            ) : null}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div className="border-t border-[color:var(--border)] px-4 py-4">
+            {examples.length > 0 ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {examples.map((example) => (
+                  <button
+                    key={example}
+                    type="button"
+                    onClick={() => setDraft(example)}
+                    className="rounded-full border border-[color:var(--border)] bg-white px-3 py-2 text-xs font-semibold text-sage transition hover:border-moss hover:text-moss"
+                  >
+                    Örnek
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {requestCreated ? (
+              <div className="mb-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">
+                Talep hazırlandı. Restoran ekibi son uygunluğu kontrol edip rezervasyonu onaylayacaktır.
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="mb-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-700">{error}</div>
+            ) : null}
+
+            <form className="space-y-3" onSubmit={handleSubmit}>
+              <textarea
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                disabled={!assistantEnabled || isSending}
+                className="field min-h-28 resize-none"
+                placeholder={inputPlaceholder}
+              />
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs leading-5 text-sage">{helperText}</div>
+                <button
+                  type="submit"
+                  disabled={!assistantEnabled || isSending || draft.trim().length === 0}
+                  className="inline-flex min-w-[132px] items-center justify-center gap-2 rounded-full bg-moss px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink disabled:cursor-not-allowed disabled:bg-moss/40"
+                >
+                  {isSending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/35 border-t-white" /> : null}
+                  {isSending ? "Gönderiliyor" : "Gönder"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  if (mode === "operator") {
+    return (
+      <div className={cn("rounded-[26px] border border-[color:var(--border)] bg-white/90 p-4", className)}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-moss">AI Operasyon Asistanı</div>
+            <div className="mt-2 text-lg font-semibold text-ink">Küçük bir panelden tüm akışı yönetin</div>
+            <div className="mt-2 text-sm leading-6 text-sage">
+              Müşteri mesajlarını talebe dönüştürür, eksik bilgileri bulur ve onay akışına bırakır.
+            </div>
+          </div>
+          <div className="rounded-full bg-[color:var(--accent-soft)] px-4 py-2 text-sm font-semibold text-moss">
+            {operatorSummary?.pendingCount ?? 0} bekleyen
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <CompactMetric label="Toplam Talep" value={operatorSummary?.totalCount ?? 0} />
+          <CompactMetric label="Onay Bekliyor" value={operatorSummary?.pendingCount ?? 0} />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center justify-center rounded-full bg-moss px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink"
+          >
+            Asistanı Aç
+          </button>
+          {quickLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="inline-flex items-center justify-center rounded-full border border-[color:var(--border)] bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+
+        {open ? drawer : null}
       </div>
     );
   }
@@ -303,15 +457,7 @@ export function RestaurantChatWidget({
         <span className="sm:hidden">{open ? "Kapat" : "Sohbet"}</span>
       </button>
 
-      {open ? (
-        <div
-          id="restaurant-chat-widget"
-          className="fixed inset-x-3 bottom-20 z-40 max-h-[78vh] rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(248,244,236,0.98)_0%,rgba(244,238,227,0.97)_100%)] shadow-[0_25px_60px_rgba(44,62,45,0.16)] backdrop-blur sm:inset-x-auto sm:right-6 sm:w-[390px]"
-        >
-          {header}
-          {conversation}
-        </div>
-      ) : null}
+      {open ? drawer : null}
     </>
   );
 }
