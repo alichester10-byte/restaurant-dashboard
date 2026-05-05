@@ -69,7 +69,7 @@ export const reservationSourceLabels: Record<ReservationSource, string> = {
   WEBSITE: "Web",
   GOOGLE: "Google",
   WHATSAPP: "WhatsApp",
-  AI: "AI"
+  AI: "AI Assistant"
 };
 
 export const userRoleLabels: Record<UserRole, string> = {

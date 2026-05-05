@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { RestaurantChatWidget } from "@/components/chat/restaurant-chat-widget";
 import { PublicReservationRequestForm } from "@/components/integrations/public-reservation-request-form";
 import { prisma } from "@/lib/prisma";
 
@@ -12,6 +13,11 @@ export default async function PublicReservationPage({
   const business = await prisma.business.findUnique({
     where: {
       slug: params.slug
+    },
+    include: {
+      settings: {
+        take: 1
+      }
     }
   });
 
@@ -20,6 +26,11 @@ export default async function PublicReservationPage({
   }
 
   const embed = searchParams?.embed === "1";
+  const settings = business.settings[0];
+  const assistantEnabled = true;
+  const welcomeMessage =
+    `${settings?.restaurantName ?? business.name} için rezervasyon talebinizi memnuniyetle alırım. ` +
+    "İsim, telefon, tarih, saat ve kişi sayısını paylaşırsanız talebinizi ekip onayına hazırlayabilirim.";
 
   return (
     <main className={embed ? "min-h-screen bg-transparent p-4" : "min-h-screen bg-[linear-gradient(180deg,#f6f3eb_0%,#ebe4d8_100%)] px-4 py-10"}>
@@ -35,6 +46,14 @@ export default async function PublicReservationPage({
         ) : null}
         <PublicReservationRequestForm businessSlug={business.slug} businessName={business.name} embed={embed} />
       </div>
+      {!embed ? (
+        <RestaurantChatWidget
+          restaurantId={business.id}
+          restaurantName={settings?.restaurantName ?? business.name}
+          assistantEnabled={assistantEnabled}
+          welcomeMessage={welcomeMessage}
+        />
+      ) : null}
     </main>
   );
 }

@@ -155,6 +155,13 @@ export const reservationRequestCreateSchema = z.object({
   redirectTo: z.string().default("/integrations")
 });
 
+export const aiChatSchema = z.object({
+  restaurantId: z.string().min(10),
+  sessionId: z.string().optional().or(z.literal("")),
+  message: z.string().min(2).max(1000),
+  source: z.string().optional().or(z.literal(""))
+});
+
 export const settingsSchema = z.object({
   restaurantName: z.string().min(2).max(80),
   phone: z.string().min(10).max(30),

@@ -6,7 +6,8 @@ const defaults: Record<string, { limit: number; windowMinutes: number; blockMinu
   "forgot-password": { limit: 5, windowMinutes: 30, blockMinutes: 60 },
   "payment-initiate": { limit: 8, windowMinutes: 30, blockMinutes: 30 },
   webhook: { limit: 120, windowMinutes: 1, blockMinutes: 15 },
-  "reservation-request": { limit: 40, windowMinutes: 15, blockMinutes: 15 }
+  "reservation-request": { limit: 40, windowMinutes: 15, blockMinutes: 15 },
+  "ai-chat": { limit: 50, windowMinutes: 15, blockMinutes: 15 }
 };
 
 function getWindowKey(windowMinutes: number) {

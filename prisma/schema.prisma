@@ -168,6 +168,18 @@ enum ReservationSource {
   AI
 }
 
+enum ChatSessionStatus {
+  ACTIVE
+  COMPLETED
+  CLOSED
+}
+
+enum ChatMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
 model User {
   id                  String      @id @default(cuid())
   email               String      @unique
@@ -278,6 +290,7 @@ model Business {
   callLogs              CallLog[]
   billingPayments       BillingPayment[]
   reservationRequests   ReservationRequest[]
+  chatSessions          ChatSession[]
   integrationConnections IntegrationConnection[]
   auditLogs             AuditLog[]
   rateLimits            RateLimitBucket[]
@@ -549,6 +562,36 @@ model ReservationRequest {
   @@index([businessId, status])
   @@index([businessId, source])
   @@unique([businessId, sourceMessageId])
+}
+
+model ChatSession {
+  id                         String            @id @default(cuid())
+  businessId                 String
+  customerName               String?
+  customerPhone              String?
+  requestedDate              String?
+  requestedTime              String?
+  partySize                  Int?
+  notes                      String?
+  status                     ChatSessionStatus @default(ACTIVE)
+  completedReservationRequestId String?
+  business                   Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  messages                   ChatMessage[]
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+
+  @@index([businessId, status])
+}
+
+model ChatMessage {
+  id         String          @id @default(cuid())
+  sessionId  String
+  role       ChatMessageRole
+  content    String
+  createdAt  DateTime        @default(now())
+  session    ChatSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
 }
 
 model AuditLog {
