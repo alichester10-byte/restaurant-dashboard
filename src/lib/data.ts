@@ -94,7 +94,7 @@ export async function getDashboardDataForBusiness(businessId: string) {
   const yesterdayStart = startOfDay(new Date(now.getTime() - 86400000));
   const yesterdayEnd = endOfDay(new Date(now.getTime() - 86400000));
 
-  const [settings, reservationsToday, reservationsYesterday, callsToday, callsYesterday, tables, upcomingReservations] = await Promise.all([
+  const [settings, reservationsToday, reservationsYesterday, callsToday, callsYesterday, tables, upcomingReservations, aiRecentRequests] = await Promise.all([
     prisma.restaurantSettings.findFirstOrThrow({
       where: {
         businessId
@@ -130,6 +130,16 @@ export async function getDashboardDataForBusiness(businessId: string) {
       include: reservationInclude,
       take: 6,
       orderBy: { startAt: "asc" }
+    }),
+    prisma.reservationRequest.findMany({
+      where: {
+        businessId,
+        source: ReservationSource.AI
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 6
     })
   ]);
 
@@ -202,6 +212,13 @@ export async function getDashboardDataForBusiness(businessId: string) {
     callsToday,
     tables,
     upcomingReservations,
+    aiAssistant: {
+      enabled: true,
+      welcomeMessage: `${settings.restaurantName} için rezervasyon talebinizi memnuniyetle alırım. İsim, telefon, tarih, saat ve kişi sayısını paylaşırsanız talebinizi ekip onayına hazırlayabilirim.`,
+      pendingCount: aiRecentRequests.filter((request) => request.status === ReservationRequestStatus.PENDING).length,
+      totalCount: aiRecentRequests.length,
+      latestRequests: aiRecentRequests
+    },
     charts: {
       reservationsByDay: last7Days,
       reservationsBySource: sourceRows

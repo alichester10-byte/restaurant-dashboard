@@ -1,4 +1,6 @@
 import { CallOutcome } from "@prisma/client";
+import Link from "next/link";
+import { RestaurantChatWidget } from "@/components/chat/restaurant-chat-widget";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
 import { CallForm } from "@/components/dashboard/call-form";
@@ -80,6 +82,110 @@ export default async function DashboardPage() {
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="section-title">AI Asistan</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Panel içinden canlı test edin</h2>
+              <p className="mt-2 text-sm leading-6 text-sage">
+                AI asistan müşteri gibi konuşur, eksik rezervasyon bilgilerini toplar ve onay için Kanal Talepleri akışına bırakır.
+              </p>
+            </div>
+            <div className="rounded-full bg-[color:var(--accent-soft)] px-4 py-2 text-sm font-semibold text-moss">
+              {data.aiAssistant.pendingCount} bekleyen AI talebi
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
+            <div className="space-y-4">
+              <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
+                <div className="text-sm font-semibold text-ink">AI operasyon özeti</div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3">
+                    <div className="text-xs uppercase tracking-[0.22em] text-moss">Toplam Talep</div>
+                    <div className="mt-2 text-3xl font-semibold text-ink">{data.aiAssistant.totalCount}</div>
+                  </div>
+                  <div className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3">
+                    <div className="text-xs uppercase tracking-[0.22em] text-moss">Onay Bekliyor</div>
+                    <div className="mt-2 text-3xl font-semibold text-ink">{data.aiAssistant.pendingCount}</div>
+                  </div>
+                </div>
+                <div className="mt-4 text-sm leading-6 text-sage">
+                  Public chatbot ve kanal akışlarından gelen AI talepleri burada tek mantıkla çalışır. Hiçbiri restoran onayı olmadan rezervasyona dönüşmez.
+                </div>
+                <Link
+                  href="/reservations#channel-requests"
+                  className="mt-5 inline-flex items-center justify-center rounded-full border border-[color:var(--border)] bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
+                >
+                  Kanal Taleplerini Aç
+                </Link>
+              </div>
+
+              <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
+                <div className="text-sm font-semibold text-ink">Son AI Talepleri</div>
+                <div className="mt-4 space-y-3">
+                  {data.aiAssistant.latestRequests.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-4 text-sm leading-6 text-sage">
+                      Henüz AI kaynaklı talep yok. Bu paneldeki test alanı veya public rezervasyon sayfasındaki asistan ilk talepleri oluşturabilir.
+                    </div>
+                  ) : (
+                    data.aiAssistant.latestRequests.map((request) => (
+                      <div key={request.id} className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="font-semibold text-ink">{request.guestName || "İsim bekleniyor"}</div>
+                          <div className="badge bg-white text-ink">{request.status}</div>
+                        </div>
+                        <div className="mt-2 text-sm text-sage">
+                          {request.requestedDate ?? "Tarih bekleniyor"} • {request.requestedTime ?? "Saat bekleniyor"} • {request.guestCount ?? "-"} kişi
+                        </div>
+                        <div className="mt-1 text-sm text-sage">{request.guestPhone ?? "Telefon bekleniyor"}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <RestaurantChatWidget
+              restaurantId={session.user.businessId}
+              restaurantName={data.settings.restaurantName}
+              assistantEnabled={data.aiAssistant.enabled}
+              welcomeMessage={data.aiAssistant.welcomeMessage}
+              mode="inline"
+            />
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="section-title">Yaklaşan Rezervasyonlar</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Onaylanmış ve yaklaşan servis akışı</h2>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {data.upcomingReservations.map((reservation) => (
+              <div key={reservation.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-ink">{reservation.guestName}</div>
+                    <div className="mt-1 text-sm text-sage">
+                      {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
+                    </div>
+                  </div>
+                  <StatusBadge value={reservation.status} />
+                </div>
+                <div className="mt-4 flex items-center justify-between text-sm text-sage">
+                  <span>{reservation.assignedTable ? reservation.assignedTable.number : "Masa ataması bekliyor"}</span>
+                  <span>{reservation.guestPhone}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Panel>
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">Masa Planı</div>
@@ -106,31 +212,6 @@ export default async function DashboardPage() {
           </div>
         </Panel>
 
-        <Panel>
-          <div className="section-title">Yaklaşan Rezervasyonlar</div>
-          <div className="mt-5 space-y-3">
-            {data.upcomingReservations.map((reservation) => (
-              <div key={reservation.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-ink">{reservation.guestName}</div>
-                    <div className="mt-1 text-sm text-sage">
-                      {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
-                    </div>
-                  </div>
-                  <StatusBadge value={reservation.status} />
-                </div>
-                <div className="mt-4 flex items-center justify-between text-sm text-sage">
-                  <span>{reservation.assignedTable ? reservation.assignedTable.number : "Masa ataması bekliyor"}</span>
-                  <span>{reservation.guestPhone}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>
           <div className="flex items-center justify-between">
             <div>
