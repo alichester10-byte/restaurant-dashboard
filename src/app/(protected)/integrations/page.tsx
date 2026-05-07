@@ -5,9 +5,8 @@ import { IntegrationQueryFeedback } from "@/components/integrations/integration-
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { requireBusinessAccess } from "@/lib/auth";
-import { getBusinessEntitlement } from "@/lib/billing";
+import { getAppBaseUrl, getBusinessEntitlement } from "@/lib/billing";
 import { getIntegrationsPageDataSafe } from "@/lib/data";
-import { getMetaEnvironmentDiagnostics } from "@/lib/meta";
 
 const roadmapCards = [
   {
@@ -22,8 +21,8 @@ const roadmapCards = [
   },
   {
     title: "Website Widget",
-    status: "Temel hazır",
-    body: "Web formu ve public rezervasyon talep sayfası çalışır durumda. Müşteri yalnızca talep bırakır; son onay her zaman restoran ekibindedir."
+    status: "Canlı kullanıma hazır",
+    body: "Widget kodunu sitenize ekleyerek rezervasyon talebini doğrudan Limon Masa akışına alabilirsiniz. Son onay yine restoran ekibindedir."
   },
   {
     title: "AI Reservation Assistant",
@@ -62,7 +61,8 @@ export default async function IntegrationsPage() {
   });
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const data = await getIntegrationsPageDataSafe(session.user.businessId);
-  const metaDiagnostics = getMetaEnvironmentDiagnostics();
+  const publicReservationLink = `${getAppBaseUrl()}/r/${session.user.business.slug}`;
+  const widgetScript = `<iframe src="${publicReservationLink}?embed=1" title="Limon Masa Reservation Widget" style="width:100%;min-height:640px;border:0;border-radius:24px;"></iframe>`;
 
   return (
     <div className="space-y-6">
@@ -114,7 +114,7 @@ export default async function IntegrationsPage() {
             <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
               <div className="text-xs uppercase tracking-[0.24em] text-moss">Meta Durumu</div>
               <div className="mt-3 text-lg font-semibold text-ink">
-                {metaDiagnostics.missing.length === 0 ? "Kurulum tamamlandı" : "Kurulum / onay bekleniyor"}
+                Kurulum / onay bekleniyor
               </div>
               <div className="mt-2 text-sm text-sage">Instagram ve WhatsApp self-serve açılışı Meta onayından sonra yayınlanacak.</div>
             </div>
@@ -206,39 +206,24 @@ export default async function IntegrationsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">Kurulum Özeti</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Ne zaman aktif olacak?</h2>
+          <div className="section-title">Website Widget</div>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Şimdi canlı kullanabilirsiniz</h2>
           <div className="mt-5 space-y-3">
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
-              Meta onayı tamamlandıktan sonra Instagram ve WhatsApp bağlantıları restoran sahibi tarafından panel içinden başlatılacak.
+              Website Widget, public rezervasyon talep sayfanızı sitenize gömmek için hazır. Müşteri rezervasyonu kesinleştirmez; yalnızca talep bırakır.
             </div>
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
-              O ana kadar web formu, public reservation page ve AI ile manuel mesaj çözümleme akışı kullanılabilir.
+              Bu bağlantıyı doğrudan paylaşabilirsiniz:
+              <div className="mt-3 break-all rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 font-medium text-ink">{publicReservationLink}</div>
             </div>
             <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
-              Tüm talepler <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> alanında birleşir.
+              Sitene gömülecek örnek widget kodu:
+              <pre className="mt-3 overflow-x-auto rounded-2xl bg-[color:var(--bg-strong)] p-4 text-xs leading-6 text-ink">{widgetScript}</pre>
+            </div>
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
+              Tüm web talepleri <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> alanında toplanır. Ekip onay verdikten sonra gerçek rezervasyona dönüşür.
             </div>
           </div>
-
-          {session.user.role === UserRole.BUSINESS_ADMIN ? (
-            <div className="mt-8 border-t border-[color:var(--border)] pt-6">
-              <div className="section-title">Admin Tanısı</div>
-              <div className="mt-4 grid gap-3">
-                <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
-                  <div className="font-semibold text-ink">Redirect URI</div>
-                  <div className="mt-2 break-all">{metaDiagnostics.redirectUri}</div>
-                </div>
-                <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
-                  <div className="font-semibold text-ink">Eksik / kontrol edilmesi gereken alanlar</div>
-                  <div className="mt-2">
-                    {metaDiagnostics.missing.length === 0 && metaDiagnostics.suspicious.length === 0
-                      ? "Temel env kurulumu hazır görünüyor."
-                      : [...metaDiagnostics.missing, ...metaDiagnostics.suspicious].join(", ")}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
         </Panel>
       </section>
     </div>
