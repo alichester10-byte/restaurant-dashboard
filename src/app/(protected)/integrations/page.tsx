@@ -1,15 +1,60 @@
 import { UserRole } from "@prisma/client";
 import { LockedAction } from "@/components/demo/locked-action";
 import { AiAssistantComposer } from "@/components/integrations/ai-assistant-composer";
-import { IntegrationCardGrid } from "@/components/integrations/integration-card-grid";
 import { IntegrationQueryFeedback } from "@/components/integrations/integration-query-feedback";
 import { AppHeader } from "@/components/layout/app-header";
 import { Panel } from "@/components/ui/panel";
 import { requireBusinessAccess } from "@/lib/auth";
-import { getAppBaseUrl, getBusinessEntitlement } from "@/lib/billing";
+import { getBusinessEntitlement } from "@/lib/billing";
 import { getIntegrationsPageDataSafe } from "@/lib/data";
-import { getInstagramSetupStatus, getMetaEnvironmentDiagnostics, getMetaSetupStatus, getWhatsappSetupStatus } from "@/lib/meta";
-import { getWhatsAppVerifyToken, WHATSAPP_SAMPLE_MESSAGE } from "@/lib/whatsapp";
+import { getMetaEnvironmentDiagnostics } from "@/lib/meta";
+
+const roadmapCards = [
+  {
+    title: "WhatsApp Business",
+    status: "Yakında aktif",
+    body: "Meta onayı tamamlandığında restoran sahibi kendi panelinden WhatsApp hesabını bağlayabilecek. Gelen mesajlar rezervasyon talebi olarak bekleyen kuyruğa düşecek."
+  },
+  {
+    title: "Instagram DM",
+    status: "Meta onayı bekleniyor",
+    body: "Instagram Professional hesaplarından gelen DM'ler, Meta review tamamlandıktan sonra doğrudan Kanal Talepleri akışına taşınacak."
+  },
+  {
+    title: "Website Widget",
+    status: "Temel hazır",
+    body: "Web formu ve public rezervasyon talep sayfası çalışır durumda. Müşteri yalnızca talep bırakır; son onay her zaman restoran ekibindedir."
+  },
+  {
+    title: "AI Reservation Assistant",
+    status: "Panel içinde hazır",
+    body: "AI operasyon asistanı müşteri mesajlarını talebe dönüştürür, eksik alanları bulur ve rezervasyon ekibine düzenli bir ön izleme sunar."
+  }
+];
+
+const steps = [
+  "Müşteri WhatsApp, Instagram, web formu veya AI destekli sohbet üzerinden mesaj bırakır.",
+  "Sistem isim, telefon, tarih, saat ve kişi sayısını çıkarır.",
+  "Talep Rezervasyonlar > Kanal Talepleri alanına düşer.",
+  "Restoran ekibi talebi inceler, onaylar veya reddeder.",
+  "Onaylanan kayıt gerçek rezervasyona dönüşür."
+];
+
+const afterApproval = [
+  "WhatsApp ve Instagram hesapları işletme sahibi tarafından panel içinden bağlanabilecek.",
+  "Gelen DM ve mesajlar otomatik olarak AI ile çözümlenecek.",
+  "Mesaj akışları bekleyen talepler olarak tek kuyrukta toplanacak.",
+  "Operasyon ekibi tek tıkla onay / red verecek.",
+  "Tüm kanal performansı raporlara yansıyacak."
+];
+
+const nowAvailable = [
+  "Website rezervasyon talep formu",
+  "Public reservation page",
+  "AI ile manuel mesaj çözümleme",
+  "Kanal Talepleri içinde onay / red akışı",
+  "Tenant ve rol kontrollü güvenli pending request sistemi"
+];
 
 export default async function IntegrationsPage() {
   const session = await requireBusinessAccess({
@@ -17,18 +62,13 @@ export default async function IntegrationsPage() {
   });
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const data = await getIntegrationsPageDataSafe(session.user.businessId);
-  const metaSetup = {
-    meta: getMetaSetupStatus(),
-    whatsapp: getWhatsappSetupStatus(),
-    instagram: getInstagramSetupStatus()
-  };
   const metaDiagnostics = getMetaEnvironmentDiagnostics();
 
   return (
     <div className="space-y-6">
       <AppHeader
         title="Rezervasyon Kanalları"
-        subtitle="WhatsApp, Instagram, web ve AI destekli talep akışlarını tek panelde yönetin."
+        subtitle="WhatsApp, Instagram, web ve AI destekli talepleri tek operasyon akışında toplamaya hazırlanın."
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -45,63 +85,110 @@ export default async function IntegrationsPage() {
         </Panel>
       ) : null}
 
-      <IntegrationCardGrid
-        cards={data.cards}
-        businessSlug={session.user.business.slug}
-        baseUrl={getAppBaseUrl()}
-        whatsappVerifyToken={getWhatsAppVerifyToken()}
-        whatsappSampleMessage={WHATSAPP_SAMPLE_MESSAGE}
-        metaSetup={metaSetup}
-        canManageConnections={entitlement.canWrite && session.user.role === UserRole.BUSINESS_ADMIN}
-        pendingRequestCount={data.pendingRequests.length}
-      />
-
-      {session.user.role === UserRole.BUSINESS_ADMIN ? (
-        <Panel>
-          <div className="section-title">Meta Diagnostics</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Bağlantı ayarları kontrolü</h2>
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
-              <div className="font-semibold text-ink">Redirect URI</div>
-              <div className="mt-2 break-all">{metaDiagnostics.redirectUri}</div>
-              <div className="mt-2">
-                {metaDiagnostics.redirectUriExactMatch
-                  ? `${metaDiagnostics.expectedBaseUrl} ile uyumlu.`
-                  : `NEXT_PUBLIC_APP_URL tam olarak ${metaDiagnostics.expectedBaseUrl} olmalı.`}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
-              <div className="font-semibold text-ink">Temel Kontroller</div>
-              <div className="mt-2">App ID eşleşmesi: {metaDiagnostics.appIdsMatch ? "Evet" : "Hayır"}</div>
-              <div className="mt-1">Webhook secret eşleşmesi: {metaDiagnostics.webhookSecretMatchesAppSecret ? "Evet" : "Hayır / farklı"}</div>
-              <div className="mt-1">WhatsApp Config ID: {metaDiagnostics.whatsappConfigIdLooksValid ? "Uygun görünüyor" : "Şüpheli"}</div>
-              <div className="mt-1">Instagram Config ID: {metaDiagnostics.instagramConfigIdLooksValid ? "Uygun görünüyor" : "Şüpheli"}</div>
-              <div className="mt-1">Verify token önizleme: {metaDiagnostics.verifyTokenPreview}</div>
+      <Panel className="overflow-hidden">
+        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-4">
+            <div className="section-title">Yakında Geliyor</div>
+            <h2 className="text-3xl font-semibold text-ink">Tüm rezervasyon kanalları tek merkezde toplanacak</h2>
+            <p className="max-w-2xl text-sm leading-7 text-sage">
+              Limon Masa&apos;nın kanal yapısı; WhatsApp, Instagram, web ve AI destekli talep akışlarını tek yerde toplayacak şekilde hazırlanıyor.
+              Şu anda Meta onay süreci devam ettiği için sosyal kanal bağlantıları kontrollü ilerliyor. Bu sayfa artık durumu net anlatır; yanlışlıkla
+              aktifmiş gibi hissettirmez.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a href="/reservations#channel-requests" className="btn-primary">
+                Kanal Taleplerini Aç
+              </a>
+              <a href={`/r/${session.user.business.slug}`} className="btn-secondary">
+                Public Talep Sayfasını Gör
+              </a>
             </div>
           </div>
-          <div className="mt-5 grid gap-3">
-            {metaDiagnostics.diagnostics.map((item) => (
-              <div key={item.key} className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="font-semibold text-ink">{item.key}</div>
-                  <span className={`badge ${item.level === "ok" ? "bg-emerald-100 text-emerald-800" : item.level === "missing" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800"}`}>
-                    {item.level === "ok" ? "Hazır" : item.level === "missing" ? "Eksik" : "Kontrol Et"}
-                  </span>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+              <div className="text-xs uppercase tracking-[0.24em] text-moss">Bekleyen Talep</div>
+              <div className="mt-3 text-4xl font-semibold text-ink">{data.pendingRequests.length}</div>
+              <div className="mt-2 text-sm text-sage">Şu anda dış kanallardan gelen ve onay bekleyen talepler</div>
+            </div>
+            <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+              <div className="text-xs uppercase tracking-[0.24em] text-moss">Meta Durumu</div>
+              <div className="mt-3 text-lg font-semibold text-ink">
+                {metaDiagnostics.missing.length === 0 ? "Kurulum tamamlandı" : "Kurulum / onay bekleniyor"}
+              </div>
+              <div className="mt-2 text-sm text-sage">Instagram ve WhatsApp self-serve açılışı Meta onayından sonra yayınlanacak.</div>
+            </div>
+          </div>
+        </div>
+      </Panel>
+
+      <section className="grid gap-6 xl:grid-cols-4">
+        {roadmapCards.map((card) => (
+          <Panel key={card.title}>
+            <div className="section-title">{card.status}</div>
+            <h3 className="mt-2 text-xl font-semibold text-ink">{card.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-sage">{card.body}</p>
+          </Panel>
+        ))}
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <Panel>
+          <div className="section-title">Sistem Nasıl Çalışacak?</div>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">Uçtan uca kanal akışı</h2>
+          <div className="mt-6 space-y-3">
+            {steps.map((step, index) => (
+              <div key={step} className="flex gap-4 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--bg-strong)] text-sm font-semibold text-moss">
+                  {index + 1}
                 </div>
-                <div className="mt-2 text-sage">{item.maskedValue}</div>
-                <div className="mt-1 text-sage">{item.message}</div>
+                <div className="text-sm leading-6 text-sage">{step}</div>
               </div>
             ))}
           </div>
-        </Panel>
-      ) : null}
 
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="mt-8 border-t border-[color:var(--border)] pt-8">
+            <div className="section-title">Şu Anda Hazır Olanlar</div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {nowAvailable.map((item) => (
+                <div key={item} className="rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 text-sm leading-6 text-sage">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="section-title">Meta Onayından Sonra</div>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">Instagram ve WhatsApp ile neler açılacak?</h2>
+          <div className="mt-6 space-y-3">
+            {afterApproval.map((item) => (
+              <div key={item} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
+                {item}
+              </div>
+            ))}
+          </div>
+
+          {entitlement.isDemo ? (
+            <div className="mt-8">
+              <LockedAction
+                fullWidth
+                href="/billing?upgrade=integrations"
+                title="Pro ile tüm kanal operasyonu açılır"
+                description="Pro planda AI destekli talep yönetimi, daha yoğun kullanım, kanal işleme akışı ve operasyon ekibi için hızlandırılmış rezervasyon onay sistemi açılır."
+              />
+            </div>
+          ) : null}
+        </Panel>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Panel id="ai-assistant-testing">
           <div className="section-title">AI Reservation Assistant</div>
           <h2 className="mt-2 text-2xl font-semibold text-ink">Mesajı yapıştır, talebi önizle</h2>
           <p className="mt-2 text-sm leading-6 text-sage">
-            WhatsApp, Instagram veya web üzerinden gelebilecek mesajları önce pending request olarak oluşturun. İnsan onayı olmadan canlı rezervasyon oluşmaz.
+            Müşteriden gelen bir WhatsApp, Instagram veya web mesajını buraya yapıştırın. Sistem önce rezervasyon talebini çıkarır, sonra siz onay verirsiniz.
           </p>
 
           <div className="mt-6">
@@ -109,53 +196,49 @@ export default async function IntegrationsPage() {
               <LockedAction
                 fullWidth
                 href="/billing?upgrade=ai-assistant"
-                title="AI asistanından talep oluşturmak için Pro gerekir"
-                description="Demo modunda pending request akışını inceleyebilirsiniz. Yeni talep oluşturma ve onay işlemleri Pro ile açılır."
+                title="AI destekli talep yönetimi Pro ile açılır"
+                description="Demo modunda sistemi inceleyebilirsiniz. Pro planında AI mesaj çözümleme, daha yoğun kullanım ve gerçek operasyon akışı açılır."
               />
             ) : (
               <AiAssistantComposer />
             )}
           </div>
-
-          <div className="mt-8 border-t border-[color:var(--border)] pt-8">
-            <div className="section-title">Kanal Talepleri</div>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">Tüm dış kanal taleplerini Rezervasyonlar içinde yönetin</h2>
-            <p className="mt-2 text-sm leading-6 text-sage">
-              WhatsApp, Instagram, web ve AI kaynaklı tüm talepler artık Rezervasyonlar sayfasındaki özel Kanal Talepleri bölümünde toplanır. Entegrasyonlar sayfası yalnızca bağlantı durumlarını ve kurulum adımlarını gösterir.
-            </p>
-
-            <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-6">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <div className="text-lg font-semibold text-ink">{data.pendingRequests.length} bekleyen talep</div>
-                  <p className="mt-2 text-sm leading-6 text-sage">
-                    Onay ve red işlemleri, müşteri mesajı ve AI çıkarımlarıyla birlikte Rezervasyonlar sayfasında tek akışta yönetilir.
-                  </p>
-                </div>
-                <a href="/reservations#channel-requests" className="btn-primary text-center">
-                  Rezervasyonlarda Gör
-                </a>
-              </div>
-            </div>
-          </div>
         </Panel>
 
         <Panel>
-          <div className="section-title">Kanal Mimarisi</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Hazır temeller</h2>
+          <div className="section-title">Kurulum Özeti</div>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Ne zaman aktif olacak?</h2>
           <div className="mt-5 space-y-3">
-            {[
-              "WhatsApp ve Instagram için webhook doğrulama endpointleri hazır.",
-              "Google / web talepleri public request endpointine düşer.",
-              "AI extraction katmanı isim, telefon, tarih, saat ve kişi sayısı için preview çıkarır.",
-              "Tüm dış kaynak talepleri önce pending request olarak saklanır.",
-              "Onay/reddet akışı tenant ve rol kontrolüyle korunur."
-            ].map((item) => (
-              <div key={item} className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
-                {item}
-              </div>
-            ))}
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
+              Meta onayı tamamlandıktan sonra Instagram ve WhatsApp bağlantıları restoran sahibi tarafından panel içinden başlatılacak.
+            </div>
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
+              O ana kadar web formu, public reservation page ve AI ile manuel mesaj çözümleme akışı kullanılabilir.
+            </div>
+            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
+              Tüm talepler <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> alanında birleşir.
+            </div>
           </div>
+
+          {session.user.role === UserRole.BUSINESS_ADMIN ? (
+            <div className="mt-8 border-t border-[color:var(--border)] pt-6">
+              <div className="section-title">Admin Tanısı</div>
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
+                  <div className="font-semibold text-ink">Redirect URI</div>
+                  <div className="mt-2 break-all">{metaDiagnostics.redirectUri}</div>
+                </div>
+                <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm text-sage">
+                  <div className="font-semibold text-ink">Eksik / kontrol edilmesi gereken alanlar</div>
+                  <div className="mt-2">
+                    {metaDiagnostics.missing.length === 0 && metaDiagnostics.suspicious.length === 0
+                      ? "Temel env kurulumu hazır görünüyor."
+                      : [...metaDiagnostics.missing, ...metaDiagnostics.suspicious].join(", ")}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </Panel>
       </section>
     </div>
