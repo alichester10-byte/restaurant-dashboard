@@ -81,31 +81,6 @@ export default async function DashboardPage() {
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>
-          <RestaurantChatWidget
-            restaurantId={session.user.businessId}
-            restaurantName={data.settings.restaurantName}
-            assistantEnabled={data.aiAssistant.enabled}
-            welcomeMessage={data.aiAssistant.welcomeMessage}
-            mode="operator"
-            operatorSummary={{
-              pendingCount: data.aiAssistant.pendingCount,
-              totalCount: data.aiAssistant.totalCount,
-              latestRequestLabel:
-                data.aiAssistant.latestRequests[0]
-                  ? `${data.aiAssistant.latestRequests[0].guestName || "İsim bekleniyor"} • ${
-                      data.aiAssistant.latestRequests[0].requestedDate ?? "Tarih bekleniyor"
-                    }`
-                  : null
-            }}
-            quickLinks={[
-              { label: "Kanal Talepleri", href: "/reservations#channel-requests" },
-              { label: "Rezervasyonlar", href: "/reservations" },
-              { label: "Public Sayfa", href: `/r/${session.user.business.slug}` }
-            ]}
-          />
-        </Panel>
-
-        <Panel>
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">Yaklaşan Rezervasyonlar</div>
@@ -200,6 +175,31 @@ export default async function DashboardPage() {
           </div>
         </Panel>
       </section>
+
+      <RestaurantChatWidget
+        restaurantId={session.user.businessId}
+        restaurantName={data.settings.restaurantName}
+        assistantEnabled={!entitlement.isDemo && data.aiAssistant.enabled}
+        welcomeMessage={data.aiAssistant.welcomeMessage}
+        mode="operator"
+        isDemo={entitlement.isDemo}
+        upgradeHref="/billing?upgrade=ai-assistant"
+        operatorSummary={{
+          pendingCount: data.aiAssistant.pendingCount,
+          totalCount: data.aiAssistant.totalCount,
+          latestRequestLabel:
+            data.aiAssistant.latestRequests[0]
+              ? `${data.aiAssistant.latestRequests[0].guestName || "İsim bekleniyor"} • ${
+                  data.aiAssistant.latestRequests[0].requestedDate ?? "Tarih bekleniyor"
+                }`
+              : null
+        }}
+        quickLinks={[
+          { label: "Kanal Talepleri", href: "/reservations#channel-requests" },
+          { label: "Rezervasyonlar", href: "/reservations" },
+          { label: "Public Sayfa", href: `/r/${session.user.business.slug}` }
+        ]}
+      />
     </div>
   );
 }

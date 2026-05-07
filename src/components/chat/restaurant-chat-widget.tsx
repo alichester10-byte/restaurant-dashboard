@@ -31,6 +31,8 @@ type RestaurantChatWidgetProps = {
   className?: string;
   quickLinks?: QuickLink[];
   operatorSummary?: OperatorSummary;
+  isDemo?: boolean;
+  upgradeHref?: string;
 };
 
 type ChatApiResponse = {
@@ -90,7 +92,9 @@ export function RestaurantChatWidget({
   mode = "floating",
   className,
   quickLinks = [],
-  operatorSummary
+  operatorSummary,
+  isDemo = false,
+  upgradeHref = "/billing?upgrade=ai-assistant"
 }: RestaurantChatWidgetProps) {
   const storageKey = useMemo(() => buildStorageKey(restaurantId, mode), [mode, restaurantId]);
   const [open, setOpen] = useState(false);
@@ -314,6 +318,24 @@ export function RestaurantChatWidget({
               </div>
             ) : null}
 
+            {mode === "operator" && isDemo ? (
+              <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 px-4 py-4">
+                <div className="text-sm font-semibold text-emerald-900">Pro ile neler açılır?</div>
+                <div className="mt-3 space-y-2 text-sm leading-6 text-emerald-800">
+                  <div>Website chatbot taleplerini canlı olarak yönetme</div>
+                  <div>WhatsApp ve Instagram mesajlarını AI ile toplama</div>
+                  <div>Talebi rezervasyona çeviren hızlandırılmış operasyon akışı</div>
+                  <div>Rezervasyon asistanı için daha yoğun kullanım ve kanal otomasyonu</div>
+                </div>
+                <a
+                  href={upgradeHref}
+                  className="mt-4 inline-flex items-center justify-center rounded-full bg-moss px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink"
+                >
+                  Pro&apos;ya Geç
+                </a>
+              </div>
+            ) : null}
+
             {messages.length === 0 ? (
               <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/70 px-4 py-5 text-sm leading-6 text-sage">
                 Sohbet başlatmak için mesajınızı yazın. İsim, telefon, tarih, saat ve kişi sayısı bilgilerini toplarım.
@@ -400,46 +422,27 @@ export function RestaurantChatWidget({
 
   if (mode === "operator") {
     return (
-      <div className={cn("rounded-[26px] border border-[color:var(--border)] bg-white/90 p-4", className)}>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-moss">AI Operasyon Asistanı</div>
-            <div className="mt-2 text-lg font-semibold text-ink">Küçük bir panelden tüm akışı yönetin</div>
-            <div className="mt-2 text-sm leading-6 text-sage">
-              Müşteri mesajlarını talebe dönüştürür, eksik bilgileri bulur ve onay akışına bırakır.
-            </div>
-          </div>
-          <div className="rounded-full bg-[color:var(--accent-soft)] px-4 py-2 text-sm font-semibold text-moss">
-            {operatorSummary?.pendingCount ?? 0} bekleyen
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <CompactMetric label="Toplam Talep" value={operatorSummary?.totalCount ?? 0} />
-          <CompactMetric label="Onay Bekliyor" value={operatorSummary?.pendingCount ?? 0} />
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
+      <>
+        <div className={cn("fixed bottom-5 left-5 z-30 sm:bottom-6 sm:left-6", className)}>
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex items-center justify-center rounded-full bg-moss px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink"
+            className="group inline-flex items-center gap-3 rounded-full border border-white/70 bg-white/92 px-4 py-3 shadow-[0_20px_45px_rgba(44,62,45,0.14)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_26px_55px_rgba(44,62,45,0.18)]"
           >
-            Asistanı Aç
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-moss text-lg text-white shadow-[0_12px_30px_rgba(53,92,62,0.22)]">
+              AI
+            </span>
+            <span className="min-w-0 text-left">
+              <span className="block text-xs font-semibold uppercase tracking-[0.24em] text-moss">Operasyon Asistanı</span>
+              <span className="mt-0.5 block text-sm font-semibold text-ink">
+                {isDemo ? "Pro ile AI akışını açın" : `${operatorSummary?.pendingCount ?? 0} bekleyen talep`}
+              </span>
+            </span>
           </button>
-          {quickLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="inline-flex items-center justify-center rounded-full border border-[color:var(--border)] bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss"
-            >
-              {link.label}
-            </a>
-          ))}
         </div>
 
         {open ? drawer : null}
-      </div>
+      </>
     );
   }
 

@@ -42,10 +42,10 @@ export function PublicReservationRequestForm({
       }}
     >
       <div className={embed ? "" : "rounded-[28px] border border-[color:var(--border)] bg-white/90 p-6"}>
-        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-moss">Online Reservation</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-moss">Reservation Request</div>
         <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl text-ink">{businessName}</h1>
         <p className="mt-3 text-sm leading-6 text-sage">
-          Mesajınızı bırakın; ekip uygunluğu kontrol edip rezervasyon talebinizi onay akışına alır.
+          Mesajınızı bırakın; ekip uygunluğu kontrol edip rezervasyon talebinizi onay akışına alır. Bu form rezervasyonu otomatik kesinleştirmez.
         </p>
         <textarea
           className="field mt-5 min-h-36"
@@ -60,7 +60,7 @@ export function PublicReservationRequestForm({
         </button>
         {status === "success" ? (
           <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            Talebiniz alındı. İşletme ekibi kısa süre içinde sizinle iletişime geçecek.
+            Talebiniz alındı. İşletme ekibi uygunluğu kontrol edip kısa süre içinde sizinle iletişime geçecek.
           </div>
         ) : null}
         {status === "error" ? (
