@@ -62,7 +62,7 @@ export default async function IntegrationsPage() {
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const data = await getIntegrationsPageDataSafe(session.user.businessId);
   const publicReservationLink = `${getAppBaseUrl()}/r/${session.user.business.slug}`;
-  const widgetScript = `<iframe src="${publicReservationLink}?embed=1" title="Limon Masa Reservation Widget" style="width:100%;min-height:640px;border:0;border-radius:24px;"></iframe>`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicReservationLink)}`;
 
   return (
     <div className="space-y-6">
@@ -207,21 +207,38 @@ export default async function IntegrationsPage() {
 
         <Panel>
           <div className="section-title">Website Widget</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Şimdi canlı kullanabilirsiniz</h2>
-          <div className="mt-5 space-y-3">
-            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
-              Website Widget, public rezervasyon talep sayfanızı sitenize gömmek için hazır. Müşteri rezervasyonu kesinleştirmez; yalnızca talep bırakır.
+          <h2 className="mt-2 text-xl font-semibold text-ink">Paylaşılabilir rezervasyon bağlantısı hazır</h2>
+          <p className="mt-3 text-sm leading-6 text-sage">
+            Bu bağlantıyı Instagram bio&apos;ya, WhatsApp profil açıklamasına veya Google Business profilinize ekleyebilirsiniz.
+            Müşteri rezervasyonu kesinleştirmez; yalnızca talep bırakır ve ekip onayından sonra gerçek rezervasyona dönüşür.
+          </p>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-[220px_1fr]">
+            <div className="rounded-[28px] border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
+              <img src={qrUrl} alt="Rezervasyon bağlantısı QR kodu" className="mx-auto h-[180px] w-[180px] rounded-2xl border border-[color:var(--border)] bg-white p-2" />
+              <div className="mt-4 text-center text-xs uppercase tracking-[0.24em] text-moss">QR ile paylaş</div>
+              <div className="mt-2 text-center text-sm leading-6 text-sage">Masanın üzerine, menüye veya vitrine ekleyebilirsiniz.</div>
             </div>
-            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
-              Bu bağlantıyı doğrudan paylaşabilirsiniz:
-              <div className="mt-3 break-all rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 font-medium text-ink">{publicReservationLink}</div>
-            </div>
-            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
-              Sitene gömülecek örnek widget kodu:
-              <pre className="mt-3 overflow-x-auto rounded-2xl bg-[color:var(--bg-strong)] p-4 text-xs leading-6 text-ink">{widgetScript}</pre>
-            </div>
-            <div className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4 text-sm leading-6 text-sage">
-              Tüm web talepleri <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> alanında toplanır. Ekip onay verdikten sonra gerçek rezervasyona dönüşür.
+
+            <div className="space-y-4">
+              <div className="rounded-[28px] border border-[color:var(--border)] bg-white/90 p-5">
+                <div className="text-xs uppercase tracking-[0.24em] text-moss">Bio / profil bağlantısı</div>
+                <div className="mt-3 break-all rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 font-medium text-ink">{publicReservationLink}</div>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <a href={publicReservationLink} target="_blank" rel="noreferrer" className="btn-primary">
+                    Bağlantıyı Aç
+                  </a>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-[color:var(--border)] bg-white/90 p-5">
+                <div className="text-xs uppercase tracking-[0.24em] text-moss">Nasıl kullanılır?</div>
+                <div className="mt-3 space-y-2 text-sm leading-6 text-sage">
+                  <div>1. Linki Instagram bio, WhatsApp profil veya Google Business alanına ekleyin.</div>
+                  <div>2. Müşteri formu doldurunca talep doğrudan <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> alanına düşer.</div>
+                  <div>3. Ekibiniz onay verirse kayıt gerçek rezervasyona dönüşür.</div>
+                </div>
+              </div>
             </div>
           </div>
         </Panel>
