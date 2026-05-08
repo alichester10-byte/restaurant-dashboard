@@ -3,6 +3,7 @@ import "server-only";
 import { AuditCategory, ReservationRequestStatus, ReservationSource } from "@prisma/client";
 import { extractReservationRequest } from "@/lib/ai-reservation";
 import { safeCreateAuditLog } from "@/lib/audit";
+import { enforcePlanUsageLimit } from "@/lib/plan-config";
 import { prisma } from "@/lib/prisma";
 
 export async function createPendingReservationRequestFromExternalMessage(input: {
@@ -48,6 +49,8 @@ export async function createPendingReservationRequestFromExternalMessage(input: 
       };
     }
   }
+
+  await enforcePlanUsageLimit(input.businessId, "monthlyReservationRequests");
 
   const extracted = await extractReservationRequest(input.rawMessage, input.source, {
     businessType: input.structuredData?.businessType ?? undefined

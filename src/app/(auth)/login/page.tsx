@@ -46,12 +46,12 @@ export default async function LoginPage({
       {toast ? <AuthToast title={toast.title} description={toast.description} tone={toast.tone} /> : null}
       <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="glass-panel rounded-[32px] p-8 md:p-10">
-          <div className="text-xs uppercase tracking-[0.34em] text-sage">Restaurant Revenue OS</div>
+          <div className="text-xs uppercase tracking-[0.34em] text-sage">Booking Operations OS</div>
           <h1 className="mt-5 max-w-xl font-[family-name:var(--font-display)] text-5xl leading-tight text-ink">
-            Rezervasyon ve salon operasyonlarını premium bir panelden yönetin.
+            Rezervasyon, randevu ve talep operasyonlarını premium bir panelden yönetin.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-sage">
-            Limon Masa Ops; rezervasyon takibi, çağrı yönetimi, masa planı, müşteri geçmişi ve günlük raporları tek akışta birleştirir.
+            Limon Masa Ops; talepleri, müşterileri, kaynakları, kanal akışlarını ve günlük operasyon görünürlüğünü tek akışta birleştirir.
           </p>
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -73,7 +73,7 @@ export default async function LoginPage({
             <div className="text-xs uppercase tracking-[0.28em] text-white/60">Yönetici Girişi</div>
             <div className="mt-3 text-2xl font-semibold">Hoş geldiniz</div>
             <p className="mt-2 text-sm leading-6 text-white/75">
-              Demo giriş deneyimiyle bütün modülleri gerçek restoran akışı hissiyle inceleyin.
+              Demo giriş deneyimiyle bütün modülleri gerçek işletme akışı hissiyle inceleyin.
             </p>
           </div>
           <div className="mt-8">

@@ -17,7 +17,7 @@ export default async function SecurityPage() {
     <div className="space-y-6">
       <AppHeader
         title="Güvenlik & Veri"
-        subtitle="Restoran verilerinizin nasıl korunduğunu ve son güvenlik olaylarını tek sayfada görün."
+        subtitle="İşletme verilerinizin nasıl korunduğunu ve son güvenlik olaylarını tek sayfada görün."
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}

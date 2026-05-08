@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { enforcePlanFeature, enforcePlanUsageLimit, PlanLimitError } from "@/lib/plan-config";
 import { handleRestaurantChatMessage } from "@/lib/restaurant-chat";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { aiChatSchema } from "@/lib/validation";
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Mesaj veya restoran bilgisi geçersiz."
+        error: "Mesaj veya işletme bilgisi geçersiz."
       },
       { status: 400 }
     );
@@ -34,6 +35,9 @@ export async function POST(request: Request) {
   }
 
   try {
+    await enforcePlanFeature(parsed.data.restaurantId, "aiAssistant", "Bu plan AI asistanını henüz desteklemiyor. Üst plana geçerek açabilirsiniz.");
+    await enforcePlanUsageLimit(parsed.data.restaurantId, "monthlyAiMessages");
+
     const result = await handleRestaurantChatMessage({
       restaurantId: parsed.data.restaurantId,
       sessionId: parsed.data.sessionId || null,
@@ -58,6 +62,16 @@ export async function POST(request: Request) {
       ...result.payload
     });
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message
+        },
+        { status: 403 }
+      );
+    }
+
     console.error("[ai:chat-route-error]", {
       error: error instanceof Error ? error.message : "unknown_error"
     });

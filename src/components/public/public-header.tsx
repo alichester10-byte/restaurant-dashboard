@@ -17,7 +17,7 @@ export function PublicHeader({ language }: { language: PublicLanguage }) {
             <div>
               <div className="text-sm font-semibold text-ink">Limon Masa</div>
               <div className="text-xs text-sage">
-                {isEnglish ? "Restaurant reservation operations" : "Restoran rezervasyon operasyonu"}
+                {isEnglish ? "Universal booking operations" : "Çok sektörlü rezervasyon operasyonu"}
               </div>
             </div>
           </Link>

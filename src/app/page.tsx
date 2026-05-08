@@ -6,8 +6,8 @@ import { getPublicCopy, getPublicLanguage, getPublicMetadataBase } from "@/lib/p
 
 export const metadata: Metadata = getPublicMetadataBase(
   "/",
-  "Restoran Rezervasyon Sistemi | Limon Masa",
-  "Limon Masa, restoranların WhatsApp, Instagram ve web üzerinden gelen rezervasyon taleplerini tek panelden yönetmesini sağlayan yapay zeka destekli rezervasyon sistemidir."
+  "Rezervasyon ve Randevu Sistemi | Limon Masa",
+  "Limon Masa, işletmelerin WhatsApp, Instagram ve web üzerinden gelen rezervasyon, randevu ve booking taleplerini tek panelden yönetmesini sağlayan yapay zeka destekli platformdur."
 );
 
 export default async function HomePage({

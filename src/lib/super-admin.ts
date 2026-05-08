@@ -13,6 +13,7 @@ import {
 import { isEmailDeliveryConfigured } from "@/lib/email";
 import { getEmailTwoFactorSchemaStatus } from "@/lib/email-two-factor-runtime";
 import { getMetaEnvironmentDiagnostics } from "@/lib/meta";
+import { getPlanOverviewForSuperAdmin } from "@/lib/plan-config";
 import { prisma } from "@/lib/prisma";
 import { endOfDay, startOfDay } from "@/lib/utils";
 
@@ -52,7 +53,8 @@ export async function getSuperAdminOverviewData() {
     todaysReservations,
     todaysMessages,
     sessionCount,
-    schemaStatus
+    schemaStatus,
+    planOverview
   ] = await Promise.all([
     prisma.business.count(),
     prisma.business.count({ where: { status: "ACTIVE" } }),
@@ -65,7 +67,8 @@ export async function getSuperAdminOverviewData() {
     prisma.reservation.count({ where: { createdAt: { gte: todayStart, lte: todayEnd } } }),
     prisma.reservationRequest.count({ where: { createdAt: { gte: todayStart, lte: todayEnd } } }),
     prisma.session.count({ where: { expiresAt: { gt: new Date() } } }),
-    getEmailTwoFactorSchemaStatus()
+    getEmailTwoFactorSchemaStatus(),
+    getPlanOverviewForSuperAdmin()
   ]);
 
   const emailConfigured = isEmailDeliveryConfigured();
@@ -90,7 +93,8 @@ export async function getSuperAdminOverviewData() {
       emailConfigured,
       metaReady: metaDiagnostics.missing.length === 0,
       emailTwoFactorSchemaReady: schemaStatus.ready
-    }
+    },
+    planOverview
   };
 }
 

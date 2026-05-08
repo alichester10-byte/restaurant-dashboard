@@ -19,7 +19,7 @@ import { Panel } from "@/components/ui/panel";
 import { requireBusinessUser } from "@/lib/auth";
 import { getEmailTwoFactorSettingsState } from "@/lib/auth-service";
 import { getBusinessEntitlement } from "@/lib/billing";
-import { reminderChannelLabels } from "@/lib/constants";
+import { reminderChannelLabels, subscriptionPlanLabels } from "@/lib/constants";
 import { getSettingsData } from "@/lib/data";
 import { getIndustryConfig, getIndustryOptionLabel, industryOptions } from "@/lib/industry-config";
 
@@ -34,15 +34,16 @@ const securityMessages: Record<string, { tone: "success" | "error"; text: string
 export default async function SettingsPage({
   searchParams
 }: {
-  searchParams?: { security?: string };
+  searchParams?: { security?: string; error?: string; reason?: string };
 }) {
   const session = await requireBusinessUser();
-  const { settings, business, services, staffMembers, bookableResources } = await getSettingsData(session.user.businessId);
+  const { settings, business, services, staffMembers, bookableResources, usageSnapshot } = await getSettingsData(session.user.businessId);
   const industry = getIndustryConfig(business.businessType);
   const emailTwoFactorState = await getEmailTwoFactorSettingsState();
   const openingHours = settings.openingHours as Record<string, string>;
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const securityFeedback = searchParams?.security ? securityMessages[searchParams.security] : null;
+  const planLimitFeedback = searchParams?.error === "plan_limit" ? "Your current plan limit has been reached. Please upgrade to continue." : null;
 
   return (
     <div className="space-y-6">
@@ -59,9 +60,54 @@ export default async function SettingsPage({
       {entitlement.isDemo ? (
         <DemoModeBanner
           title="Ayarlar görünür, değişiklikler Pro ile açılır."
-          description="Restoran profilinizi, çalışma saatlerinizi ve servis kurallarınızı önizleyebilirsiniz. Kalıcı güncellemeler için Pro planını etkinleştirin."
+          description="İşletme profilinizi, çalışma saatlerinizi ve hizmet kurallarınızı önizleyebilirsiniz. Kalıcı güncellemeler için Pro planını etkinleştirin."
           href="/billing?upgrade=settings"
         />
+      ) : null}
+
+      {planLimitFeedback ? (
+        <Panel className="border-amber-200 bg-amber-50/80">
+          <div className="section-title text-amber-700">Plan Limiti</div>
+          <p className="mt-2 text-sm leading-6 text-amber-800">{planLimitFeedback}</p>
+        </Panel>
+      ) : null}
+
+      {usageSnapshot ? (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <Panel>
+            <div className="text-sm text-sage">Mevcut Plan</div>
+            <div className="mt-2 text-2xl font-semibold text-ink">{subscriptionPlanLabels[usageSnapshot.effectivePlan]}</div>
+            <div className="mt-2 text-sm text-sage">{usageSnapshot.config.description}</div>
+          </Panel>
+          <Panel>
+            <div className="text-sm text-sage">Aylık Talep Kullanımı</div>
+            <div className="mt-2 text-2xl font-semibold text-ink">
+              {usageSnapshot.usage.monthlyReservationRequests}
+              {usageSnapshot.config.monthlyReservationRequests !== null ? ` / ${usageSnapshot.config.monthlyReservationRequests}` : ""}
+            </div>
+          </Panel>
+          <Panel>
+            <div className="text-sm text-sage">AI Mesaj Kullanımı</div>
+            <div className="mt-2 text-2xl font-semibold text-ink">
+              {usageSnapshot.usage.monthlyAiMessages}
+              {usageSnapshot.config.monthlyAiMessages !== null ? ` / ${usageSnapshot.config.monthlyAiMessages}` : ""}
+            </div>
+          </Panel>
+          <Panel>
+            <div className="text-sm text-sage">Hizmet / Personel / Kaynak</div>
+            <div className="mt-2 text-lg font-semibold text-ink">
+              {usageSnapshot.usage.services} / {usageSnapshot.usage.staff} / {usageSnapshot.usage.resources}
+            </div>
+          </Panel>
+          <Panel>
+            <div className="text-sm text-sage">Kanal Erişimi</div>
+            <div className="mt-2 text-sm leading-6 text-ink">
+              AI Asistan: {usageSnapshot.config.aiAssistantEnabled ? "Açık" : "Kapalı"}
+              <br />
+              WhatsApp / Instagram: {usageSnapshot.config.whatsappInstagramEnabled ? "Açık" : "Kapalı"}
+            </div>
+          </Panel>
+        </section>
       ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -400,7 +446,7 @@ export default async function SettingsPage({
             <div className="mt-4 space-y-3">
               {bookableResources.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
-                  Henüz kaynak tanımı yok. Restoranlar mevcut masa planıyla çalışmaya devam eder.
+                  Henüz kaynak tanımı yok. Mevcut işletmeler bugünkü kaynak yapısıyla çalışmaya devam eder.
                 </div>
               ) : (
                 bookableResources.map((resource) => (
@@ -458,7 +504,7 @@ export default async function SettingsPage({
 
           <div className="mt-6 space-y-4">
             {[
-              { title: "Veri izolasyonu", body: "Her işletmenin verisi ayrı tenant yapısında tutulur; farklı restoran kayıtları birbirine karışmaz." },
+              { title: "Veri izolasyonu", body: "Her işletmenin verisi ayrı tenant yapısında tutulur; farklı işletme kayıtları birbirine karışmaz." },
               { title: "Oturum ve erişim", body: "Rol bazlı erişim, güvenli oturum çerezleri ve yazma işlemlerinde ek yetki kontrolleri uygulanır." },
               { title: "Ödeme güveni", body: "Ödeme akışı PAYTR tarafından işlenir; kart verileri uygulama içinde tutulmaz." }
             ].map((item) => (

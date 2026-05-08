@@ -84,8 +84,10 @@ export const businessStatusLabels: Record<BusinessStatus, string> = {
 };
 
 export const subscriptionPlanLabels: Record<SubscriptionPlan, string> = {
+  FREE: "Free",
   STARTER: "Starter",
   PRO: "Pro",
+  BUSINESS: "Business",
   ENTERPRISE: "Enterprise"
 };
 

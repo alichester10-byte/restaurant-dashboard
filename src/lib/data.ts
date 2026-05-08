@@ -12,6 +12,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getIndustryConfig } from "@/lib/industry-config";
+import { getBusinessUsageSnapshot } from "@/lib/plan-config";
 import { endOfDay, startOfDay } from "@/lib/utils";
 
 const activeReservationStatuses = new Set<ReservationStatus>([
@@ -42,7 +43,10 @@ const externalReservationSources = [
 
 const reservationInclude = {
   customer: true,
-  assignedTable: true
+  assignedTable: true,
+  service: true,
+  staffMember: true,
+  resource: true
 } satisfies Prisma.ReservationInclude;
 
 function getCustomerValueLabel(metrics: {
@@ -556,7 +560,7 @@ export async function getReportsPageData(businessId: string) {
 }
 
 export async function getSettingsData(businessId: string) {
-  const [settings, business, services, staffMembers, bookableResources] = await Promise.all([
+  const [settings, business, services, staffMembers, bookableResources, usageSnapshot] = await Promise.all([
     prisma.restaurantSettings.findFirstOrThrow({
       where: {
         businessId
@@ -584,7 +588,8 @@ export async function getSettingsData(businessId: string) {
         businessId
       },
       orderBy: [{ isActive: "desc" }, { name: "asc" }]
-    })
+    }),
+    getBusinessUsageSnapshot(businessId)
   ]);
 
   return {
@@ -592,7 +597,8 @@ export async function getSettingsData(businessId: string) {
     business,
     services,
     staffMembers,
-    bookableResources
+    bookableResources,
+    usageSnapshot
   };
 }
 

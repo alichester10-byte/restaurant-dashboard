@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function DemoModeBanner({
   title = "Demo modunda keşif açıktır, kayıt kapalıdır.",
-  description = "Paneli gerçek restoran akışıyla inceleyebilirsiniz. Yeni kayıt oluşturmak, güncellemek veya veri kaydetmek için Pro planını etkinleştirin.",
+  description = "Paneli gerçek işletme akışıyla inceleyebilirsiniz. Yeni kayıt oluşturmak, güncellemek veya veri kaydetmek için Pro planını etkinleştirin.",
   ctaLabel = "Pro'ya Geç",
   href = "/billing?upgrade=demo-banner" as Route
 }: {

@@ -3,10 +3,12 @@ import { archiveTableAction, saveTableAction } from "@/actions/table-actions";
 import { LockedAction } from "@/components/demo/locked-action";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { tableAreaLabels, tableShapeLabels, tableStatusLabels } from "@/lib/constants";
+import type { IndustryConfig } from "@/lib/industry-config";
 
 export function TableForm({
   table,
-  locked = false
+  locked = false,
+  industry
 }: {
   table?: {
     id: string;
@@ -20,14 +22,15 @@ export function TableForm({
     notes: string | null;
   } | null;
   locked?: boolean;
+  industry: IndustryConfig;
 }) {
   if (locked) {
     return (
       <LockedAction
         fullWidth
         href="/billing?upgrade=tables"
-        title="Masa yönetimi Pro planıyla açılır"
-        description="Demo modunda masa yerleşimini inceleyebilirsiniz. Oluşturma, düzenleme ve arşivleme akışları için Pro planına geçin."
+        title={`${industry.primaryResourceLabel} yönetimi Pro planıyla açılır`}
+        description={`Demo modunda ${industry.primaryResourceLabelPlural.toLocaleLowerCase("tr-TR")} yapısını inceleyebilirsiniz. Oluşturma, düzenleme ve arşivleme akışları için Pro planına geçin.`}
       />
     );
   }
@@ -40,7 +43,7 @@ export function TableForm({
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-ink">Masa Numarası</span>
+            <span className="text-sm font-semibold text-ink">{industry.primaryResourceLabel} Kodu</span>
             <input className="field" name="number" defaultValue={table?.number} placeholder="T12" required />
           </label>
           <label className="space-y-2">
@@ -72,7 +75,7 @@ export function TableForm({
             </select>
           </label>
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-ink">Masa Tipi</span>
+            <span className="text-sm font-semibold text-ink">{industry.primaryResourceLabel} Tipi</span>
             <select className="field" name="shape" defaultValue={table?.shape ?? TableShape.RECTANGLE}>
               {Object.values(TableShape).map((value) => (
                 <option key={value} value={value}>
@@ -100,8 +103,8 @@ export function TableForm({
 
         <FormSubmitButton
           className="w-full"
-          idleLabel={table ? "Masayı Güncelle" : "Yeni Masa Oluştur"}
-          pendingLabel={table ? "Masa Güncelleniyor..." : "Masa Oluşturuluyor..."}
+          idleLabel={table ? `${industry.primaryResourceLabel} Güncelle` : `Yeni ${industry.primaryResourceLabel} Oluştur`}
+          pendingLabel={table ? `${industry.primaryResourceLabel} Güncelleniyor...` : `${industry.primaryResourceLabel} Oluşturuluyor...`}
         />
       </form>
 
@@ -109,7 +112,7 @@ export function TableForm({
         <form action={archiveTableAction}>
           <input type="hidden" name="tableId" value={table.id} />
           <input type="hidden" name="redirectTo" value={`/tables?tableId=${table.id}`} />
-          <FormSubmitButton className="w-full" variant="danger" idleLabel="Masayı Arşivle" pendingLabel="Arşivleniyor..." />
+          <FormSubmitButton className="w-full" variant="danger" idleLabel={`${industry.primaryResourceLabel} Arşivle`} pendingLabel="Arşivleniyor..." />
         </form>
       ) : null}
     </div>

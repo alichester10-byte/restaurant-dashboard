@@ -9,7 +9,7 @@ export default function RegisterPage() {
           İşletmeniz için birkaç dakikada canlı kullanıma hazır hesap açın.
         </h1>
         <p className="mt-5 max-w-3xl text-base leading-8 text-sage">
-          Restoran, salon, klinik, otel ve diğer hizmet işletmeleri için ilk yönetici hesabı, temel operasyon ayarları ve rezervasyon akışı aynı onboarding içinde hazırlanır.
+          Farklı hizmet işletmeleri için ilk yönetici hesabı, temel operasyon ayarları ve rezervasyon/randevu akışı aynı onboarding içinde hazırlanır.
         </p>
         <RegisterForm />
       </div>

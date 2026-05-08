@@ -7,12 +7,13 @@ import { Panel } from "@/components/ui/panel";
 import { requireBusinessAccess } from "@/lib/auth";
 import { getAppBaseUrl, getBusinessEntitlement } from "@/lib/billing";
 import { getIntegrationsPageDataSafe } from "@/lib/data";
+import { getIndustryConfig } from "@/lib/industry-config";
 
 const roadmapCards = [
   {
     title: "WhatsApp Business",
     status: "Yakında aktif",
-    body: "Meta onayı tamamlandığında restoran sahibi kendi panelinden WhatsApp hesabını bağlayabilecek. Gelen mesajlar rezervasyon talebi olarak bekleyen kuyruğa düşecek."
+    body: "Meta onayı tamamlandığında işletme sahibi kendi panelinden WhatsApp hesabını bağlayabilecek. Gelen mesajlar talep olarak bekleyen kuyruğa düşecek."
   },
   {
     title: "Instagram DM",
@@ -22,7 +23,7 @@ const roadmapCards = [
   {
     title: "Website Widget",
     status: "Canlı kullanıma hazır",
-    body: "Widget kodunu sitenize ekleyerek rezervasyon talebini doğrudan Limon Masa akışına alabilirsiniz. Son onay yine restoran ekibindedir."
+    body: "Paylaşım bağlantısını veya widget akışını kullanarak talebi doğrudan Limon Masa akışına alabilirsiniz. Son onay yine işletme ekibindedir."
   },
   {
     title: "AI Reservation Assistant",
@@ -35,7 +36,7 @@ const steps = [
   "Müşteri WhatsApp, Instagram, web formu veya AI destekli sohbet üzerinden mesaj bırakır.",
   "Sistem isim, telefon, tarih, saat ve kişi sayısını çıkarır.",
   "Talep Rezervasyonlar > Kanal Talepleri alanına düşer.",
-  "Restoran ekibi talebi inceler, onaylar veya reddeder.",
+  "İşletme ekibi talebi inceler, onaylar veya reddeder.",
   "Onaylanan kayıt gerçek rezervasyona dönüşür."
 ];
 
@@ -61,13 +62,14 @@ export default async function IntegrationsPage() {
   });
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const data = await getIntegrationsPageDataSafe(session.user.businessId);
+  const industry = getIndustryConfig(session.user.business.businessType);
   const publicReservationLink = `${getAppBaseUrl()}/r/${session.user.business.slug}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicReservationLink)}`;
 
   return (
     <div className="space-y-6">
       <AppHeader
-        title="Rezervasyon Kanalları"
+        title={`${industry.requestLabelPlural} Kanalları`}
         subtitle="WhatsApp, Instagram, web ve AI destekli talepleri tek operasyon akışında toplamaya hazırlanın."
         businessName={session.user.business.name}
         role={session.user.role}
@@ -228,7 +230,7 @@ export default async function IntegrationsPage() {
               <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
                 <img src={qrUrl} alt="Rezervasyon bağlantısı QR kodu" className="mx-auto h-[160px] w-[160px] rounded-2xl border border-[color:var(--border)] bg-white p-2" />
                 <div className="mt-3 text-center text-xs uppercase tracking-[0.24em] text-moss">QR ile paylaş</div>
-                <div className="mt-2 text-center text-sm leading-6 text-sage">Menü, masa kartı veya vitrin için hazır.</div>
+                <div className="mt-2 text-center text-sm leading-6 text-sage">Bio, profil, masaüstü kartı veya vitrin için hazır.</div>
               </div>
 
               <div className="space-y-4">

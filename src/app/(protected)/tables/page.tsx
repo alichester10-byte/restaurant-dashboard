@@ -11,6 +11,7 @@ import { requireBusinessUser } from "@/lib/auth";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { tableAreaLabels, tableShapeLabels, tableStatusLabels } from "@/lib/constants";
 import { getTablesPageData } from "@/lib/data";
+import { getIndustryConfig } from "@/lib/industry-config";
 import { formatDateTime } from "@/lib/utils";
 
 export default async function TablesPage({
@@ -21,22 +22,23 @@ export default async function TablesPage({
   const session = await requireBusinessUser();
   const data = await getTablesPageData(session.user.businessId, searchParams.tableId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
+  const industry = getIndustryConfig(session.user.business.businessType);
   const feedback =
     searchParams.saved === "created"
-      ? "Yeni masa eklendi."
+      ? `Yeni ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} eklendi.`
       : searchParams.saved === "updated"
-        ? "Masa bilgileri güncellendi."
+        ? `${industry.primaryResourceLabel} bilgileri güncellendi.`
         : searchParams.saved === "archived"
-          ? "Masa arşive taşındı."
+          ? `${industry.primaryResourceLabel} arşive taşındı.`
           : searchParams.error
-            ? "Masa işlemi tamamlanamadı. Alanları kontrol edip tekrar deneyin."
+            ? `${industry.primaryResourceLabel} işlemi tamamlanamadı. Alanları kontrol edip tekrar deneyin.`
             : null;
 
   return (
     <div className="space-y-6">
       <AppHeader
-        title="Masa Planı"
-        subtitle="Salon akışını görsel masa planı üzerinden yönetin ve rezervasyonları doğru kapasiteye atayın."
+        title={industry.resourceBoardTitle}
+        subtitle={`${industry.primaryResourceLabelPlural} görünümünü tek ekranda yönetin ve ${industry.reservationLabelPlural.toLocaleLowerCase("tr-TR")} doğru kapasiteye atayın.`}
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -46,8 +48,8 @@ export default async function TablesPage({
 
       {entitlement.isDemo ? (
         <DemoModeBanner
-          title="Masa planını canlı gibi görüntüleyin."
-          description="Demo modunda tüm salon yerleşimini, masa durumlarını ve önerilen eşleşmeleri inceleyebilirsiniz. Durum güncelleme ve rezervasyon atama akışları Pro ile açılır."
+          title={`${industry.primaryResourceLabelPlural} görünümünü canlı gibi görüntüleyin.`}
+          description={`Demo modunda tüm ${industry.primaryResourceLabelPlural.toLocaleLowerCase("tr-TR")} durumlarını ve önerilen eşleşmeleri inceleyebilirsiniz. Durum güncelleme ve atama akışları Pro ile açılır.`}
           href="/billing?upgrade=tables"
         />
       ) : null}
@@ -55,7 +57,7 @@ export default async function TablesPage({
       {feedback ? (
         <Panel className={searchParams.error ? "border-rose-200 bg-rose-50/80" : "border-emerald-200 bg-emerald-50/80"}>
           <div className={`section-title ${searchParams.error ? "text-rose-600" : "text-emerald-700"}`}>
-            {searchParams.error ? "İşlem Başarısız" : "Masa Güncellendi"}
+            {searchParams.error ? "İşlem Başarısız" : `${industry.primaryResourceLabel} Güncellendi`}
           </div>
           <p className={`mt-2 text-sm leading-6 ${searchParams.error ? "text-rose-700" : "text-emerald-700"}`}>{feedback}</p>
         </Panel>
@@ -73,16 +75,16 @@ export default async function TablesPage({
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="section-title">Salon Yerleşimi</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Canlı masa haritası</h2>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Canlı {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} görünümü</h2>
             </div>
             {!entitlement.isDemo ? (
               <Link href="/tables?create=1" scroll={false} className="btn-secondary">
-                Yeni Masa
+                Yeni {industry.primaryResourceLabel}
               </Link>
             ) : null}
           </div>
           <p className="mt-2 text-sm leading-6 text-sage">
-            Konum, kapasite ve servis durumuna göre tüm masaları tek ekranda yönetin.
+            Konum, kapasite ve durum bilgisine göre tüm {industry.primaryResourceLabelPlural.toLocaleLowerCase("tr-TR")} tek ekranda yönetin.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {data.tables.map((table) => (
@@ -111,7 +113,7 @@ export default async function TablesPage({
           </div>
           {data.tables.length === 0 ? (
             <div className="mt-6 rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-6 text-sm leading-6 text-sage">
-              Henüz masa tanımlanmadı. Servis alanını oluşturmak için ilk masanızı ekleyin.
+              Henüz {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} tanımlanmadı. Planı oluşturmak için ilk kaynağınızı ekleyin.
             </div>
           ) : null}
         </Panel>
@@ -119,7 +121,7 @@ export default async function TablesPage({
         <Panel>
           {data.selectedTable ? (
             <>
-              <div className="section-title">Seçili Masa</div>
+              <div className="section-title">Seçili {industry.primaryResourceLabel}</div>
               <h2 className="mt-2 text-xl font-semibold text-ink">
                 {data.selectedTable.number} • {data.selectedTable.label}
               </h2>
@@ -132,7 +134,7 @@ export default async function TablesPage({
                   <div className="mt-2 font-semibold text-ink">{tableAreaLabels[data.selectedTable.area]}</div>
                 </div>
                 <div className="rounded-2xl bg-white/80 p-4">
-                  <div className="text-sm text-sage">Masa tipi</div>
+                  <div className="text-sm text-sage">{industry.primaryResourceLabel} tipi</div>
                   <div className="mt-2 font-semibold text-ink">{tableShapeLabels[data.selectedTable.shape]}</div>
                 </div>
                 <div className="rounded-2xl bg-white/80 p-4">
@@ -146,8 +148,8 @@ export default async function TablesPage({
                   <LockedAction
                     fullWidth
                     href="/billing?upgrade=table-status"
-                    title="Masa durumu güncelleme Pro ile açılır"
-                    description="Masa durumlarını değiştirmek ve servis akışını canlı yönetmek için Pro planına geçin."
+                    title={`${industry.primaryResourceLabel} durumu güncelleme Pro ile açılır`}
+                    description={`${industry.primaryResourceLabelPlural} durumlarını değiştirmek ve operasyon akışını canlı yönetmek için Pro planına geçin.`}
                   />
                 </div>
               ) : (
@@ -155,7 +157,7 @@ export default async function TablesPage({
                   <input type="hidden" name="tableId" value={data.selectedTable.id} />
                   <input type="hidden" name="redirectTo" value={`/tables?tableId=${data.selectedTable.id}`} />
                   <label className="space-y-2">
-                    <span className="text-sm font-semibold text-ink">Masa Durumu</span>
+                    <span className="text-sm font-semibold text-ink">{industry.primaryResourceLabel} Durumu</span>
                     <select className="field" name="status" defaultValue={data.selectedTable.status}>
                       {Object.values(TableStatus).map((status) => (
                         <option key={status} value={status}>
@@ -171,7 +173,7 @@ export default async function TablesPage({
               )}
 
               <div className="mt-8">
-                <div className="text-sm font-semibold text-ink">Masa Rezervasyonları</div>
+                <div className="text-sm font-semibold text-ink">{industry.primaryResourceLabel} {industry.reservationLabelPlural}</div>
                 <div className="mt-3 space-y-3">
                   {data.selectedTable.reservations.map((reservation) => (
                     <div key={reservation.id} className="rounded-2xl border border-[color:var(--border)] bg-white/80 p-4">
@@ -189,8 +191,8 @@ export default async function TablesPage({
                   <LockedAction
                     fullWidth
                     href="/billing?upgrade=table-assign"
-                    title="Rezervasyon atama akışı Pro ile açılır"
-                    description="Bekleyen rezervasyonları masalara eşlemek ve masa kullanımını optimize etmek için Pro planını etkinleştirin."
+                    title={`${industry.reservationLabel} atama akışı Pro ile açılır`}
+                    description={`Bekleyen ${industry.reservationLabelPlural.toLocaleLowerCase("tr-TR")} ${industry.primaryResourceLabelPlural.toLocaleLowerCase("tr-TR")} ile eşlemek için Pro planını etkinleştirin.`}
                   />
                 </div>
               ) : (
@@ -198,10 +200,10 @@ export default async function TablesPage({
                   <input type="hidden" name="tableId" value={data.selectedTable.id} />
                   <input type="hidden" name="redirectTo" value={`/tables?tableId=${data.selectedTable.id}`} />
                   <label className="space-y-2">
-                    <span className="text-sm font-semibold text-ink">Rezervasyon Ata</span>
+                    <span className="text-sm font-semibold text-ink">{industry.reservationLabel} Ata</span>
                     <select className="field" name="reservationId" defaultValue="">
                       <option value="" disabled>
-                        Rezervasyon seçin
+                        {industry.reservationLabel} seçin
                       </option>
                       {data.reservations.map((reservation) => (
                         <option key={reservation.id} value={reservation.id}>
@@ -211,19 +213,20 @@ export default async function TablesPage({
                     </select>
                   </label>
                   <button className="btn-primary w-full" type="submit">
-                    Rezervasyonu Masaya Ata
+                    {industry.reservationLabel}u {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} ata
                   </button>
                 </form>
               )}
 
               <div className="mt-8 border-t border-[color:var(--border)] pt-8">
-                <div className="section-title">Masa Ayarları</div>
-                <h3 className="mt-2 text-xl font-semibold text-ink">Seçili masayı güncelleyin</h3>
+                <div className="section-title">{industry.primaryResourceLabel} Ayarları</div>
+                <h3 className="mt-2 text-xl font-semibold text-ink">Seçili {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} kaydını güncelleyin</h3>
                 <p className="mt-2 text-sm leading-6 text-sage">
-                  Konum, kapasite, etiket ve servis notlarını tek yerden güncelleyebilirsiniz.
+                  Konum, kapasite, etiket ve operasyon notlarını tek yerden güncelleyebilirsiniz.
                 </p>
                 <div className="mt-6">
                   <TableForm
+                    industry={industry}
                     locked={entitlement.isDemo}
                     table={{
                       id: data.selectedTable.id,
@@ -242,25 +245,25 @@ export default async function TablesPage({
             </>
           ) : searchParams.create === "1" ? (
             <>
-              <div className="section-title">Yeni Masa</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Salon planına yeni masa ekleyin</h2>
+              <div className="section-title">Yeni {industry.primaryResourceLabel}</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Planınıza yeni {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} ekleyin</h2>
               <p className="mt-2 text-sm leading-6 text-sage">
-                Masa numarası, konum, kapasite ve tip bilgisini girerek servis planını hızlıca büyütün.
+                Kod, konum, kapasite ve tip bilgisiyle planınızı hızlıca büyütün.
               </p>
               <div className="mt-6">
-                <TableForm locked={entitlement.isDemo} />
+                <TableForm locked={entitlement.isDemo} industry={industry} />
               </div>
             </>
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <div className="section-title">Detay Paneli</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Bir masa seçin</h2>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Bir {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} seçin</h2>
               <p className="mt-3 max-w-sm text-sm leading-6 text-sage">
-                Sağ panelden masa durumu, atamalar ve detay düzenleme akışlarını yönetebilir veya yeni masa ekleyebilirsiniz.
+                Sağ panelden durum, atamalar ve detay düzenleme akışlarını yönetebilir veya yeni kaynak ekleyebilirsiniz.
               </p>
               {!entitlement.isDemo ? (
                 <Link href="/tables?create=1" scroll={false} className="btn-primary mt-6">
-                  İlk Masayı Oluştur
+                  İlk {industry.primaryResourceLabel}ı Oluştur
                 </Link>
               ) : null}
             </div>

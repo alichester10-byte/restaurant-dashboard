@@ -1,4 +1,4 @@
-import { BusinessType, Prisma, UserRole } from "@prisma/client";
+import { BusinessType, Prisma, SubscriptionPlan, SubscriptionStatus, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 type BusinessSnapshot = {
@@ -16,8 +16,8 @@ type BusinessSnapshot = {
   restaurantType: string | null;
   estimatedTableCount: number | null;
   status: "ACTIVE" | "SUSPENDED";
-  subscriptionPlan: "STARTER" | "PRO" | "ENTERPRISE";
-  subscriptionStatus: "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
+  subscriptionPlan: SubscriptionPlan;
+  subscriptionStatus: SubscriptionStatus;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripePriceId: string | null;

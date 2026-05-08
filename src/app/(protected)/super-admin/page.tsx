@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { SuperAdminControlNav } from "@/components/super-admin/control-center-nav";
 import { Panel } from "@/components/ui/panel";
 import { requireSuperAdmin } from "@/lib/auth";
+import { subscriptionPlanLabels } from "@/lib/constants";
 import { getSuperAdminOverviewData } from "@/lib/super-admin";
 
 export default async function SuperAdminOverviewPage() {
@@ -110,6 +111,36 @@ export default async function SuperAdminOverviewPage() {
                 <p className="mt-2 text-sm leading-6 text-sage">{item.body}</p>
               </Link>
             ))}
+          </div>
+        </Panel>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <Panel>
+          <div className="section-title">Plan Görünümü</div>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">İşletmeler planlara göre nasıl dağılıyor?</h2>
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
+            {data.planOverview.businessesByPlan.map((row) => (
+              <div key={row.subscriptionPlan} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+                <div className="text-sm text-sage">{subscriptionPlanLabels[row.subscriptionPlan]}</div>
+                <div className="mt-2 text-2xl font-semibold text-ink">{row._count._all}</div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="section-title">Aylık Kullanım</div>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">Platform kullanımı bu ay</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+              <div className="text-sm text-sage">Aylık Talep</div>
+              <div className="mt-2 text-2xl font-semibold text-ink">{data.planOverview.monthlyRequests}</div>
+            </div>
+            <div className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+              <div className="text-sm text-sage">AI Mesajları</div>
+              <div className="mt-2 text-2xl font-semibold text-ink">{data.planOverview.monthlyAiMessages}</div>
+            </div>
           </div>
         </Panel>
       </section>

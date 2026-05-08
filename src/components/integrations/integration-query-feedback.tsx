@@ -16,7 +16,9 @@ const integrationErrorMessages: Record<string, string> = {
   instagram_redirect_mismatch: "Instagram redirect URI Meta ayarlarındaki Valid OAuth Redirect URIs listesiyle eşleşmiyor.",
   meta_state_invalid: "Bağlantı oturumu doğrulanamadı. Lütfen tekrar deneyin.",
   meta_session_expired: "Bağlantı oturumu süresi doldu. Panelden tekrar bağlamayı deneyin.",
-  meta_callback_failed: "Meta callback işlendi ancak bağlantı tamamlanamadı. Aşağıdaki adım bilgisiyle kontrol edin."
+  meta_callback_failed: "Meta callback işlendi ancak bağlantı tamamlanamadı. Aşağıdaki adım bilgisiyle kontrol edin.",
+  plan_limit: "Your current plan limit has been reached. Please upgrade to continue.",
+  upgrade_required: "Bu özelliği kullanmak için planınızı yükseltmeniz gerekiyor."
 };
 
 const callbackStepLabels: Record<string, string> = {

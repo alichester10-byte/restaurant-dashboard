@@ -47,7 +47,7 @@ export function ForgotPasswordForm() {
         <FormMessage message={error} />
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">E-posta</span>
-          <input className="field" name="email" type="email" placeholder="admin@restoran.com" required disabled={isPending} />
+          <input className="field" name="email" type="email" placeholder="admin@isletme.com" required disabled={isPending} />
         </label>
         <button className="btn-primary w-full gap-2 disabled:cursor-not-allowed disabled:opacity-70" type="submit" disabled={isPending}>
           {isPending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : null}

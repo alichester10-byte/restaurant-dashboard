@@ -7,9 +7,16 @@ import { requireBusinessAccess, requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { getEmailTwoFactorSchemaStatus } from "@/lib/email-two-factor-runtime";
 import { isEmailDeliveryConfigured } from "@/lib/email";
+import { enforcePlanUsageLimit, PlanLimitError } from "@/lib/plan-config";
 import { prisma } from "@/lib/prisma";
 import { sanitizeNullableText, sanitizeText } from "@/lib/security";
 import { managementItemToggleSchema, resourceFormSchema, serviceFormSchema, settingsSchema, staffMemberFormSchema } from "@/lib/validation";
+
+function redirectWithPlanError(path: string, error: unknown) {
+  if (error instanceof PlanLimitError) {
+    redirect(`${path}?error=plan_limit&reason=${error.code}`);
+  }
+}
 
 export async function updateSettingsAction(formData: FormData) {
   const session = await requireBusinessWriteAccess({
@@ -222,6 +229,12 @@ export async function saveServiceAction(formData: FormData) {
       data: payload
     });
   } else {
+    try {
+      await enforcePlanUsageLimit(businessId, "services");
+    } catch (error) {
+      redirectWithPlanError("/settings", error);
+      throw error;
+    }
     await prisma.service.create({
       data: payload
     });
@@ -300,6 +313,12 @@ export async function saveStaffMemberAction(formData: FormData) {
       data: payload
     });
   } else {
+    try {
+      await enforcePlanUsageLimit(businessId, "staff");
+    } catch (error) {
+      redirectWithPlanError("/settings", error);
+      throw error;
+    }
     await prisma.staffMember.create({
       data: payload
     });
@@ -376,6 +395,12 @@ export async function saveBookableResourceAction(formData: FormData) {
       data: payload
     });
   } else {
+    try {
+      await enforcePlanUsageLimit(businessId, "resources");
+    } catch (error) {
+      redirectWithPlanError("/settings", error);
+      throw error;
+    }
     await prisma.bookableResource.create({
       data: payload
     });

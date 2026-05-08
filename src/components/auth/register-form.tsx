@@ -54,7 +54,7 @@ export function RegisterForm() {
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">Sahip E-postası</span>
-          <input className="field" type="email" name="ownerEmail" placeholder="ayse@restoran.com" required disabled={isPending} />
+          <input className="field" type="email" name="ownerEmail" placeholder="ayse@isletme.com" required disabled={isPending} />
         </label>
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">Sahip Telefonu</span>

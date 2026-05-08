@@ -39,8 +39,10 @@ enum BusinessStatus {
 }
 
 enum SubscriptionPlan {
+  FREE
   STARTER
   PRO
+  BUSINESS
   ENTERPRISE
 }
 
@@ -290,6 +292,7 @@ model Business {
   status                BusinessStatus       @default(ACTIVE)
   subscriptionPlan      SubscriptionPlan     @default(STARTER)
   subscriptionStatus    SubscriptionStatus   @default(TRIALING)
+  subscriptionCurrentPeriodStartsAt DateTime?
   stripeCustomerId      String?              @unique
   stripeSubscriptionId  String?              @unique
   stripePriceId         String?
@@ -458,6 +461,7 @@ model Service {
   isActive        Boolean       @default(true)
   metadata        Json?
   business        Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  reservations    Reservation[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -475,6 +479,7 @@ model StaffMember {
   isActive   Boolean   @default(true)
   metadata   Json?
   business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -490,6 +495,7 @@ model BookableResource {
   isActive   Boolean   @default(true)
   metadata   Json?
   business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -504,13 +510,18 @@ model Reservation {
   guestName        String
   guestPhone       String
   assignedTableId  String?
+  serviceId        String?
+  staffMemberId    String?
+  resourceId       String?
   source           ReservationSource  @default(PHONE)
   status           ReservationStatus  @default(PENDING)
   startAt          DateTime
   endAt            DateTime
+  durationMinutes  Int?
   guestCount       Int
   occasion         String?
   notes            String?
+  bookingMetadata  Json?
   reminderStatus   ReminderStatus     @default(NOT_SCHEDULED)
   reminderScheduledAt DateTime?
   reminderSentAt   DateTime?
@@ -521,11 +532,17 @@ model Reservation {
   updatedAt        DateTime           @updatedAt
   customer         Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
   assignedTable    DiningTable?       @relation(fields: [assignedTableId], references: [id], onDelete: SetNull)
+  service          Service?           @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  staffMember      StaffMember?       @relation(fields: [staffMemberId], references: [id], onDelete: SetNull)
+  resource         BookableResource?  @relation(fields: [resourceId], references: [id], onDelete: SetNull)
   relatedCalls     CallLog[]
 
   @@index([startAt])
   @@index([status])
   @@index([assignedTableId])
+  @@index([serviceId])
+  @@index([staffMemberId])
+  @@index([resourceId])
   @@index([customerId])
   @@index([businessId])
 }

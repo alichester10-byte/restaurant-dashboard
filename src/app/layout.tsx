@@ -14,7 +14,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "Limon Masa Ops",
-  description: "Restoran rezervasyon ve operasyon yönetimi paneli",
+  description: "Çok sektörlü rezervasyon, randevu ve operasyon yönetimi paneli",
   other: {
     "facebook-domain-verification": "lhoil3nq0z7a6kc1t1dwqg72cv2w0y"
   }

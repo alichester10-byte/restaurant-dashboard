@@ -1,5 +1,7 @@
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSource } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { PlanLimitError } from "@/lib/plan-config";
+import { checkReservationConflict, getBusinessAvailabilityContext, resolveReservationWindow } from "@/lib/availability";
 import { createAuditLog } from "@/lib/audit";
 import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
 import { getIndustryConfig } from "@/lib/industry-config";
@@ -48,12 +50,47 @@ export async function POST(request: Request) {
   }
 
   const [serviceRecord, staffRecord, resourceRecord] = await Promise.all([
-    serviceId ? prisma.service.findFirst({ where: { id: serviceId, businessId: business.id, isActive: true }, select: { id: true, name: true } }) : Promise.resolve(null),
+    serviceId
+      ? prisma.service.findFirst({
+          where: { id: serviceId, businessId: business.id, isActive: true },
+          select: { id: true, name: true, durationMinutes: true }
+        })
+      : Promise.resolve(null),
     staffId ? prisma.staffMember.findFirst({ where: { id: staffId, businessId: business.id, isActive: true }, select: { id: true, name: true } }) : Promise.resolve(null),
     resourceId
       ? prisma.bookableResource.findFirst({ where: { id: resourceId, businessId: business.id, isActive: true }, select: { id: true, name: true, type: true } })
       : Promise.resolve(null)
   ]);
+  const availabilityContext = await getBusinessAvailabilityContext(business.id);
+  if (requestedDate && requestedTime) {
+    const { startAt, endAt } = resolveReservationWindow({
+      requestedDate,
+      requestedTime,
+      endDate,
+      durationMinutes: Number.isFinite(durationMinutes) ? durationMinutes : serviceRecord?.durationMinutes ?? null,
+      fallbackDurationMinutes: serviceRecord?.durationMinutes ?? availabilityContext?.averageDurationMinutes ?? 90
+    });
+    const conflict = await checkReservationConflict({
+      businessId: business.id,
+      startAt,
+      endAt,
+      guestCount: Number.isFinite(guestCount) ? guestCount : null,
+      serviceId: serviceRecord?.id ?? null,
+      staffMemberId: staffRecord?.id ?? null,
+      resourceId: resourceRecord?.id ?? null
+    });
+    if (!conflict.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: conflict.message ?? "Seçilen saat için uygunluk bulunamadı.",
+          code: conflict.code,
+          suggestions: conflict.suggestions ?? []
+        },
+        { status: 409 }
+      );
+    }
+  }
 
   const industry = getIndustryConfig(business.businessType);
   const rawMessage = [
@@ -92,32 +129,39 @@ export async function POST(request: Request) {
     }
   });
 
-  await createPendingReservationRequestFromExternalMessage({
-    businessId: business.id,
-    source,
-    rawMessage,
-    guestPhoneHint: guestPhone || null,
-    notes: notes || null,
-    structuredData: {
-      guestName,
-      guestPhone: guestPhone || null,
-      customerEmail: customerEmail || null,
-      requestedDate: requestedDate || null,
-      requestedTime: requestedTime || null,
-      endDate: endDate || null,
-      guestCount: Number.isFinite(guestCount) ? guestCount : null,
-      serviceType: serviceType || serviceRecord?.name || null,
-      serviceId: serviceRecord?.id || null,
-      staffId: staffRecord?.id || null,
-      staffName: staffRecord?.name || null,
-      resourcePreference: resourcePreference || staffRecord?.name || null,
-      resourceId: resourceRecord?.id || null,
-      resourceName: resourceRecord?.name || null,
-      durationMinutes: Number.isFinite(durationMinutes) ? durationMinutes : null,
+  try {
+    await createPendingReservationRequestFromExternalMessage({
+      businessId: business.id,
+      source,
+      rawMessage,
+      guestPhoneHint: guestPhone || null,
       notes: notes || null,
-      businessType: business.businessType
+      structuredData: {
+        guestName,
+        guestPhone: guestPhone || null,
+        customerEmail: customerEmail || null,
+        requestedDate: requestedDate || null,
+        requestedTime: requestedTime || null,
+        endDate: endDate || null,
+        guestCount: Number.isFinite(guestCount) ? guestCount : null,
+        serviceType: serviceType || serviceRecord?.name || null,
+        serviceId: serviceRecord?.id || null,
+        staffId: staffRecord?.id || null,
+        staffName: staffRecord?.name || null,
+        resourcePreference: resourcePreference || staffRecord?.name || null,
+        resourceId: resourceRecord?.id || null,
+        resourceName: resourceRecord?.name || null,
+        durationMinutes: Number.isFinite(durationMinutes) ? durationMinutes : null,
+        notes: notes || null,
+        businessType: business.businessType
+      }
+    });
+  } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return NextResponse.json({ ok: false, error: error.message, code: error.code }, { status: 403 });
     }
-  });
+    throw error;
+  }
 
   await createAuditLog({
     businessId: business.id,

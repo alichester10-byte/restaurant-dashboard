@@ -1,7 +1,7 @@
-import { SubscriptionPlan } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { RestaurantChatWidget } from "@/components/chat/restaurant-chat-widget";
 import { PublicReservationRequestForm } from "@/components/integrations/public-reservation-request-form";
+import { getEffectivePlan, hasPlanFeature } from "@/lib/plan-config";
 import { getIndustryConfig } from "@/lib/industry-config";
 import { prisma } from "@/lib/prisma";
 
@@ -42,7 +42,13 @@ export default async function PublicReservationPage({
   const embed = searchParams?.embed === "1";
   const settings = business.settings[0];
   const industry = getIndustryConfig(business.businessType);
-  const assistantEnabled = business.subscriptionPlan !== SubscriptionPlan.STARTER;
+  const assistantEnabled = hasPlanFeature(
+    getEffectivePlan({
+      subscriptionPlan: business.subscriptionPlan,
+      subscriptionStatus: business.subscriptionStatus
+    }),
+    "aiAssistant"
+  );
   const welcomeMessage =
     `${settings?.restaurantName ?? business.name} için ${industry.requestLabel.toLocaleLowerCase("tr-TR")} memnuniyetle alırım. ` +
     "Gerekli bilgileri paylaşırsanız talebinizi ekip onayına hazırlayabilirim. Nihai uygunluğu işletme ekibi onaylar.";

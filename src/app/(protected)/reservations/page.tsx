@@ -52,6 +52,16 @@ export default async function ReservationsPage({
   const data = await getReservationsPageData(session.user.businessId, searchParams.reservationId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const industry = getIndustryConfig(session.user.business.businessType);
+  const conflictMessages: Record<string, string> = {
+    availability_conflict: "Seçilen kayıt için temel uygunluk kontrolü başarısız oldu. Saat veya kaynak çakışıyor olabilir.",
+    availability_closed: "Seçilen saat işletmenin çalışma aralığının dışında görünüyor.",
+    availability_max_party: "Talep edilen kişi sayısı işletmenin kabul ettiği üst sınırı aşıyor.",
+    availability_staff_busy: "Seçilen uzman bu saat aralığında başka bir kayıtla meşgul.",
+    availability_resource_busy: "Seçilen kaynak bu saat aralığında dolu görünüyor.",
+    availability_table_busy: `Seçilen ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} bu saat aralığında dolu görünüyor.`,
+    availability_capacity: `Seçilen ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} veya kaynak bu kapasiteyi karşılamıyor.`,
+    availability_invalid_range: "Başlangıç ve bitiş aralığı geçerli değil."
+  };
   const feedback =
     searchParams.saved === "created"
       ? {
@@ -87,7 +97,7 @@ export default async function ReservationsPage({
             ? {
                 tone: "error",
                 title: "Rezervasyon işlemi tamamlanamadı",
-                description: "Lütfen form alanlarını kontrol edip tekrar deneyin."
+                description: conflictMessages[searchParams.error] ?? "Lütfen form alanlarını kontrol edip tekrar deneyin."
               }
             : null;
 
@@ -105,8 +115,8 @@ export default async function ReservationsPage({
 
       {entitlement.isDemo ? (
         <DemoModeBanner
-          title="Rezervasyon akışını keşfedin, Pro ile aksiyona geçin."
-          description="Demo modunda yaklaşan kayıtları, durumları ve masa atamalarını inceleyebilirsiniz. Yeni rezervasyon, onay, iptal ve düzenleme işlemleri Pro planıyla açılır."
+          title={`${industry.reservationLabel} akışını keşfedin, Pro ile aksiyona geçin.`}
+          description={`Demo modunda yaklaşan kayıtları, durumları ve ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} atamalarını inceleyebilirsiniz. Yeni ${industry.reservationLabel.toLocaleLowerCase("tr-TR")}, onay, iptal ve düzenleme işlemleri Pro planıyla açılır.`}
           href="/billing?upgrade=reservations"
         />
       ) : null}
@@ -141,6 +151,11 @@ export default async function ReservationsPage({
                       {formatDateTime(reservation.startAt)} • {reservation.guestCount} {industry.guestCountLabel.toLocaleLowerCase("tr-TR")} • {reservation.assignedTable?.number ?? `${industry.primaryResourceLabel} bekliyor`}
                     </div>
                     <div className="mt-1 text-sm text-sage">{formatPhone(reservation.guestPhone)}</div>
+                    {reservation.service || reservation.staffMember || reservation.resource ? (
+                      <div className="mt-1 text-sm text-sage">
+                        {[reservation.service?.name, reservation.staffMember?.name, reservation.resource?.name].filter(Boolean).join(" • ")}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -339,7 +354,7 @@ export default async function ReservationsPage({
                             <input type="hidden" name="decision" value={ReservationRequestStatus.APPROVED} />
                             <input type="hidden" name="redirectTo" value="/reservations#channel-requests" />
                             <div className="grid gap-3 md:grid-cols-2">
-                              <input className="field" name="guestName" defaultValue={request.guestName} placeholder="Misafir adı" />
+                              <input className="field" name="guestName" defaultValue={request.guestName} placeholder={`${industry.customerLabel} adı`} />
                               <input className="field" name="guestPhone" defaultValue={request.guestPhone ?? ""} placeholder="Telefon" />
                             </div>
                             <div className="grid gap-3 md:grid-cols-3">
@@ -347,7 +362,7 @@ export default async function ReservationsPage({
                               <input className="field" name="requestedTime" type="time" defaultValue={request.requestedTime ?? ""} />
                               <input className="field" name="guestCount" type="number" min={1} max={20} defaultValue={request.guestCount ?? 2} />
                             </div>
-                            <textarea className="field min-h-24" name="notes" defaultValue={request.notes ?? request.rawMessage ?? ""} placeholder="Rezervasyon notu" />
+                            <textarea className="field min-h-24" name="notes" defaultValue={request.notes ?? request.rawMessage ?? ""} placeholder={`${industry.reservationLabel} notu`} />
                             <input className="field" name="reason" placeholder="İsteğe bağlı onay notu" />
                             <FormSubmitButton className="w-full" idleLabel="Onayla ve Rezervasyona Dönüştür" pendingLabel="Onaylanıyor..." />
                           </form>
@@ -383,12 +398,12 @@ export default async function ReservationsPage({
             {data.selectedReservation ? "Detayları güncelleyin" : "Yeni kayıt oluşturun"}
           </h2>
           <p className="mt-2 text-sm leading-6 text-sage">
-            Sunucu tarafında doğrulanan form akışıyla müşteri, masa ve durum bilgisini aynı anda yönetin.
+            Sunucu tarafında doğrulanan form akışıyla müşteri, kaynak ve durum bilgisini aynı anda yönetin.
           </p>
           {data.selectedReservation ? (
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl bg-white/80 p-4">
-                <div className="text-sm text-sage">Misafir</div>
+                <div className="text-sm text-sage">{industry.customerLabel}</div>
                 <div className="mt-2 font-semibold text-ink">{data.selectedReservation.guestName}</div>
               </div>
               <div className="rounded-2xl bg-white/80 p-4">
@@ -404,9 +419,9 @@ export default async function ReservationsPage({
           {data.selectedReservation && data.customerHistorySummary ? (
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
-                <div className="text-sm text-sage">Müşteri değeri</div>
+                <div className="text-sm text-sage">{industry.customerLabel} değeri</div>
                 <div className="mt-2 text-lg font-semibold text-ink">{data.customerHistorySummary.valueLabel}</div>
-                <p className="mt-2 text-sm leading-6 text-sage">Bu misafirin tamamlanan, iptal edilen ve no-show geçmişi anlık olarak hesaplanır.</p>
+                <p className="mt-2 text-sm leading-6 text-sage">Bu müşterinin tamamlanan, iptal edilen ve no-show geçmişi anlık olarak hesaplanır.</p>
               </div>
               <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
                 <div className="text-sm text-sage">Ziyaret Özeti</div>

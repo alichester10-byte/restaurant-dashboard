@@ -4,6 +4,7 @@ import { AuditCategory, BusinessType, ChatMessageRole, ChatSessionStatus, Reserv
 import { extractReservationRequest } from "@/lib/ai-reservation";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { getIndustryConfig, getIndustryFieldLabel, type IndustryFieldKey } from "@/lib/industry-config";
+import { enforcePlanUsageLimit } from "@/lib/plan-config";
 import { prisma } from "@/lib/prisma";
 
 type RestaurantContext = {
@@ -315,6 +316,8 @@ async function maybeCreateReservationRequest(input: {
     });
     return existing.id;
   }
+
+  await enforcePlanUsageLimit(input.context.businessId, "monthlyReservationRequests");
 
   const created = await prisma.reservationRequest.create({
     data: {

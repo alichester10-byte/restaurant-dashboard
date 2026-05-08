@@ -5,6 +5,7 @@ import { getBusinessEntitlement } from "@/lib/billing";
 import { getCurrentSession } from "@/lib/auth";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { buildMetaAuthorizationUrl, createMetaConnectionState, getMetaAuthorizationDebugInfo, getMetaEnvironmentDiagnostics, getMetaProviderSetup } from "@/lib/meta";
+import { enforcePlanFeature, PlanLimitError } from "@/lib/plan-config";
 import { prisma } from "@/lib/prisma";
 
 function buildIntegrationsRedirect(request: Request, error: string) {
@@ -38,6 +39,15 @@ export async function GET(request: Request) {
     const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
     if (!entitlement.canWrite) {
       return buildIntegrationsRedirect(request, "upgrade_required");
+    }
+
+    try {
+      await enforcePlanFeature(session.user.businessId, "whatsappIntegration", "WhatsApp bağlantısı bu planda açık değil. Pro veya üstü plana geçmeniz gerekir.");
+    } catch (error) {
+      if (error instanceof PlanLimitError) {
+        return buildIntegrationsRedirect(request, "upgrade_required");
+      }
+      throw error;
     }
 
     if (!setup.available || !setup.callbackUrl) {

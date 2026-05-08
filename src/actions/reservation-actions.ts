@@ -3,6 +3,7 @@
 import { AuditCategory, ReminderStatus, ReservationStatus, TableStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkReservationConflict, resolveReservationWindow } from "@/lib/availability";
 import { requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
@@ -93,11 +94,15 @@ export async function saveReservationAction(formData: FormData) {
   }
 
   const startAt = buildReservationDateTime(parsed.data.reservationDate, parsed.data.reservationTime);
-  const endAt = new Date(startAt.getTime() + 100 * 60000);
   const settings = await prisma.restaurantSettings.findFirstOrThrow({
     where: {
       businessId
     }
+  });
+  const { endAt, durationMinutes } = resolveReservationWindow({
+    requestedDate: parsed.data.reservationDate,
+    requestedTime: parsed.data.reservationTime,
+    fallbackDurationMinutes: settings.averageDiningDurationMin
   });
   const reminderConfig = buildReminderSchedule({
     startAt,
@@ -116,6 +121,19 @@ export async function saveReservationAction(formData: FormData) {
     if (!table) {
       redirect(`${redirectTo}?error=table_missing`);
     }
+  }
+
+  const conflict = await checkReservationConflict({
+    businessId,
+    startAt,
+    endAt,
+    guestCount: parsed.data.guestCount,
+    assignedTableId: parsed.data.tableId || null,
+    excludeReservationId: parsed.data.id ?? null
+  });
+
+  if (!conflict.ok) {
+    redirect(withQueryParam(redirectTo, "error", `availability_${(conflict.code ?? "conflict").toLowerCase()}`));
   }
 
   if (parsed.data.id) {
@@ -150,6 +168,7 @@ export async function saveReservationAction(formData: FormData) {
         source: parsed.data.source,
         startAt,
         endAt,
+        durationMinutes,
         guestCount: parsed.data.guestCount,
         occasion: parsed.data.occasion || null,
         notes: parsed.data.notes || null,
@@ -213,6 +232,7 @@ export async function saveReservationAction(formData: FormData) {
         source: parsed.data.source,
         startAt,
         endAt,
+        durationMinutes,
         guestCount: parsed.data.guestCount,
         occasion: parsed.data.occasion || null,
         notes: parsed.data.notes || null,

@@ -56,6 +56,7 @@ export function PublicReservationRequestForm({
   embed?: boolean;
 }) {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState<FormState>({});
   const visibleFields = getVisibleFields(industry);
@@ -155,8 +156,10 @@ export function PublicReservationRequestForm({
               notes: form.notes
             })
           });
+          const payload = await response.json().catch(() => null);
 
           setStatus(response.ok ? "success" : "error");
+          setErrorMessage(response.ok ? null : payload?.error ?? "Talep şu anda gönderilemedi. Lütfen birkaç dakika sonra tekrar deneyin.");
           if (response.ok) {
             setForm({});
           }
@@ -207,7 +210,7 @@ export function PublicReservationRequestForm({
         ) : null}
         {status === "error" ? (
           <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            Talep şu anda gönderilemedi. Lütfen birkaç dakika sonra tekrar deneyin.
+            {errorMessage ?? "Talep şu anda gönderilemedi. Lütfen birkaç dakika sonra tekrar deneyin."}
           </div>
         ) : null}
       </div>

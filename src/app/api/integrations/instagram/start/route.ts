@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireBusinessWriteAccess } from "@/lib/auth";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { buildMetaAuthorizationUrl, createMetaConnectionState, getMetaAuthorizationDebugInfo, getMetaEnvironmentDiagnostics, getMetaProviderSetup } from "@/lib/meta";
+import { enforcePlanFeature, PlanLimitError } from "@/lib/plan-config";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
@@ -10,6 +11,15 @@ export async function GET(request: Request) {
     roles: [UserRole.BUSINESS_ADMIN],
     feature: "integrations"
   });
+
+  try {
+    await enforcePlanFeature(session.user.businessId, "instagramIntegration", "Instagram bağlantısı bu planda açık değil. Pro veya üstü plana geçmeniz gerekir.");
+  } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return NextResponse.redirect(new URL("/integrations?error=upgrade_required", request.url), { status: 303 });
+    }
+    throw error;
+  }
 
   const setup = getMetaProviderSetup("instagram");
   if (!setup.available) {

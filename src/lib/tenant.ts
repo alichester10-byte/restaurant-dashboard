@@ -100,6 +100,7 @@ export async function createBusinessWithAdmin(input: CreateBusinessInput) {
         status: input.businessStatus ?? BusinessStatus.ACTIVE,
         subscriptionPlan: input.plan ?? SubscriptionPlan.STARTER,
         subscriptionStatus: input.subscriptionStatus ?? SubscriptionStatus.TRIALING,
+        subscriptionCurrentPeriodStartsAt: new Date(),
         trialStartsAt: new Date(),
         trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         onboardingCompletedAt: new Date(),

@@ -5,6 +5,7 @@ import { requireBusinessUser } from "@/lib/auth";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { reservationSourceLabels, callOutcomeLabels } from "@/lib/constants";
 import { getReportsPageData } from "@/lib/data";
+import { getIndustryConfig } from "@/lib/industry-config";
 import { formatPercent } from "@/lib/utils";
 
 function getSourceLabel(source: string) {
@@ -19,12 +20,13 @@ export default async function ReportsPage() {
   const session = await requireBusinessUser();
   const data = await getReportsPageData(session.user.businessId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
+  const industry = getIndustryConfig(session.user.business.businessType);
 
   return (
     <div className="space-y-6">
       <AppHeader
         title="Raporlar"
-        subtitle="Rezervasyon kaynakları, çağrı etkisi ve kapasite kullanımını operasyonel metriklerle analiz edin."
+        subtitle={`${industry.reservationLabelPlural}, çağrı etkisi ve kapasite kullanımını operasyonel metriklerle analiz edin.`}
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -38,12 +40,12 @@ export default async function ReportsPage() {
           <h2 className="mt-2 text-xl font-semibold text-ink">Temel performans sinyalleri</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[
-              { label: "Bugünkü rezervasyon", value: data.summaryCards.todayReservations },
+              { label: `Bugünkü ${industry.reservationLabel.toLocaleLowerCase("tr-TR")}`, value: data.summaryCards.todayReservations },
               { label: "No-show oranı", value: formatPercent(data.summaryCards.noShowRate) },
               { label: "İptal oranı", value: formatPercent(data.summaryCards.cancellationRate) },
               { label: "Tamamlanan oran", value: formatPercent(data.summaryCards.completedRate) },
-              { label: "Geri dönen müşteri", value: data.summaryCards.returningCustomers },
-              { label: "VIP müşteri", value: data.summaryCards.vipCustomers }
+              { label: `Geri dönen ${industry.customerLabel.toLocaleLowerCase("tr-TR")}`, value: data.summaryCards.returningCustomers },
+              { label: `VIP ${industry.customerLabel.toLocaleLowerCase("tr-TR")}`, value: data.summaryCards.vipCustomers }
             ].map((item) => (
               <div key={item.label} className="rounded-2xl border border-[color:var(--border)] bg-white/90 p-4">
                 <div className="text-sm text-sage">{item.label}</div>
@@ -54,8 +56,8 @@ export default async function ReportsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">14 Günlük Rezervasyon</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Rezervasyon ve misafir hacmi</h2>
+          <div className="section-title">14 Günlük Akış</div>
+          <h2 className="mt-2 text-xl font-semibold text-ink">{industry.reservationLabel} ve {industry.customerLabel.toLocaleLowerCase("tr-TR")} hacmi</h2>
           <div className="mt-6">
             <MiniBarChart items={data.reservationsByDay.map((item) => ({ label: item.label, total: item.reservations }))} color="bg-gold" />
           </div>
@@ -79,7 +81,7 @@ export default async function ReportsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">Rezervasyon Kaynakları</div>
+          <div className="section-title">{industry.reservationLabel} Kaynakları</div>
           <div className="mt-5 space-y-3">
             {data.sourceCounts.map((item) => (
               <div key={item.source} className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3">
@@ -91,12 +93,12 @@ export default async function ReportsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">Doluluk ve Masa Kullanımı</div>
+          <div className="section-title">{industry.capacityLabel} ve {industry.primaryResourceLabel} Kullanımı</div>
           <div className="mt-4 grid gap-4">
             <div className="rounded-[24px] bg-[linear-gradient(135deg,#214c3d_0%,#172f27_100%)] p-5 text-white">
               <div className="text-sm text-white/70">Ortalama doluluk</div>
               <div className="mt-2 text-4xl font-bold">{formatPercent(data.occupancySummary.average)}</div>
-              <div className="mt-3 text-sm text-white/75">Masa kullanım özeti: {formatPercent(data.occupancySummary.utilization)}</div>
+              <div className="mt-3 text-sm text-white/75">{industry.primaryResourceLabel} kullanım özeti: {formatPercent(data.occupancySummary.utilization)}</div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl bg-white/90 p-4">
@@ -104,7 +106,7 @@ export default async function ReportsPage() {
                 <div className="mt-2 text-3xl font-bold text-ink">{formatPercent(data.occupancySummary.peak)}</div>
               </div>
               <div className="rounded-2xl bg-white/90 p-4">
-                <div className="text-sm text-sage">Toplam Misafir</div>
+                <div className="text-sm text-sage">Toplam {industry.customerLabel}</div>
                 <div className="mt-2 text-3xl font-bold text-ink">{data.occupancySummary.totalGuests}</div>
               </div>
             </div>
@@ -129,7 +131,7 @@ export default async function ReportsPage() {
             {data.popularHours.map((item) => (
               <div key={item.label} className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3">
                 <div className="font-semibold text-ink">{item.label}</div>
-                <div className="text-sm text-sage">{item.total} rezervasyon</div>
+                <div className="text-sm text-sage">{item.total} {industry.reservationLabel.toLocaleLowerCase("tr-TR")}</div>
               </div>
             ))}
           </div>

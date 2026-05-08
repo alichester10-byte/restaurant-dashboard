@@ -34,12 +34,12 @@ const upgradeCopy: Record<string, { title: string; description: string }> = {
     description: "Yeni rezervasyon oluşturma, düzenleme, onay ve iptal gibi tüm akışlar Pro planıyla aktif olur."
   },
   tables: {
-    title: "Masa planı düzenleme Pro gerektirir",
-    description: "Masa durumu güncelleme ve rezervasyonları masalara atama akışları Pro ile açılır."
+    title: "Kaynak planı düzenleme Pro gerektirir",
+    description: "Kaynak durumu güncelleme ve kayıtları kaynaklara atama akışları Pro ile açılır."
   },
   settings: {
     title: "Ayarları kaydetmek için Pro gerekir",
-    description: "Restoran profili, çalışma saatleri ve servis kurallarını kalıcı olarak güncellemek için Pro planına geçin."
+    description: "İşletme profili, çalışma saatleri ve hizmet kurallarını kalıcı olarak güncellemek için Pro planına geçin."
   },
   customers: {
     title: "Müşteri hafızasını ekibiniz için aktive edin",
@@ -107,8 +107,8 @@ export default async function BillingPage({
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/80">
               {entitlement.isDemo
-                ? "Dashboard, rezervasyonlar, müşteriler ve masa planı demoda tamamen görünür. Pro ile kayıt oluşturma, düzenleme, iptal, masa atama ve ayar güncelleme anında açılır."
-                : "İşletmeniz şu anda tam erişimde. Rezervasyon, çağrı, masa ve ayar akışları ekibiniz için aktif durumda."}
+                ? "Dashboard, kayıtlar, müşteriler ve kaynak planı demoda tamamen görünür. Pro ile kayıt oluşturma, düzenleme, iptal, kaynak atama ve ayar güncelleme anında açılır."
+                : "İşletmeniz şu anda tam erişimde. Rezervasyon, çağrı, kaynak ve ayar akışları ekibiniz için aktif durumda."}
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -155,7 +155,7 @@ export default async function BillingPage({
           <div className="mt-5 grid gap-3">
             {[
               "Yeni rezervasyon oluşturma, düzenleme, onay ve iptal",
-              "Masa durumlarını güncelleme ve rezervasyonları masalara atama",
+              "Kaynak durumlarını güncelleme ve kayıtları kaynaklara atama",
               "Çağrı kaydı ekleme ve gerçek operasyon takibi",
               "Ayarları, çalışma saatlerini ve servis kurallarını kaydetme"
             ].map((item) => (

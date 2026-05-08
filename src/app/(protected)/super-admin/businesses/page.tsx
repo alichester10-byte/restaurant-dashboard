@@ -50,14 +50,14 @@ export default async function SuperAdminBusinessesPage({
             <div className="grid gap-4 md:grid-cols-2">
               <input className="field" name="businessName" placeholder="İşletme adı" required />
               <input className="field" name="ownerName" placeholder="Kurucu adı" required />
-              <input className="field" name="ownerEmail" type="email" placeholder="kurucu@restoran.com" required />
+              <input className="field" name="ownerEmail" type="email" placeholder="kurucu@isletme.com" required />
               <input className="field" name="ownerPhone" placeholder="+90 5.." required />
               <input className="field" name="businessPhone" placeholder="İşletme telefonu" required />
               <input className="field" name="adminPassword" type="password" defaultValue="Welcome123!" required />
               <input className="field md:col-span-2" name="businessAddress" placeholder="Adres" required />
               <input className="field" name="city" placeholder="Şehir" required />
               <input className="field" name="district" placeholder="İlçe" required />
-              <input className="field" name="restaurantType" placeholder="Restoran tipi" required />
+              <input className="field" name="restaurantType" placeholder="Hizmet odağı" required />
               <input className="field" type="number" name="estimatedTableCount" defaultValue={12} required />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -79,7 +79,7 @@ export default async function SuperAdminBusinessesPage({
             <textarea className="field min-h-24" name="notes" placeholder="İç operasyon notları" />
             <label className="flex items-center gap-3 rounded-2xl border border-[color:var(--border)] bg-white/80 px-4 py-3 text-sm text-ink">
               <input type="checkbox" name="createDefaultTables" value="true" defaultChecked />
-              Varsayılan masa planı oluştur
+              Varsayılan kaynak planı oluştur
             </label>
             <button className="btn-primary w-full" type="submit">
               İşletmeyi Oluştur

@@ -70,7 +70,7 @@ export function Sidebar({
           {role === UserRole.SUPER_ADMIN
             ? "Yeni işletmeleri açın, plan geçişlerini yönetin ve tüm portföyü tek merkezden izleyin."
             : canWrite
-              ? "Canlı rezervasyon, masa yönetimi ve ayarlar üzerinde tam kontrol sizde."
+              ? `Canlı ${industry.reservationLabel.toLocaleLowerCase("tr-TR")} akışı, ${industry.primaryResourceLabelPlural.toLocaleLowerCase("tr-TR")} ve ayarlar üzerinde tam kontrol sizde.`
               : "Ürünü gerçek verilerle keşfedin. Kayıt oluşturma ve güncelleme akışlarını açmak için Pro'ya geçin."}
         </p>
         {role !== UserRole.SUPER_ADMIN && !canWrite ? (

@@ -32,8 +32,8 @@ export function ReservationForm({ tables, reservation, businessType, locked = fa
     ? reservation.startAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", hour12: false })
     : "19:30";
   const selectedTableLabel = reservation?.assignedTableId
-    ? tables.find((table) => table.id === reservation.assignedTableId)?.number ?? "Atanmış masa"
-    : "Henüz masa ataması yok";
+    ? tables.find((table) => table.id === reservation.assignedTableId)?.number ?? `Atanmış ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}`
+    : `Henüz ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} ataması yok`;
 
   if (locked) {
     return (

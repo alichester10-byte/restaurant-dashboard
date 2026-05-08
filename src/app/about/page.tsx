@@ -6,7 +6,7 @@ import { buildPublicHref, getPublicCopy, getPublicLanguage, getPublicMetadataBas
 export const metadata: Metadata = getPublicMetadataBase(
   "/about",
   "Limon Masa Hakkında",
-  "Limon Masa, restoranların çok kanallı rezervasyon taleplerini insan onaylı akışla yönetmesine yardımcı olur."
+  "Limon Masa, işletmelerin çok kanallı rezervasyon ve randevu taleplerini insan onaylı akışla yönetmesine yardımcı olur."
 );
 
 export default function AboutPage({

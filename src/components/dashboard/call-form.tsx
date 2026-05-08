@@ -21,7 +21,7 @@ export function CallForm({ locked = false }: { locked?: boolean }) {
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">Arayan</span>
-          <input className="field" name="callerName" placeholder="Misafir adı" />
+          <input className="field" name="callerName" placeholder="Müşteri adı" />
         </label>
         <label className="space-y-2">
           <span className="text-sm font-semibold text-ink">Telefon</span>

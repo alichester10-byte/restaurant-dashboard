@@ -3,13 +3,25 @@
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationRequestStatus, ReservationStatus, ReservationSource, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireBusinessAccess, requireBusinessWriteAccess } from "@/lib/auth";
+import { checkReservationConflict, getBusinessAvailabilityContext, resolveReservationWindow } from "@/lib/availability";
+import { requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
+import { PlanLimitError } from "@/lib/plan-config";
 import { prisma } from "@/lib/prisma";
 import { sanitizeNullableText, sanitizeText } from "@/lib/security";
 import { buildReminderSchedule } from "@/lib/reminders";
 import { reservationRequestCreateSchema, reservationRequestReviewSchema } from "@/lib/validation";
+
+function withQueryParams(pathname: string, params: Record<string, string>) {
+  const [baseWithQuery, hash = ""] = pathname.split("#");
+  const [base, search = ""] = baseWithQuery.split("?");
+  const query = new URLSearchParams(search);
+  for (const [key, value] of Object.entries(params)) {
+    query.set(key, value);
+  }
+  return `${base}${query.toString() ? `?${query.toString()}` : ""}${hash ? `#${hash}` : ""}`;
+}
 
 export async function configureIntegrationAction(formData: FormData) {
   const session = await requireBusinessWriteAccess({
@@ -127,6 +139,10 @@ export async function reviewReservationRequestAction(formData: FormData) {
   const approvedRequestedTime = parsed.data.requestedTime || request.requestedTime || "19:30";
   const approvedGuestCount = parsed.data.guestCount ?? request.guestCount ?? 2;
   const approvedNotes = parsed.data.notes || request.notes || request.rawMessage || null;
+  const extractedData =
+    request.extractedData && typeof request.extractedData === "object" && !Array.isArray(request.extractedData)
+      ? (request.extractedData as Record<string, unknown>)
+      : {};
 
   const phone = approvedGuestPhone.trim() || `request-${request.id.slice(-6)}`;
   const settings = await prisma.restaurantSettings.findFirstOrThrow({
@@ -149,8 +165,48 @@ export async function reviewReservationRequestAction(formData: FormData) {
     }
   });
 
-  const startAt = new Date(`${approvedRequestedDate}T${approvedRequestedTime}:00`);
-  const endAt = new Date(startAt.getTime() + 100 * 60000);
+  const serviceId = typeof extractedData.serviceId === "string" ? extractedData.serviceId : null;
+  const staffMemberId = typeof extractedData.staffId === "string" ? extractedData.staffId : null;
+  const resourceId = typeof extractedData.resourceId === "string" ? extractedData.resourceId : null;
+  const assignedTableId = typeof extractedData.tableId === "string" ? extractedData.tableId : null;
+  const requestedEndDate = typeof extractedData.endDate === "string" ? extractedData.endDate : null;
+  const explicitDuration =
+    typeof extractedData.durationMinutes === "number"
+      ? extractedData.durationMinutes
+      : typeof extractedData.durationMinutes === "string"
+        ? Number(extractedData.durationMinutes)
+        : null;
+  const service = serviceId
+    ? await prisma.service.findFirst({
+        where: { id: serviceId, businessId },
+        select: { id: true, name: true, durationMinutes: true }
+      })
+    : null;
+  const availabilityContext = await getBusinessAvailabilityContext(businessId);
+  const { startAt, endAt, durationMinutes } = resolveReservationWindow({
+    requestedDate: approvedRequestedDate,
+    requestedTime: approvedRequestedTime,
+    endDate: requestedEndDate,
+    durationMinutes: Number.isFinite(explicitDuration ?? NaN) ? explicitDuration : service?.durationMinutes ?? null,
+    fallbackDurationMinutes: service?.durationMinutes ?? availabilityContext?.averageDurationMinutes ?? settings.averageDiningDurationMin ?? 90
+  });
+  const conflict = await checkReservationConflict({
+    businessId,
+    startAt,
+    endAt,
+    guestCount: approvedGuestCount,
+    assignedTableId,
+    serviceId: service?.id ?? null,
+    staffMemberId,
+    resourceId
+  });
+  if (!conflict.ok) {
+    redirect(
+      withQueryParams(parsed.data.redirectTo, {
+        error: `availability_${(conflict.code ?? "conflict").toLowerCase()}`
+      })
+    );
+  }
   const reminderConfig = buildReminderSchedule({
     startAt,
     reminderEnabled: settings.reminderEnabled,
@@ -163,12 +219,25 @@ export async function reviewReservationRequestAction(formData: FormData) {
       customerId: customer.id,
       guestName: approvedGuestName,
       guestPhone: approvedGuestPhone || customer.phone,
+      assignedTableId,
+      serviceId: service?.id ?? null,
+      staffMemberId,
+      resourceId,
       source: request.source,
       status: ReservationStatus.CONFIRMED,
       startAt,
       endAt,
+      durationMinutes,
       guestCount: approvedGuestCount,
       notes: approvedNotes,
+      bookingMetadata: {
+        ...extractedData,
+        serviceId: service?.id ?? serviceId,
+        serviceType: service?.name ?? extractedData.serviceType ?? null,
+        staffId: staffMemberId,
+        resourceId,
+        tableId: assignedTableId
+      },
       reminderStatus: reminderConfig.reminderStatus,
       reminderScheduledAt: reminderConfig.reminderScheduledAt
     }
@@ -233,6 +302,11 @@ export async function createManualReservationRequestAction(formData: FormData) {
     source: ReservationSource.AI,
     rawMessage: parsed.data.message,
     notes: "Manuel AI asistan talebi"
+  }).catch((error) => {
+    if (error instanceof PlanLimitError) {
+      redirect(`/integrations?error=plan_limit&reason=${error.code}`);
+    }
+    throw error;
   });
 
   await prisma.integrationConnection.upsert({

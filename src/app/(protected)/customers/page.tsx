@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { requireBusinessUser } from "@/lib/auth";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { getCustomersPageData } from "@/lib/data";
+import { getIndustryConfig } from "@/lib/industry-config";
 import { formatDateTime, formatPhone } from "@/lib/utils";
 
 export default async function CustomersPage({
@@ -16,12 +17,13 @@ export default async function CustomersPage({
   const session = await requireBusinessUser();
   const data = await getCustomersPageData(session.user.businessId, searchParams.customerId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
+  const industry = getIndustryConfig(session.user.business.businessType);
 
   return (
     <div className="space-y-6">
       <AppHeader
         title="Müşteriler"
-        subtitle="VIP, düzenli ve yeni misafirleri davranış geçmişiyle birlikte takip edin."
+        subtitle={`VIP, düzenli ve yeni ${industry.customerLabelPlural.toLocaleLowerCase("tr-TR")} davranış geçmişiyle birlikte takip edin.`}
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -55,7 +57,7 @@ export default async function CustomersPage({
                   </div>
                   <StatusBadge value={customer.tag} />
                 </div>
-                <div className="mt-3 text-sm text-sage">{customer.reservations.length} son rezervasyon kaydı</div>
+                <div className="mt-3 text-sm text-sage">{customer.reservations.length} son {industry.reservationLabel.toLocaleLowerCase("tr-TR")} kaydı</div>
               </Link>
             ))}
           </div>
@@ -75,7 +77,7 @@ export default async function CustomersPage({
                   <div className="mt-2 font-semibold text-ink">{formatPhone(data.selectedCustomer.phone)}</div>
                 </div>
                 <div className="rounded-2xl bg-white/80 p-4">
-                  <div className="text-sm text-sage">Toplam Rezervasyon</div>
+                  <div className="text-sm text-sage">Toplam {industry.reservationLabel}</div>
                   <div className="mt-2 font-semibold text-ink">{data.selectedCustomer.reservations.length}</div>
                 </div>
               </div>
@@ -86,7 +88,7 @@ export default async function CustomersPage({
               </div>
 
               <div className="mt-8">
-                <div className="text-sm font-semibold text-ink">Rezervasyon Geçmişi</div>
+                <div className="text-sm font-semibold text-ink">{industry.reservationLabel} Geçmişi</div>
                 <div className="mt-3 space-y-3">
                   {data.selectedCustomer.reservations.map((reservation) => (
                     <div key={reservation.id} className="rounded-2xl border border-[color:var(--border)] bg-white/80 p-4">
@@ -94,7 +96,7 @@ export default async function CustomersPage({
                         <div>
                           <div className="font-semibold text-ink">{reservation.guestName}</div>
                           <div className="mt-1 text-sm text-sage">
-                            {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi • {reservation.assignedTable?.number ?? "Masa yok"}
+                            {formatDateTime(reservation.startAt)} • {reservation.guestCount} {industry.guestCountLabel.toLocaleLowerCase("tr-TR")} • {reservation.assignedTable?.number ?? `${industry.primaryResourceLabel} yok`}
                           </div>
                         </div>
                         <StatusBadge value={reservation.status} />
@@ -124,9 +126,9 @@ export default async function CustomersPage({
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <div className="section-title">Detay Paneli</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Bir müşteri seçin</h2>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Bir {industry.customerLabel.toLocaleLowerCase("tr-TR")} seçin</h2>
               <p className="mt-3 max-w-sm text-sm leading-6 text-sage">
-                Detay görünümünde rezervasyon geçmişi, segment etiketi ve son çağrı notlarını birlikte inceleyebilirsiniz.
+                Detay görünümünde {industry.reservationLabel.toLocaleLowerCase("tr-TR")} geçmişi, segment etiketi ve son çağrı notlarını birlikte inceleyebilirsiniz.
               </p>
             </div>
           )}

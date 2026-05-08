@@ -819,7 +819,7 @@ export async function manualPlanOverrideAction(formData: FormData) {
     where: { id: businessId },
     data: {
       subscriptionPlan: plan,
-      subscriptionStatus: plan === SubscriptionPlan.STARTER ? SubscriptionStatus.TRIALING : SubscriptionStatus.ACTIVE
+      subscriptionStatus: SubscriptionStatus.ACTIVE
     }
   });
 

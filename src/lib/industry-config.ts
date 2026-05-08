@@ -529,7 +529,7 @@ export function getIndustryConfig(businessType?: BusinessType | null): IndustryC
     return industryConfigs.RESTAURANT;
   }
 
-  return industryConfigs[businessType] ?? industryConfigs.RESTAURANT;
+  return industryConfigs[businessType] ?? industryConfigs.OTHER;
 }
 
 export function getIndustryOptionLabel(value?: BusinessType | null) {

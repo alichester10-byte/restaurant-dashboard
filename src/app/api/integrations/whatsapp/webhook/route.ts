@@ -3,6 +3,7 @@ import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSourc
 import { NextResponse } from "next/server";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
+import { PlanLimitError } from "@/lib/plan-config";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { logSuspiciousActivity, sanitizeText } from "@/lib/security";
@@ -132,15 +133,30 @@ export async function POST(request: Request) {
     }
   });
 
-  const result = await createPendingReservationRequestFromExternalMessage({
-    businessId: connection.business.id,
-    source: ReservationSource.WHATSAPP,
-    rawMessage: message,
-    sourceConversationId,
-    sourceMessageId,
-    guestPhoneHint: sanitizeText(firstMessage?.from),
-    notes: "WhatsApp üzerinden alındı."
-  });
+  let result;
+  try {
+    result = await createPendingReservationRequestFromExternalMessage({
+      businessId: connection.business.id,
+      source: ReservationSource.WHATSAPP,
+      rawMessage: message,
+      sourceConversationId,
+      sourceMessageId,
+      guestPhoneHint: sanitizeText(firstMessage?.from),
+      notes: "WhatsApp üzerinden alındı."
+    });
+  } catch (error) {
+    if (error instanceof PlanLimitError) {
+      await safeCreateAuditLog({
+        businessId: connection.business.id,
+        category: AuditCategory.INTEGRATION,
+        action: "plan_limit_blocked_whatsapp_request",
+        message: error.message,
+        metadata: { sourceMessageId, code: error.code }
+      });
+      return NextResponse.json({ ok: true });
+    }
+    throw error;
+  }
 
   await safeCreateAuditLog({
     businessId: connection.business.id,

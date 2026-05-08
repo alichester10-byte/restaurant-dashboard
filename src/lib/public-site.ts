@@ -85,14 +85,14 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
     },
     footer: {
       blurb:
-        "Limon Masa, küçük ve orta ölçekli restoranlar için geliştirilen yapay zeka destekli rezervasyon yönetim platformudur. WhatsApp ve Instagram entegrasyonları desteklenen senaryolarda ve Meta onayı sonrasında kullanılabilir.",
+        "Limon Masa, küçük ve orta ölçekli hizmet işletmeleri için geliştirilen yapay zeka destekli rezervasyon ve randevu yönetim platformudur. WhatsApp ve Instagram entegrasyonları desteklenen senaryolarda ve Meta onayı sonrasında kullanılabilir.",
       marker: "Limon Masa vMetaReview"
     },
     home: {
       eyebrow: "Limon Masa",
-      title: "Restoran rezervasyon taleplerini tek merkezde yönetin, son kararı yine siz verin",
+      title: "Rezervasyon ve randevu taleplerini tek merkezde yönetin, son kararı yine siz verin",
       description:
-        "Limon Masa; WhatsApp, Instagram, web formu ve AI destekli mesaj akışlarından gelen rezervasyon taleplerini tek panelde toplar. İnsan onayı olmadan hiçbir rezervasyon kesinleşmez.",
+        "Limon Masa; WhatsApp, Instagram, web formu ve AI destekli mesaj akışlarından gelen rezervasyon ve randevu taleplerini tek panelde toplar. İnsan onayı olmadan hiçbir kayıt kesinleşmez.",
       primary: "Ücretsiz Başla",
       secondary: "Giriş Yap",
       cards: [
@@ -106,7 +106,7 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
         },
         {
           title: "İnsan onayı olmadan rezervasyon kesinleşmez",
-          body: "Restoran ekibi, talebi inceleyip onaylamadan rezervasyon oluşturulmaz. Böylece kapasite ve servis kararı işletmede kalır."
+          body: "İşletme ekibi, talebi inceleyip onaylamadan kayıt oluşturulmaz. Böylece kapasite ve servis kararı işletmede kalır."
         }
       ],
       stats: [
@@ -118,12 +118,12 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
         {
           title: "Onay modeli",
           value: "İnsan odaklı",
-          body: "Talepler restoran ekibi tarafından onaylanmadan canlı rezervasyona dönüşmez."
+          body: "Talepler işletme ekibi tarafından onaylanmadan canlı kayda dönüşmez."
         },
         {
           title: "Kimler için",
-          value: "Restoranlar",
-          body: "Küçük ve orta ölçekli işletmeler için net, sade ve pratik bir operasyon akışı."
+          value: "İşletmeler",
+          body: "Küçük ve orta ölçekli hizmet işletmeleri için net, sade ve pratik bir operasyon akışı."
         },
         {
           title: "Güven",
@@ -134,17 +134,17 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
       howTitle: "Nasıl çalışır",
       howHeadline: "Müşteri mesajından onaylı rezervasyona giden net akış",
       howBody:
-        "Limon Masa, farklı kanallardan gelen talebi toplar, çıkarım yapar ve son kararı otomasyona bırakmadan restoran ekibine sunar.",
+        "Limon Masa, farklı kanallardan gelen talebi toplar, çıkarım yapar ve son kararı otomasyona bırakmadan işletme ekibine sunar.",
       steps: [
         "Müşteri mesaj veya rezervasyon talebi gönderir.",
         "Limon Masa tarih, saat, kişi sayısı ve notları çıkarır.",
         "Talep onay bekleyen istek olarak listelenir.",
-        "Restoran ekibi talebi onaylayarak rezervasyonu kesinleştirir."
+        "İşletme ekibi talebi onaylayarak kaydı kesinleştirir."
       ],
       trust: [
         {
-          title: "Restoranlar için",
-          body: "Rezervasyon, masa akışı, misafir geçmişi ve kanal yönetimini tek yerde toplamak isteyen restoran ekipleri için tasarlandı."
+          title: "İşletmeler için",
+          body: "Rezervasyon, randevu, müşteri geçmişi ve kanal yönetimini tek yerde toplamak isteyen işletme ekipleri için tasarlandı."
         },
         {
           title: "Veri gizliliği",
@@ -152,7 +152,7 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
         },
         {
           title: "İnsan onayı",
-          body: "Yapay zeka yalnızca talebi çözümlemeye yardımcı olur; onay, düzenleme ve son karar restoran tarafında kalır."
+          body: "Yapay zeka yalnızca talebi çözümlemeye yardımcı olur; onay, düzenleme ve son karar işletme tarafında kalır."
         },
         {
           title: "Meta uyumlu anlatım",
@@ -162,14 +162,14 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
     },
     about: {
       title: "Limon Masa Hakkında",
-      headline: "Çok kanallı rezervasyon talebini sadeleştiren restoran operasyon platformu",
+      headline: "Çok kanallı rezervasyon ve randevu talebini sadeleştiren operasyon platformu",
       intro:
-        "Limon Masa, restoranların farklı kanallardan gelen rezervasyon taleplerini tek merkezde yönetmesine yardımcı olur. Amaç, tam otomasyona zorlamak değil; ekibe daha hızlı ve daha kontrollü karar verebileceği bir akış sunmaktır.",
+        "Limon Masa, işletmelerin farklı kanallardan gelen rezervasyon ve randevu taleplerini tek merkezde yönetmesine yardımcı olur. Amaç, tam otomasyona zorlamak değil; ekibe daha hızlı ve daha kontrollü karar verebileceği bir akış sunmaktır.",
       principles: [
         "Limon Masa; WhatsApp, Instagram, web formları ve AI destekli talep akışlarından gelen rezervasyonları tek panelde toplar.",
         "Müşteri mesajları doğrudan onaylı rezervasyona dönüşmez; önce onay bekleyen talep olarak oluşturulur.",
-        "Restoran ekibi her rezervasyonu manuel olarak onaylar, düzenler veya reddeder.",
-        "Platform özellikle küçük ve orta ölçekli restoranların operasyon gerçeklerine göre tasarlanmıştır."
+        "İşletme ekibi her talebi manuel olarak onaylar, düzenler veya reddeder.",
+        "Platform özellikle küçük ve orta ölçekli hizmet işletmelerinin operasyon gerçeklerine göre tasarlanmıştır."
       ],
       sections: [
         {
@@ -177,8 +177,8 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
           body: "Gelen müşteri mesajları toplanır, tarih-saat-kişi sayısı gibi bilgiler çıkarılır ve ekip için onay bekleyen rezervasyon taleplerine dönüştürülür."
         },
         {
-          title: "Restoranlar için",
-          body: "Rezervasyon operasyonunu düzenli hale getirmek isteyen, ancak müşteri ilişkisini ve son kararı ekip içinde tutmak isteyen restoranlar için geliştirildi."
+          title: "İşletmeler için",
+          body: "Rezervasyon veya randevu operasyonunu düzenli hale getirmek isteyen, ancak müşteri ilişkisini ve son kararı ekip içinde tutmak isteyen işletmeler için geliştirildi."
         },
         {
           title: "Veri gizliliği",
@@ -186,7 +186,7 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
         },
         {
           title: "İnsan onayı",
-          body: "Limon Masa, rezervasyonu restoran adına otomatik olarak kesinleştirmez. Son onay her zaman işletme ekibindedir."
+          body: "Limon Masa, kaydı işletme adına otomatik olarak kesinleştirmez. Son onay her zaman işletme ekibindedir."
         }
       ],
       primary: "Ücretsiz Başla",
@@ -196,15 +196,15 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
       title: "Gizlilik Politikası",
       headline: "Veri işleme ve gizlilik yaklaşımımız",
       intro:
-        "Limon Masa, restoranların rezervasyon iletişimini yönetmesine yardımcı olurken işletme verilerini ayrı tutmak ve erişimi yetkili kullanıcılarla sınırlamak için tasarlanmıştır.",
+        "Limon Masa, işletmelerin rezervasyon ve randevu iletişimini yönetmesine yardımcı olurken verileri ayrı tutmak ve erişimi yetkili kullanıcılarla sınırlamak için tasarlanmıştır.",
       sections: [
         {
           title: "İşletme verisi izolasyonu",
-          body: "Her restoran hesabı kendi verisiyle çalışır. Destek veya güvenlik gerekmediği sürece işletme dışı erişim açılmaz."
+          body: "Her işletme hesabı kendi verisiyle çalışır. Destek veya güvenlik gerekmediği sürece işletme dışı erişim açılmaz."
         },
         {
           title: "Rezervasyon talepleri",
-          body: "Desteklenen kanallardan gelen mesajlar onay bekleyen rezervasyon taleplerine dönüştürülebilir. Restoran onayı olmadan kesin rezervasyon oluşmaz."
+          body: "Desteklenen kanallardan gelen mesajlar onay bekleyen taleplere dönüştürülebilir. İşletme onayı olmadan kesin kayıt oluşmaz."
         },
         {
           title: "Ödeme ve faturalama",
@@ -220,10 +220,10 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
       title: "Kullanım Şartları",
       headline: "Limon Masa kullanım çerçevesi",
       items: [
-        "Limon Masa, restoran rezervasyon operasyonları ve ekip içi iş akışları için tasarlanmıştır.",
-        "Platform üzerinden oluşturulan veya incelenen rezervasyonların son onayı, zamanlaması ve servis kararı restoranın sorumluluğundadır.",
+        "Limon Masa, rezervasyon, randevu ve booking operasyonları ile ekip içi iş akışları için tasarlanmıştır.",
+        "Platform üzerinden oluşturulan veya incelenen kayıtların son onayı, zamanlaması ve hizmet kararı işletmenin sorumluluğundadır.",
         "WhatsApp ve Instagram gibi kanal entegrasyonları, desteklenen durumlarda ve Meta onayı sonrasında kullanılabilir.",
-        "AI destekli çözümleme, ekiplerin müşteri talebini daha hızlı anlamasına yardımcı olur; ancak önemli detaylar rezervasyon onayından önce doğrulanmalıdır.",
+        "AI destekli çözümleme, ekiplerin müşteri talebini daha hızlı anlamasına yardımcı olur; ancak önemli detaylar onaydan önce doğrulanmalıdır.",
         "Platform; entegrasyonlar, ödeme akışları ve operasyon özellikleri geliştikçe güncellenebilir."
       ]
     }
@@ -240,14 +240,14 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
     },
     footer: {
       blurb:
-        "Limon Masa is an AI-powered reservation operations platform for small and medium restaurants. WhatsApp and Instagram integrations are available where supported and after Meta approval.",
+        "Limon Masa is an AI-powered booking and appointment operations platform for small and medium service businesses. WhatsApp and Instagram integrations are available where supported and after Meta approval.",
       marker: "Limon Masa vMetaReview"
     },
     home: {
       eyebrow: "Limon Masa",
-      title: "Manage restaurant reservation demand in one place while keeping final approval human",
+      title: "Manage booking and appointment demand in one place while keeping final approval human",
       description:
-        "Limon Masa helps restaurants manage reservation requests from WhatsApp, Instagram, web forms, and AI-assisted message flows. No reservation is confirmed without restaurant approval.",
+        "Limon Masa helps businesses manage booking and appointment requests from WhatsApp, Instagram, web forms, and AI-assisted message flows. No request is confirmed without business approval.",
       primary: "Start Free",
       secondary: "Login",
       cards: [
@@ -261,7 +261,7 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
         },
         {
           title: "Human approval before confirmation",
-          body: "Restaurants review pending requests before reservations are confirmed, helping teams reduce mistakes and stay aligned with capacity."
+          body: "Teams review pending requests before they are confirmed, helping reduce mistakes and stay aligned with capacity."
         }
       ],
       stats: [
@@ -273,12 +273,12 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
         {
           title: "Approval flow",
           value: "Human-first",
-          body: "Requests stay pending until the restaurant team confirms them."
+          body: "Requests stay pending until the business team confirms them."
         },
         {
           title: "Built for",
-          value: "Restaurants",
-          body: "Created for small and medium restaurants that need clear operations without heavy software."
+          value: "Businesses",
+          body: "Created for small and medium service businesses that need clear operations without heavy software."
         },
         {
           title: "Trust",
@@ -289,17 +289,17 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
       howTitle: "How it works",
       howHeadline: "From customer message to approved reservation",
       howBody:
-        "Limon Masa helps restaurants review demand from different channels without handing final control to automation.",
+        "Limon Masa helps businesses review demand from different channels without handing final control to automation.",
       steps: [
         "A customer sends a message or reservation request.",
         "Limon Masa extracts date, time, guest count, and notes.",
-        "The request stays pending for restaurant review.",
-        "The restaurant team approves the reservation manually."
+        "The request stays pending for business review.",
+        "The business team approves the booking manually."
       ],
       trust: [
         {
-          title: "For restaurants",
-          body: "Built for restaurants that want reservation flow, guest history, and channel management in one place."
+          title: "For businesses",
+          body: "Built for businesses that want booking flow, customer history, and channel management in one place."
         },
         {
           title: "Data privacy",
@@ -307,7 +307,7 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
         },
         {
           title: "Human approval",
-          body: "AI helps with extraction and triage, but the restaurant remains in charge of confirmation, edits, and guest decisions."
+          body: "AI helps with extraction and triage, but the business remains in charge of confirmation, edits, and customer decisions."
         },
         {
           title: "Meta review friendly",
@@ -319,21 +319,21 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
       title: "About Limon Masa",
       headline: "A calmer way to manage multi-channel reservation demand",
       intro:
-        "Limon Masa helps restaurants manage reservation requests from multiple channels in one place. The platform is designed to support faster decisions without forcing restaurants into fully automated booking approval.",
+        "Limon Masa helps businesses manage booking and appointment requests from multiple channels in one place. The platform is designed to support faster decisions without forcing teams into fully automated approval.",
       principles: [
         "Limon Masa brings reservation requests from WhatsApp, Instagram, website forms, and AI-assisted request flows into one workspace.",
         "Customer messages can be converted into pending reservation requests instead of confirmed bookings.",
-        "Restaurant teams manually approve, edit, or reject reservations.",
-        "The platform is designed for small and medium restaurants."
+        "Business teams manually approve, edit, or reject requests.",
+        "The platform is designed for small and medium service businesses."
       ],
       sections: [
         {
           title: "How it works",
-          body: "Incoming customer messages are collected, analyzed, and organized into pending reservation requests for restaurant review."
+          body: "Incoming customer messages are collected, analyzed, and organized into pending requests for business review."
         },
         {
-          title: "For restaurants",
-          body: "Designed for restaurants that want one control center for reservations without losing the human judgment of the front-of-house team."
+          title: "For businesses",
+          body: "Designed for businesses that want one control center for bookings without losing the human judgment of the operations team."
         },
         {
           title: "Data privacy",
@@ -341,7 +341,7 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
         },
         {
           title: "Human approval",
-          body: "Limon Masa does not automatically finalize reservations on behalf of the restaurant. Final approval stays with the business."
+          body: "Limon Masa does not automatically finalize bookings on behalf of the business. Final approval stays with the team."
         }
       ],
       primary: "Start with Limon Masa",
@@ -351,15 +351,15 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
       title: "Privacy Policy",
       headline: "Privacy and data handling",
       intro:
-        "Limon Masa is designed to help restaurants manage reservation communication while keeping business data separated and access limited to authorized users.",
+        "Limon Masa is designed to help businesses manage booking communication while keeping business data separated and access limited to authorized users.",
       sections: [
         {
           title: "Business data isolation",
-          body: "Each restaurant workspace operates with its own records. External access is limited unless support or security review is required."
+          body: "Each business workspace operates with its own records. External access is limited unless support or security review is required."
         },
         {
           title: "Reservation request handling",
-          body: "Messages from supported channels may be converted into pending reservation requests. Restaurants approve these requests before they become confirmed reservations."
+          body: "Messages from supported channels may be converted into pending booking requests. Businesses approve these requests before they become confirmed records."
         },
         {
           title: "Payments and billing",
@@ -375,10 +375,10 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
       title: "Terms of Service",
       headline: "Using Limon Masa responsibly",
       items: [
-        "Limon Masa is intended for restaurant reservation operations and internal team workflows.",
-        "Restaurants remain responsible for the final approval, timing, and service delivery of reservations created or reviewed through the platform.",
+        "Limon Masa is intended for booking, appointment, and internal team workflows.",
+        "Businesses remain responsible for the final approval, timing, and service delivery of records created or reviewed through the platform.",
         "Channel integrations such as WhatsApp and Instagram are available where supported and after Meta approval.",
-        "AI-assisted extraction is designed to help teams review customer intent, but restaurants should validate important details before confirming a reservation.",
+        "AI-assisted extraction is designed to help teams review customer intent, but businesses should validate important details before confirming a booking.",
         "The service may evolve over time as integrations, payment support, and operational tooling expand."
       ]
     }

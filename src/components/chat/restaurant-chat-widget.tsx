@@ -44,7 +44,7 @@ type ChatApiResponse = {
 };
 
 const OPERATOR_EXAMPLES = [
-  "Müşteriden gelen mesaj: Yarın akşam 20.30 için 4 kişilik masa rica ediyoruz. Adım Elif, telefonum 0555 222 33 44.",
+  "Müşteriden gelen mesaj: Yarın akşam 20.30 için 4 kişilik rezervasyon talebi bırakmak istiyoruz. Adım Elif, telefonum 0555 222 33 44.",
   "Bu rezervasyon mesajında eksik bilgi var mı? Cumartesi 19.00 için 2 kişiyiz, adım Burak.",
   "Yeni bir rezervasyon talebi hazırlamak istiyorum: Cuma 21.00, 6 kişi, Ahmet, 0532 444 55 66."
 ];
@@ -217,21 +217,21 @@ export function RestaurantChatWidget({
   const disabledMessage =
     mode === "operator"
       ? "AI operasyon asistanı şu anda aktif değil. Kanal taleplerini manuel akışla yönetmeye devam edebilirsiniz."
-      : "AI asistanı şu anda bu restoran için aktif değil. Yandaki form üzerinden rezervasyon talebinizi bırakabilirsiniz.";
+      : "AI asistanı şu anda bu işletme için aktif değil. Yandaki form üzerinden talebinizi bırakabilirsiniz.";
 
   const panelTitle = mode === "operator" ? "AI Operasyon Asistanı" : "AI Assistant";
   const panelDescription =
     mode === "operator"
-      ? "Restoran sahibinin günlük ihtiyaçları için müşteri mesajlarını talebe dönüştürür, eksik alanları tespit eder ve ekibin onay akışını hızlandırır."
-      : "Rezervasyon detaylarını toplayıp ekibe onay için iletirim.";
+      ? "İşletme sahibinin günlük ihtiyaçları için müşteri mesajlarını talebe dönüştürür, eksik alanları tespit eder ve ekibin onay akışını hızlandırır."
+      : "Talep detaylarını toplayıp ekibe onay için iletirim.";
   const inputPlaceholder =
     mode === "operator"
       ? "Müşteri mesajını yapıştırın veya yeni rezervasyon talebini tarif edin."
       : "Örn: Yarın akşam 20.30 için 4 kişiyiz. Adım Elif, telefonum 0555 222 33 44.";
   const helperText =
     mode === "operator"
-      ? "Rezervasyonu kesinleştirmez; yalnızca talebi toparlayıp onay akışına hazırlar."
-      : "AI asistan talebi toplar; rezervasyon, restoran onayı olmadan kesinleşmez.";
+      ? "Talebi kesinleştirmez; yalnızca toparlayıp onay akışına hazırlar."
+      : "AI asistan talebi toplar; son onay işletme ekibindedir.";
 
   const examples = mode === "operator" ? OPERATOR_EXAMPLES : [];
 
@@ -313,7 +313,7 @@ export function RestaurantChatWidget({
                   <div>Müşteri mesajlarını rezervasyon talebine dönüştürür.</div>
                   <div>Eksik isim, telefon, tarih, saat ve kişi sayısını tespit eder.</div>
                   <div>Kanal Talepleri akışına hazır içerik üretir.</div>
-                  <div>Son kararı yine restoran ekibi verir.</div>
+                  <div>Son kararı yine işletme ekibi verir.</div>
                 </div>
               </div>
             ) : null}
@@ -386,7 +386,7 @@ export function RestaurantChatWidget({
 
             {requestCreated ? (
               <div className="mb-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">
-                Talep hazırlandı. Restoran ekibi son uygunluğu kontrol edip rezervasyonu onaylayacaktır.
+                Talep hazırlandı. İşletme ekibi son uygunluğu kontrol edip kaydı onaylayacaktır.
               </div>
             ) : null}
 
