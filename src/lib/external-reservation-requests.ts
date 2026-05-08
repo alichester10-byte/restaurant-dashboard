@@ -22,7 +22,12 @@ export async function createPendingReservationRequestFromExternalMessage(input: 
     endDate?: string | null;
     guestCount?: number | null;
     serviceType?: string | null;
+    serviceId?: string | null;
+    staffId?: string | null;
+    staffName?: string | null;
     resourcePreference?: string | null;
+    resourceId?: string | null;
+    resourceName?: string | null;
     durationMinutes?: number | null;
     notes?: string | null;
     businessType?: string | null;

@@ -1,6 +1,16 @@
 import Link from "next/link";
 import { ReminderChannel } from "@prisma/client";
-import { disableEmailTwoFactorAction, enableEmailTwoFactorAction, updateSettingsAction } from "@/actions/settings-actions";
+import {
+  disableEmailTwoFactorAction,
+  enableEmailTwoFactorAction,
+  saveBookableResourceAction,
+  saveServiceAction,
+  saveStaffMemberAction,
+  toggleBookableResourceStatusAction,
+  toggleServiceStatusAction,
+  toggleStaffMemberStatusAction,
+  updateSettingsAction
+} from "@/actions/settings-actions";
 import { DemoModeBanner } from "@/components/demo/demo-mode-banner";
 import { LockedAction } from "@/components/demo/locked-action";
 import { AppHeader } from "@/components/layout/app-header";
@@ -27,7 +37,7 @@ export default async function SettingsPage({
   searchParams?: { security?: string };
 }) {
   const session = await requireBusinessUser();
-  const { settings, business } = await getSettingsData(session.user.businessId);
+  const { settings, business, services, staffMembers, bookableResources } = await getSettingsData(session.user.businessId);
   const industry = getIndustryConfig(business.businessType);
   const emailTwoFactorState = await getEmailTwoFactorSettingsState();
   const openingHours = settings.openingHours as Record<string, string>;
@@ -276,6 +286,159 @@ export default async function SettingsPage({
                 </form>
               )}
             </div>
+          </div>
+
+          <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+            <div className="section-title">Hizmetler</div>
+            <h3 className="mt-2 text-lg font-semibold text-ink">Sunulan servis kataloğu</h3>
+            <p className="mt-2 text-sm leading-6 text-sage">
+              AI asistanı ve public talep formu bu listeyi kullanarak müşteriye doğru hizmet seçeneklerini gösterir.
+            </p>
+            <div className="mt-4 space-y-3">
+              {services.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                  Henüz tanımlı hizmet yok. İlk hizmeti eklediğinizde public form ve AI akışı buna göre uyarlanır.
+                </div>
+              ) : (
+                services.map((service) => (
+                  <div key={service.id} className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold text-ink">{service.name}</div>
+                        <div className="mt-1 text-sm text-sage">
+                          {service.description || "Açıklama yok"} {service.durationMinutes ? `• ${service.durationMinutes} dk` : ""}{" "}
+                          {service.price ? `• ₺${service.price.toString()}` : ""}
+                        </div>
+                      </div>
+                      <form action={toggleServiceStatusAction}>
+                        <input type="hidden" name="id" value={service.id} />
+                        <input type="hidden" name="nextState" value={String(!service.isActive)} />
+                        <button className="btn-secondary" type="submit">
+                          {service.isActive ? "Pasifleştir" : "Aktifleştir"}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <form action={saveServiceAction} className="mt-4 grid gap-3 md:grid-cols-2">
+              <input className="field" name="name" placeholder="Hizmet adı" disabled={entitlement.isDemo} />
+              <input className="field" name="description" placeholder="Kısa açıklama" disabled={entitlement.isDemo} />
+              <input className="field" type="number" min={0} name="durationMinutes" placeholder="Süre (dk)" disabled={entitlement.isDemo} />
+              <input className="field" type="number" min={0} step="0.01" name="price" placeholder="Fiyat" disabled={entitlement.isDemo} />
+              <input type="hidden" name="isActive" value="true" />
+              {entitlement.isDemo ? (
+                <div className="md:col-span-2">
+                  <LockedAction fullWidth href="/billing?upgrade=services" title="Hizmet yönetimi Pro ile açılır" description="Demo modunda yapı görünür. Hizmet eklemek için Pro planına geçin." />
+                </div>
+              ) : (
+                <button className="btn-primary md:col-span-2" type="submit">
+                  Hizmet Ekle
+                </button>
+              )}
+            </form>
+          </div>
+
+          <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+            <div className="section-title">Ekip</div>
+            <h3 className="mt-2 text-lg font-semibold text-ink">Personel ve uzman listesi</h3>
+            <p className="mt-2 text-sm leading-6 text-sage">
+              Berber, salon, klinik, eğitim ve danışmanlık gibi akışlarda tercih edilen kişi bilgisini burada yönetin.
+            </p>
+            <div className="mt-4 space-y-3">
+              {staffMembers.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                  Henüz ekip üyesi eklenmedi.
+                </div>
+              ) : (
+                staffMembers.map((member) => (
+                  <div key={member.id} className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold text-ink">{member.name}</div>
+                        <div className="mt-1 text-sm text-sage">
+                          {[member.role, member.phone, member.email].filter(Boolean).join(" • ") || "Ek bilgi yok"}
+                        </div>
+                      </div>
+                      <form action={toggleStaffMemberStatusAction}>
+                        <input type="hidden" name="id" value={member.id} />
+                        <input type="hidden" name="nextState" value={String(!member.isActive)} />
+                        <button className="btn-secondary" type="submit">
+                          {member.isActive ? "Pasifleştir" : "Aktifleştir"}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <form action={saveStaffMemberAction} className="mt-4 grid gap-3 md:grid-cols-2">
+              <input className="field" name="name" placeholder="Ad Soyad" disabled={entitlement.isDemo} />
+              <input className="field" name="role" placeholder="Rol / Uzmanlık" disabled={entitlement.isDemo} />
+              <input className="field" name="phone" placeholder="Telefon" disabled={entitlement.isDemo} />
+              <input className="field" type="email" name="email" placeholder="E-posta" disabled={entitlement.isDemo} />
+              <input type="hidden" name="isActive" value="true" />
+              {entitlement.isDemo ? (
+                <div className="md:col-span-2">
+                  <LockedAction fullWidth href="/billing?upgrade=staff" title="Ekip yönetimi Pro ile açılır" description="Demo modunda yapı görünür. Personel eklemek için Pro planına geçin." />
+                </div>
+              ) : (
+                <button className="btn-primary md:col-span-2" type="submit">
+                  Ekip Üyesi Ekle
+                </button>
+              )}
+            </form>
+          </div>
+
+          <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+            <div className="section-title">Kaynaklar</div>
+            <h3 className="mt-2 text-lg font-semibold text-ink">Bookable kaynaklar</h3>
+            <p className="mt-2 text-sm leading-6 text-sage">
+              Masa, oda, servis alanı, stüdyo, sınıf veya servis hattı gibi rezervasyona konu kaynakları tanımlayın.
+            </p>
+            <div className="mt-4 space-y-3">
+              {bookableResources.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                  Henüz kaynak tanımı yok. Restoranlar mevcut masa planıyla çalışmaya devam eder.
+                </div>
+              ) : (
+                bookableResources.map((resource) => (
+                  <div key={resource.id} className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold text-ink">{resource.name}</div>
+                        <div className="mt-1 text-sm text-sage">
+                          {resource.type} {resource.capacity ? `• Kapasite ${resource.capacity}` : ""}
+                        </div>
+                      </div>
+                      <form action={toggleBookableResourceStatusAction}>
+                        <input type="hidden" name="id" value={resource.id} />
+                        <input type="hidden" name="nextState" value={String(!resource.isActive)} />
+                        <button className="btn-secondary" type="submit">
+                          {resource.isActive ? "Pasifleştir" : "Aktifleştir"}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <form action={saveBookableResourceAction} className="mt-4 grid gap-3 md:grid-cols-2">
+              <input className="field" name="name" placeholder="Kaynak adı" disabled={entitlement.isDemo} />
+              <input className="field" name="type" placeholder="Türü (oda, servis alanı, sınıf...)" disabled={entitlement.isDemo} />
+              <input className="field" type="number" min={0} name="capacity" placeholder="Kapasite" disabled={entitlement.isDemo} />
+              <input type="hidden" name="isActive" value="true" />
+              {entitlement.isDemo ? (
+                <div className="md:col-span-2">
+                  <LockedAction fullWidth href="/billing?upgrade=resources" title="Kaynak yönetimi Pro ile açılır" description="Demo modunda yapı görünür. Kaynak eklemek için Pro planına geçin." />
+                </div>
+              ) : (
+                <button className="btn-primary md:col-span-2" type="submit">
+                  Kaynak Ekle
+                </button>
+              )}
+            </form>
           </div>
 
           <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">

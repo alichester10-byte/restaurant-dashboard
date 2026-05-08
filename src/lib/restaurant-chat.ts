@@ -22,6 +22,8 @@ type RestaurantContext = {
   tone: "friendly" | "professional";
   requiredFields: IndustryFieldKey[];
   serviceTypes: string[];
+  staffOptions: string[];
+  resourceOptions: string[];
   unsupportedAdvice: string | null;
   requestLabel: string;
   primaryResourceLabel: string;
@@ -69,6 +71,18 @@ export async function loadRestaurantChatContext(restaurantId: string) {
     include: {
       settings: {
         take: 1
+      },
+      services: {
+        where: { isActive: true },
+        select: { name: true }
+      },
+      staffMembers: {
+        where: { isActive: true },
+        select: { name: true }
+      },
+      bookableResources: {
+        where: { isActive: true },
+        select: { name: true }
       }
     }
   });
@@ -97,7 +111,9 @@ export async function loadRestaurantChatContext(restaurantId: string) {
     welcomeMessage: `${settings?.restaurantName ?? business.name} için ${industry.requestLabel.toLocaleLowerCase("tr-TR")} memnuniyetle alırım. Gerekli bilgileri paylaşırsanız talebinizi ekip onayına hazırlayabilirim.`,
     tone: "friendly",
     requiredFields: industry.requiredFields,
-    serviceTypes: industry.serviceTypes,
+    serviceTypes: business.services.length > 0 ? business.services.map((service) => service.name) : industry.serviceTypes,
+    staffOptions: business.staffMembers.map((member) => member.name),
+    resourceOptions: business.bookableResources.map((resource) => resource.name),
     unsupportedAdvice: industry.unsupportedAdvice,
     requestLabel: industry.requestLabel,
     primaryResourceLabel: industry.primaryResourceLabel,
@@ -243,6 +259,9 @@ function buildRuleBasedReply(input: {
   if (input.requestCreated) {
     parts.push(`${input.context.requestLabel} alındı ve ekip onayına iletildi. İşletme ekibi son uygunluğu teyit ederek sizinle iletişime geçecek.`);
   } else if (input.missingFields.length > 0) {
+    if (input.missingFields.includes("serviceType") && input.context.serviceTypes.length > 0) {
+      parts.push(`Sunulan seçenekler: ${input.context.serviceTypes.slice(0, 6).join(", ")}.`);
+    }
     parts.push(formatMissingFieldPrompt(input.missingFields, input.context));
   } else {
     parts.push("Talebinizi hazırlıyorum. İşletme ekibi son uygunluğu onaylayacaktır.");

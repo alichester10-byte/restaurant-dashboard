@@ -30,6 +30,9 @@ export async function POST(request: Request) {
   const notes = sanitizeNullableText(raw?.notes || raw?.message);
   const durationMinutes = raw?.durationMinutes ? Number(raw.durationMinutes) : undefined;
   const guestCount = raw?.guestCount ? Number(raw.guestCount) : undefined;
+  const serviceId = sanitizeNullableText(raw?.serviceId);
+  const staffId = sanitizeNullableText(raw?.staffId);
+  const resourceId = sanitizeNullableText(raw?.resourceId);
   const source = contentType.includes("application/json") && !verifySameOrigin(request) ? ReservationSource.GOOGLE : ReservationSource.WEBSITE;
 
   if (!businessSlug || !guestName) {
@@ -44,6 +47,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "İşletme bulunamadı." }, { status: 404 });
   }
 
+  const [serviceRecord, staffRecord, resourceRecord] = await Promise.all([
+    serviceId ? prisma.service.findFirst({ where: { id: serviceId, businessId: business.id, isActive: true }, select: { id: true, name: true } }) : Promise.resolve(null),
+    staffId ? prisma.staffMember.findFirst({ where: { id: staffId, businessId: business.id, isActive: true }, select: { id: true, name: true } }) : Promise.resolve(null),
+    resourceId
+      ? prisma.bookableResource.findFirst({ where: { id: resourceId, businessId: business.id, isActive: true }, select: { id: true, name: true, type: true } })
+      : Promise.resolve(null)
+  ]);
+
   const industry = getIndustryConfig(business.businessType);
   const rawMessage = [
     `${industry.customerLabel}: ${guestName}`,
@@ -53,8 +64,9 @@ export async function POST(request: Request) {
     endDate ? `Bitiş: ${endDate}` : null,
     requestedTime ? `Saat: ${requestedTime}` : null,
     guestCount ? `${industry.guestCountLabel}: ${guestCount}` : null,
-    serviceType ? `${industry.serviceTypeLabel}: ${serviceType}` : null,
-    resourcePreference ? `${industry.primaryResourceLabel} tercihi: ${resourcePreference}` : null,
+    (serviceType || serviceRecord?.name) ? `${industry.serviceTypeLabel}: ${serviceType || serviceRecord?.name}` : null,
+    (resourcePreference || staffRecord?.name) ? `${industry.primaryResourceLabel} tercihi: ${resourcePreference || staffRecord?.name}` : null,
+    resourceRecord?.name ? `${industry.primaryResourceLabel}: ${resourceRecord.name}` : null,
     durationMinutes ? `Süre: ${durationMinutes} dk` : null,
     notes ? `Not: ${notes}` : null
   ]
@@ -94,8 +106,13 @@ export async function POST(request: Request) {
       requestedTime: requestedTime || null,
       endDate: endDate || null,
       guestCount: Number.isFinite(guestCount) ? guestCount : null,
-      serviceType: serviceType || null,
-      resourcePreference: resourcePreference || null,
+      serviceType: serviceType || serviceRecord?.name || null,
+      serviceId: serviceRecord?.id || null,
+      staffId: staffRecord?.id || null,
+      staffName: staffRecord?.name || null,
+      resourcePreference: resourcePreference || staffRecord?.name || null,
+      resourceId: resourceRecord?.id || null,
+      resourceName: resourceRecord?.name || null,
       durationMinutes: Number.isFinite(durationMinutes) ? durationMinutes : null,
       notes: notes || null,
       businessType: business.businessType

@@ -306,6 +306,9 @@ model Business {
   settings              RestaurantSettings[]
   customers             Customer[]
   tables                DiningTable[]
+  services              Service[]
+  staffMembers          StaffMember[]
+  bookableResources     BookableResource[]
   reservations          Reservation[]
   callLogs              CallLog[]
   billingPayments       BillingPayment[]
@@ -442,6 +445,56 @@ model DiningTable {
   @@unique([businessId, number])
   @@index([status])
   @@index([businessId])
+}
+
+model Service {
+  id              String        @id @default(cuid())
+  businessId      String
+  businessType    BusinessType?
+  name            String
+  description     String?
+  durationMinutes Int?
+  price           Decimal?      @db.Decimal(10, 2)
+  isActive        Boolean       @default(true)
+  metadata        Json?
+  business        Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([businessId, isActive])
+  @@index([businessType])
+}
+
+model StaffMember {
+  id         String    @id @default(cuid())
+  businessId String
+  name       String
+  phone      String?
+  email      String?
+  role       String?
+  isActive   Boolean   @default(true)
+  metadata   Json?
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([businessId, isActive])
+}
+
+model BookableResource {
+  id         String    @id @default(cuid())
+  businessId String
+  name       String
+  type       String
+  capacity   Int?
+  isActive   Boolean   @default(true)
+  metadata   Json?
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([businessId, isActive])
+  @@index([type])
 }
 
 model Reservation {

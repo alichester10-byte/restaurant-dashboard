@@ -188,3 +188,38 @@ export const settingsSchema = z.object({
   sunday: z.string(),
   notes: z.string().max(500).optional().or(z.literal(""))
 });
+
+export const serviceFormSchema = z.object({
+  id: z.string().optional().or(z.literal("")),
+  name: z.string().min(2).max(80),
+  description: z.string().max(300).optional().or(z.literal("")),
+  durationMinutes: z.coerce.number().int().min(0).max(1440).optional(),
+  price: z.coerce.number().min(0).max(1_000_000).optional(),
+  isActive: z.enum(["true", "false"]).default("true"),
+  redirectTo: z.string().default("/settings")
+});
+
+export const staffMemberFormSchema = z.object({
+  id: z.string().optional().or(z.literal("")),
+  name: z.string().min(2).max(80),
+  phone: z.string().max(30).optional().or(z.literal("")),
+  email: z.string().email().optional().or(z.literal("")),
+  role: z.string().max(80).optional().or(z.literal("")),
+  isActive: z.enum(["true", "false"]).default("true"),
+  redirectTo: z.string().default("/settings")
+});
+
+export const resourceFormSchema = z.object({
+  id: z.string().optional().or(z.literal("")),
+  name: z.string().min(2).max(80),
+  type: z.string().min(2).max(80),
+  capacity: z.coerce.number().int().min(0).max(10000).optional(),
+  isActive: z.enum(["true", "false"]).default("true"),
+  redirectTo: z.string().default("/settings")
+});
+
+export const managementItemToggleSchema = z.object({
+  id: z.string(),
+  nextState: z.enum(["true", "false"]),
+  redirectTo: z.string().default("/settings")
+});

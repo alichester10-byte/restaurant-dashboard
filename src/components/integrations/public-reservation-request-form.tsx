@@ -42,11 +42,17 @@ export function PublicReservationRequestForm({
   businessSlug,
   businessName,
   industry,
+  services = [],
+  staffMembers = [],
+  resources = [],
   embed = false
 }: {
   businessSlug: string;
   businessName: string;
   industry: IndustryConfig;
+  services?: Array<{ id: string; name: string }>;
+  staffMembers?: Array<{ id: string; name: string }>;
+  resources?: Array<{ id: string; name: string; type: string }>;
   embed?: boolean;
 }) {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -69,7 +75,7 @@ export function PublicReservationRequestForm({
           <span className="text-sm font-semibold text-ink">{label}</span>
           <select className="field" value={value} onChange={(event) => updateField(field, event.target.value)} required={required}>
             <option value="">{label} seçin</option>
-            {industry.serviceTypes.map((service) => (
+            {(services.length > 0 ? services.map((service) => service.name) : industry.serviceTypes).map((service) => (
               <option key={service} value={service}>
                 {service}
               </option>
@@ -141,7 +147,10 @@ export function PublicReservationRequestForm({
               endDate: form.endDate,
               guestCount: form.guestCount ? Number(form.guestCount) : undefined,
               serviceType: form.serviceType,
+              serviceId: form.serviceId,
+              staffId: form.staffId,
               resourcePreference: form.resourcePreference,
+              resourceId: form.resourceId,
               durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : undefined,
               notes: form.notes
             })
@@ -158,7 +167,35 @@ export function PublicReservationRequestForm({
         <div className="text-xs font-semibold uppercase tracking-[0.24em] text-moss">{industry.requestLabel}</div>
         <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl text-ink">{businessName}</h1>
         <p className="mt-3 text-sm leading-6 text-sage">{industry.publicDescription}</p>
-        <div className="mt-5 grid gap-4 md:grid-cols-2">{visibleFields.map(renderField)}</div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          {visibleFields.map(renderField)}
+          {staffMembers.length > 0 ? (
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-ink">Tercih Edilen Ekip</span>
+              <select className="field" value={form.staffId ?? ""} onChange={(event) => updateField("staffId", event.target.value)}>
+                <option value="">Tercih yok</option>
+                {staffMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {resources.length > 0 ? (
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-ink">{industry.primaryResourceLabel} Tercihi</span>
+              <select className="field" value={form.resourceId ?? ""} onChange={(event) => updateField("resourceId", event.target.value)}>
+                <option value="">Tercih yok</option>
+                {resources.map((resource) => (
+                  <option key={resource.id} value={resource.id}>
+                    {resource.name} • {resource.type}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
         <button className="btn-primary mt-5 w-full gap-2 sm:w-auto" type="submit" disabled={isPending}>
           {isPending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : null}
           {isPending ? "Talebiniz gönderiliyor..." : industry.publicSubmitLabel}

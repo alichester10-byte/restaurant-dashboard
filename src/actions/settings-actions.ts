@@ -9,7 +9,7 @@ import { getEmailTwoFactorSchemaStatus } from "@/lib/email-two-factor-runtime";
 import { isEmailDeliveryConfigured } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { sanitizeNullableText, sanitizeText } from "@/lib/security";
-import { settingsSchema } from "@/lib/validation";
+import { managementItemToggleSchema, resourceFormSchema, serviceFormSchema, settingsSchema, staffMemberFormSchema } from "@/lib/validation";
 
 export async function updateSettingsAction(formData: FormData) {
   const session = await requireBusinessWriteAccess({
@@ -184,4 +184,237 @@ export async function disableEmailTwoFactorAction() {
 
   revalidatePath("/settings");
   redirect("/settings?security=email_2fa_disabled");
+}
+
+export async function saveServiceAction(formData: FormData) {
+  const session = await requireBusinessWriteAccess({
+    roles: [UserRole.BUSINESS_ADMIN],
+    feature: "settings"
+  });
+  const businessId = session.user.businessId;
+  const parsed = serviceFormSchema.safeParse({
+    id: formData.get("id"),
+    name: sanitizeText(formData.get("name")),
+    description: sanitizeNullableText(formData.get("description")),
+    durationMinutes: formData.get("durationMinutes") ? Number(formData.get("durationMinutes")) : undefined,
+    price: formData.get("price") ? Number(formData.get("price")) : undefined,
+    isActive: formData.get("isActive") ?? "true",
+    redirectTo: formData.get("redirectTo") ?? "/settings"
+  });
+
+  if (!parsed.success) {
+    redirect("/settings?error=service_validation");
+  }
+
+  const payload = {
+    businessId,
+    businessType: session.user.business.businessType,
+    name: parsed.data.name,
+    description: parsed.data.description || null,
+    durationMinutes: parsed.data.durationMinutes || null,
+    price: parsed.data.price ?? null,
+    isActive: parsed.data.isActive === "true"
+  };
+
+  if (parsed.data.id) {
+    await prisma.service.updateMany({
+      where: { id: parsed.data.id, businessId },
+      data: payload
+    });
+  } else {
+    await prisma.service.create({
+      data: payload
+    });
+  }
+
+  await createAuditLog({
+    businessId,
+    actorUserId: session.user.id,
+    actorRole: session.user.role,
+    category: AuditCategory.BUSINESS,
+    action: parsed.data.id ? "service_updated" : "service_created",
+    message: "Service catalog updated."
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?saved=services");
+}
+
+export async function toggleServiceStatusAction(formData: FormData) {
+  const session = await requireBusinessWriteAccess({
+    roles: [UserRole.BUSINESS_ADMIN],
+    feature: "settings"
+  });
+  const businessId = session.user.businessId;
+  const parsed = managementItemToggleSchema.safeParse({
+    id: formData.get("id"),
+    nextState: formData.get("nextState"),
+    redirectTo: formData.get("redirectTo") ?? "/settings"
+  });
+
+  if (!parsed.success) {
+    redirect("/settings?error=service_toggle");
+  }
+
+  await prisma.service.updateMany({
+    where: { id: parsed.data.id, businessId },
+    data: { isActive: parsed.data.nextState === "true" }
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?saved=services");
+}
+
+export async function saveStaffMemberAction(formData: FormData) {
+  const session = await requireBusinessWriteAccess({
+    roles: [UserRole.BUSINESS_ADMIN],
+    feature: "settings"
+  });
+  const businessId = session.user.businessId;
+  const parsed = staffMemberFormSchema.safeParse({
+    id: formData.get("id"),
+    name: sanitizeText(formData.get("name")),
+    phone: sanitizeNullableText(formData.get("phone")),
+    email: sanitizeNullableText(formData.get("email")),
+    role: sanitizeNullableText(formData.get("role")),
+    isActive: formData.get("isActive") ?? "true",
+    redirectTo: formData.get("redirectTo") ?? "/settings"
+  });
+
+  if (!parsed.success) {
+    redirect("/settings?error=staff_validation");
+  }
+
+  const payload = {
+    businessId,
+    name: parsed.data.name,
+    phone: parsed.data.phone || null,
+    email: parsed.data.email || null,
+    role: parsed.data.role || null,
+    isActive: parsed.data.isActive === "true"
+  };
+
+  if (parsed.data.id) {
+    await prisma.staffMember.updateMany({
+      where: { id: parsed.data.id, businessId },
+      data: payload
+    });
+  } else {
+    await prisma.staffMember.create({
+      data: payload
+    });
+  }
+
+  await createAuditLog({
+    businessId,
+    actorUserId: session.user.id,
+    actorRole: session.user.role,
+    category: AuditCategory.BUSINESS,
+    action: parsed.data.id ? "staff_member_updated" : "staff_member_created",
+    message: "Staff list updated."
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?saved=staff");
+}
+
+export async function toggleStaffMemberStatusAction(formData: FormData) {
+  const session = await requireBusinessWriteAccess({
+    roles: [UserRole.BUSINESS_ADMIN],
+    feature: "settings"
+  });
+  const businessId = session.user.businessId;
+  const parsed = managementItemToggleSchema.safeParse({
+    id: formData.get("id"),
+    nextState: formData.get("nextState"),
+    redirectTo: formData.get("redirectTo") ?? "/settings"
+  });
+
+  if (!parsed.success) {
+    redirect("/settings?error=staff_toggle");
+  }
+
+  await prisma.staffMember.updateMany({
+    where: { id: parsed.data.id, businessId },
+    data: { isActive: parsed.data.nextState === "true" }
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?saved=staff");
+}
+
+export async function saveBookableResourceAction(formData: FormData) {
+  const session = await requireBusinessWriteAccess({
+    roles: [UserRole.BUSINESS_ADMIN],
+    feature: "settings"
+  });
+  const businessId = session.user.businessId;
+  const parsed = resourceFormSchema.safeParse({
+    id: formData.get("id"),
+    name: sanitizeText(formData.get("name")),
+    type: sanitizeText(formData.get("type")),
+    capacity: formData.get("capacity") ? Number(formData.get("capacity")) : undefined,
+    isActive: formData.get("isActive") ?? "true",
+    redirectTo: formData.get("redirectTo") ?? "/settings"
+  });
+
+  if (!parsed.success) {
+    redirect("/settings?error=resource_validation");
+  }
+
+  const payload = {
+    businessId,
+    name: parsed.data.name,
+    type: parsed.data.type,
+    capacity: parsed.data.capacity ?? null,
+    isActive: parsed.data.isActive === "true"
+  };
+
+  if (parsed.data.id) {
+    await prisma.bookableResource.updateMany({
+      where: { id: parsed.data.id, businessId },
+      data: payload
+    });
+  } else {
+    await prisma.bookableResource.create({
+      data: payload
+    });
+  }
+
+  await createAuditLog({
+    businessId,
+    actorUserId: session.user.id,
+    actorRole: session.user.role,
+    category: AuditCategory.BUSINESS,
+    action: parsed.data.id ? "resource_updated" : "resource_created",
+    message: "Bookable resources updated."
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?saved=resources");
+}
+
+export async function toggleBookableResourceStatusAction(formData: FormData) {
+  const session = await requireBusinessWriteAccess({
+    roles: [UserRole.BUSINESS_ADMIN],
+    feature: "settings"
+  });
+  const businessId = session.user.businessId;
+  const parsed = managementItemToggleSchema.safeParse({
+    id: formData.get("id"),
+    nextState: formData.get("nextState"),
+    redirectTo: formData.get("redirectTo") ?? "/settings"
+  });
+
+  if (!parsed.success) {
+    redirect("/settings?error=resource_toggle");
+  }
+
+  await prisma.bookableResource.updateMany({
+    where: { id: parsed.data.id, businessId },
+    data: { isActive: parsed.data.nextState === "true" }
+  });
+
+  revalidatePath("/settings");
+  redirect("/settings?saved=resources");
 }

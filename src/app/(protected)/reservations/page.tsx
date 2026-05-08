@@ -261,6 +261,18 @@ export default async function ReservationsPage({
                               <div className="mt-1">{String((request.extractedData as Record<string, unknown>).serviceType ?? "-")}</div>
                             </div>
                           ) : null}
+                          {request.extractedData && typeof request.extractedData === "object" && "staffName" in request.extractedData ? (
+                            <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-sage">
+                              <div className="font-semibold text-ink">Ekip / Uzman</div>
+                              <div className="mt-1">{String((request.extractedData as Record<string, unknown>).staffName ?? "-")}</div>
+                            </div>
+                          ) : null}
+                          {request.extractedData && typeof request.extractedData === "object" && "resourceName" in request.extractedData ? (
+                            <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-sage">
+                              <div className="font-semibold text-ink">{industry.primaryResourceLabel}</div>
+                              <div className="mt-1">{String((request.extractedData as Record<string, unknown>).resourceName ?? "-")}</div>
+                            </div>
+                          ) : null}
                           {request.extractedData && typeof request.extractedData === "object" && "endDate" in request.extractedData ? (
                             <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-sage">
                               <div className="font-semibold text-ink">Bitiş Tarihi</div>

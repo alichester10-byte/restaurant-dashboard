@@ -19,6 +19,18 @@ export default async function PublicReservationPage({
     include: {
       settings: {
         take: 1
+      },
+      services: {
+        where: { isActive: true },
+        select: { id: true, name: true }
+      },
+      staffMembers: {
+        where: { isActive: true },
+        select: { id: true, name: true }
+      },
+      bookableResources: {
+        where: { isActive: true },
+        select: { id: true, name: true, type: true }
       }
     }
   });
@@ -47,7 +59,15 @@ export default async function PublicReservationPage({
             </p>
           </section>
         ) : null}
-        <PublicReservationRequestForm businessSlug={business.slug} businessName={business.name} industry={industry} embed={embed} />
+        <PublicReservationRequestForm
+          businessSlug={business.slug}
+          businessName={business.name}
+          industry={industry}
+          services={business.services}
+          staffMembers={business.staffMembers}
+          resources={business.bookableResources}
+          embed={embed}
+        />
       </div>
       {!embed ? (
         <RestaurantChatWidget

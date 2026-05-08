@@ -556,7 +556,7 @@ export async function getReportsPageData(businessId: string) {
 }
 
 export async function getSettingsData(businessId: string) {
-  const [settings, business] = await Promise.all([
+  const [settings, business, services, staffMembers, bookableResources] = await Promise.all([
     prisma.restaurantSettings.findFirstOrThrow({
       where: {
         businessId
@@ -566,12 +566,33 @@ export async function getSettingsData(businessId: string) {
       where: {
         id: businessId
       }
+    }),
+    prisma.service.findMany({
+      where: {
+        businessId
+      },
+      orderBy: [{ isActive: "desc" }, { name: "asc" }]
+    }),
+    prisma.staffMember.findMany({
+      where: {
+        businessId
+      },
+      orderBy: [{ isActive: "desc" }, { name: "asc" }]
+    }),
+    prisma.bookableResource.findMany({
+      where: {
+        businessId
+      },
+      orderBy: [{ isActive: "desc" }, { name: "asc" }]
     })
   ]);
 
   return {
     settings,
-    business
+    business,
+    services,
+    staffMembers,
+    bookableResources
   };
 }
 
