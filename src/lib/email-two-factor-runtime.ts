@@ -1,10 +1,11 @@
-import { Prisma, UserRole } from "@prisma/client";
+import { BusinessType, Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 type BusinessSnapshot = {
   id: string;
   name: string;
   slug: string;
+  businessType: BusinessType;
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;

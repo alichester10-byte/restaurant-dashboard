@@ -16,6 +16,7 @@ import { requireBusinessUser } from "@/lib/auth";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { reservationRequestStatusLabels, reservationSourceLabels } from "@/lib/constants";
 import { getReservationsPageData } from "@/lib/data";
+import { getIndustryConfig } from "@/lib/industry-config";
 import { formatDateTime, formatPhone } from "@/lib/utils";
 
 const noShowLockedStatuses = new Set<ReservationStatus>([
@@ -50,6 +51,7 @@ export default async function ReservationsPage({
   const session = await requireBusinessUser();
   const data = await getReservationsPageData(session.user.businessId, searchParams.reservationId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
+  const industry = getIndustryConfig(session.user.business.businessType);
   const feedback =
     searchParams.saved === "created"
       ? {
@@ -92,8 +94,8 @@ export default async function ReservationsPage({
   return (
     <div className="space-y-6">
       <AppHeader
-        title="Rezervasyon Yönetimi"
-        subtitle="Rezervasyonları oluşturun, güncelleyin, onaylayın ve servis akışını kontrol altında tutun."
+        title={`${industry.reservationLabel} Yönetimi`}
+        subtitle={`${industry.reservationLabelPlural} oluşturun, güncelleyin, onaylayın ve operasyon akışını kontrol altında tutun.`}
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -120,8 +122,8 @@ export default async function ReservationsPage({
         <Panel>
           <div className="flex items-center justify-between">
             <div>
-              <div className="section-title">Onaylı Rezervasyonlar</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Ana rezervasyon listesi</h2>
+              <div className="section-title">Onaylı {industry.reservationLabelPlural}</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Ana {industry.reservationLabel.toLocaleLowerCase("tr-TR")} listesi</h2>
             </div>
             <ReservationPrimaryCta locked={entitlement.isDemo} />
           </div>
@@ -136,7 +138,7 @@ export default async function ReservationsPage({
                       <StatusBadge value={reservation.status} />
                     </div>
                     <div className="mt-2 text-sm text-sage">
-                      {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi • {reservation.assignedTable?.number ?? "Masa bekliyor"}
+                      {formatDateTime(reservation.startAt)} • {reservation.guestCount} {industry.guestCountLabel.toLocaleLowerCase("tr-TR")} • {reservation.assignedTable?.number ?? `${industry.primaryResourceLabel} bekliyor`}
                     </div>
                     <div className="mt-1 text-sm text-sage">{formatPhone(reservation.guestPhone)}</div>
                   </div>
@@ -208,10 +210,10 @@ export default async function ReservationsPage({
           <div className="mt-8 border-t border-[color:var(--border)] pt-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="section-title">Kanal Talepleri</div>
-                <h2 className="mt-2 text-xl font-semibold text-ink">Dış kanallardan gelen rezervasyon istekleri</h2>
+              <div className="section-title">{industry.channelRequestsLabel}</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Dış kanallardan gelen {industry.requestLabel.toLocaleLowerCase("tr-TR")} istekleri</h2>
                 <p className="mt-2 text-sm leading-6 text-sage">
-                  WhatsApp, Instagram, Google/Web, Website Widget ve AI Assistant kaynaklı talepler burada toplanır. İnsan onayı olmadan rezervasyon kesinleşmez.
+                  WhatsApp, Instagram, Google/Web, Website Widget ve AI Assistant kaynaklı talepler burada toplanır. İnsan onayı olmadan {industry.reservationLabel.toLocaleLowerCase("tr-TR")} kesinleşmez.
                 </p>
               </div>
               <div className="badge bg-[color:var(--bg-strong)] text-ink">{data.channelRequests.filter((request) => request.status === ReservationRequestStatus.PENDING).length} bekleyen talep</div>
@@ -250,9 +252,21 @@ export default async function ReservationsPage({
                             <div className="mt-1">{request.requestedTime ?? "Belirlenemedi"}</div>
                           </div>
                           <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-sage">
-                            <div className="font-semibold text-ink">Kişi sayısı</div>
+                            <div className="font-semibold text-ink">{industry.guestCountLabel}</div>
                             <div className="mt-1">{request.guestCount ?? "-"}</div>
                           </div>
+                          {request.extractedData && typeof request.extractedData === "object" && "serviceType" in request.extractedData ? (
+                            <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-sage">
+                              <div className="font-semibold text-ink">{industry.serviceTypeLabel}</div>
+                              <div className="mt-1">{String((request.extractedData as Record<string, unknown>).serviceType ?? "-")}</div>
+                            </div>
+                          ) : null}
+                          {request.extractedData && typeof request.extractedData === "object" && "endDate" in request.extractedData ? (
+                            <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-sage">
+                              <div className="font-semibold text-ink">Bitiş Tarihi</div>
+                              <div className="mt-1">{String((request.extractedData as Record<string, unknown>).endDate ?? "-")}</div>
+                            </div>
+                          ) : null}
                           <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-sage">
                             <div className="font-semibold text-ink">İsim / Telefon</div>
                             <div className="mt-1">{request.guestName || "İsim yok"} • {request.guestPhone ?? "Telefon yok"}</div>
@@ -406,6 +420,7 @@ export default async function ReservationsPage({
             <ReservationForm
               key={data.selectedReservation?.id ?? (searchParams.compose ? "compose" : "new")}
               locked={entitlement.isDemo}
+              businessType={session.user.business.businessType}
               tables={data.tables}
               reservation={data.selectedReservation
                 ? {

@@ -18,6 +18,7 @@ function getCreateBusinessErrorRedirect(pathname: string, code: string) {
 export async function onboardingCreateBusinessAction(formData: FormData) {
   const parsed = businessOnboardingSchema.safeParse({
     businessName: sanitizeText(formData.get("businessName")),
+    businessType: formData.get("businessType"),
     ownerName: sanitizeText(formData.get("ownerName")),
     ownerEmail: sanitizeText(formData.get("ownerEmail")).toLowerCase(),
     ownerPhone: sanitizeText(formData.get("ownerPhone")),
@@ -58,6 +59,7 @@ export async function superAdminCreateBusinessAction(formData: FormData) {
 
   const parsed = businessAdminCreateSchema.safeParse({
     businessName: sanitizeText(formData.get("businessName")),
+    businessType: formData.get("businessType"),
     ownerName: sanitizeText(formData.get("ownerName")),
     ownerEmail: sanitizeText(formData.get("ownerEmail")).toLowerCase(),
     ownerPhone: sanitizeText(formData.get("ownerPhone")),

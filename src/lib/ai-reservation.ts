@@ -1,16 +1,27 @@
-import { ReservationSource } from "@prisma/client";
+import { BusinessType, ReservationSource } from "@prisma/client";
 import { extractReservationSignal } from "@/lib/integrations";
 
 export type ReservationExtractionResult = {
   guestName?: string;
   guestPhone?: string;
+  customerEmail?: string;
   requestedDate?: string;
   requestedTime?: string;
+  endDate?: string;
   guestCount?: number;
+  serviceType?: string;
+  resourcePreference?: string;
+  durationMinutes?: number;
   notes?: string;
   source: ReservationSource;
   confidenceScore: number;
   provider: "rule-based" | "openai";
+  businessType?: BusinessType | string;
+};
+
+type ExtractionOptions = {
+  businessType?: BusinessType | string;
+  serviceTypes?: string[];
 };
 
 function normalizeDate(input?: string) {
@@ -54,28 +65,41 @@ function normalizeGuestCount(input?: number | string) {
   return Math.round(value);
 }
 
-function normalizeResult(input: Partial<ReservationExtractionResult>, fallbackMessage: string, source: ReservationSource): ReservationExtractionResult {
+function normalizeResult(
+  input: Partial<ReservationExtractionResult>,
+  fallbackMessage: string,
+  source: ReservationSource,
+  options?: ExtractionOptions
+): ReservationExtractionResult {
   const fallback = extractReservationSignal(fallbackMessage);
   const guestName = input.guestName?.trim() || fallback.guestName?.trim() || undefined;
   const guestPhone = input.guestPhone?.trim() || fallback.guestPhone;
+  const emailMatch = fallbackMessage.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   const requestedDate = normalizeDate(input.requestedDate) || normalizeDate(fallback.requestedDate);
   const requestedTime = normalizeTime(input.requestedTime) || normalizeTime(fallback.requestedTime);
   const guestCount = normalizeGuestCount(input.guestCount) || normalizeGuestCount(fallback.guestCount);
+  const detectedServiceType = options?.serviceTypes?.find((service) => fallbackMessage.toLocaleLowerCase("tr-TR").includes(service.toLocaleLowerCase("tr-TR")));
 
   return {
     guestName,
     guestPhone,
+    customerEmail: input.customerEmail?.trim() || emailMatch?.[0],
     requestedDate,
     requestedTime,
+    endDate: normalizeDate(input.endDate),
     guestCount,
+    serviceType: input.serviceType?.trim() || detectedServiceType,
+    resourcePreference: input.resourcePreference?.trim() || undefined,
+    durationMinutes: typeof input.durationMinutes === "number" ? input.durationMinutes : undefined,
     notes: input.notes?.trim() || fallbackMessage.trim(),
     source,
     confidenceScore: Math.min(0.99, Math.max(0.2, input.confidenceScore ?? fallback.confidenceScore)),
-    provider: input.provider ?? "rule-based"
+    provider: input.provider ?? "rule-based",
+    businessType: input.businessType ?? options?.businessType
   };
 }
 
-async function extractWithOpenAi(message: string, source: ReservationSource) {
+async function extractWithOpenAi(message: string, source: ReservationSource, options?: ExtractionOptions) {
   const apiKey = process.env.OPENAI_API_KEY ?? process.env.AI_PROVIDER_API_KEY;
   if (!apiKey) {
     return null;
@@ -96,7 +120,7 @@ async function extractWithOpenAi(message: string, source: ReservationSource) {
         {
           role: "system",
           content:
-            "You extract restaurant reservation intent from Turkish messages. Return strict JSON with guestName, guestPhone, requestedDate, requestedTime, guestCount, notes, confidenceScore. Use ISO date YYYY-MM-DD and HH:MM 24h time when possible. Leave unknown fields null."
+            `You extract booking intent from Turkish messages for a ${options?.businessType ?? "service business"}. Return strict JSON with guestName, guestPhone, customerEmail, requestedDate, requestedTime, endDate, guestCount, serviceType, resourcePreference, durationMinutes, notes, confidenceScore. Use ISO date YYYY-MM-DD and HH:MM 24h time when possible. Leave unknown fields null.`
         },
         {
           role: "user",
@@ -136,7 +160,8 @@ async function extractWithOpenAi(message: string, source: ReservationSource) {
         provider: "openai"
       },
       message,
-      source
+      source,
+      options
     );
   } catch (error) {
     console.error("[ai:reservation_extract_parse_failed]", {
@@ -146,8 +171,8 @@ async function extractWithOpenAi(message: string, source: ReservationSource) {
   }
 }
 
-export async function extractReservationRequest(message: string, source: ReservationSource): Promise<ReservationExtractionResult> {
-  const openAiResult = await extractWithOpenAi(message, source).catch((error) => {
+export async function extractReservationRequest(message: string, source: ReservationSource, options?: ExtractionOptions): Promise<ReservationExtractionResult> {
+  const openAiResult = await extractWithOpenAi(message, source, options).catch((error) => {
     console.error("[ai:reservation_extract_error]", {
       error: error instanceof Error ? error.message : "unknown_error"
     });
@@ -158,7 +183,7 @@ export async function extractReservationRequest(message: string, source: Reserva
     return openAiResult;
   }
 
-  return normalizeResult({ provider: "rule-based" }, message, source);
+  return normalizeResult({ provider: "rule-based" }, message, source, options);
 }
 
 export async function parseReservationMessage(message: string) {

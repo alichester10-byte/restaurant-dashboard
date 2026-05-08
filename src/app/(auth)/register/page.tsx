@@ -6,10 +6,10 @@ export default function RegisterPage() {
       <div className="glass-panel w-full max-w-4xl rounded-[32px] p-8 md:p-10">
         <div className="text-xs uppercase tracking-[0.34em] text-sage">Limon Masa</div>
         <h1 className="mt-5 font-[family-name:var(--font-display)] text-5xl leading-tight text-ink">
-          İşletmeniz için birkaç dakikada üretim hazır hesap açın.
+          İşletmeniz için birkaç dakikada canlı kullanıma hazır hesap açın.
         </h1>
         <p className="mt-5 max-w-3xl text-base leading-8 text-sage">
-          İlk yönetici hesabı, varsayılan operasyon ayarları ve onboarding e-postaları aynı akış içinde otomatik hazırlanır.
+          Restoran, salon, klinik, otel ve diğer hizmet işletmeleri için ilk yönetici hesabı, temel operasyon ayarları ve rezervasyon akışı aynı onboarding içinde hazırlanır.
         </p>
         <RegisterForm />
       </div>

@@ -12,18 +12,20 @@ import { requireBusinessUser } from "@/lib/auth";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { callOutcomeLabels, reservationSourceLabels } from "@/lib/constants";
 import { getDashboardDataForBusiness } from "@/lib/data";
+import { getIndustryConfig } from "@/lib/industry-config";
 import { formatDateTime, formatPhone, formatTime } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const session = await requireBusinessUser();
   const data = await getDashboardDataForBusiness(session.user.businessId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
+  const industry = getIndustryConfig(session.user.business.businessType);
 
   return (
     <div className="space-y-6">
       <AppHeader
-        title="Operasyon Paneli"
-        subtitle="Günlük rezervasyon, masa kullanımı ve çağrı performansını tek ekranda izleyin."
+        title={industry.dashboardTitle}
+        subtitle={industry.dashboardSubtitle}
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -40,9 +42,9 @@ export default async function DashboardPage() {
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Günlük Rezervasyon" value={data.stats.dailyReservations} trend={data.stats.trends.dailyReservations} tone="accent" />
-        <StatCard label="Toplam Misafir" value={data.stats.totalGuests} trend={data.stats.trends.totalGuests} />
-        <StatCard label="Doluluk Oranı" value={data.stats.occupancyRate} />
+        <StatCard label={`Günlük ${industry.reservationLabel}`} value={data.stats.dailyReservations} trend={data.stats.trends.dailyReservations} tone="accent" />
+        <StatCard label={`Toplam ${industry.customerLabel}`} value={data.stats.totalGuests} trend={data.stats.trends.totalGuests} />
+        <StatCard label={industry.capacityLabel} value={data.stats.occupancyRate} />
         <StatCard label="Yanıtlanan Çağrı" value={data.stats.answeredCalls} trend={data.stats.trends.answeredCalls} />
         <StatCard label="Cevapsız Çağrı" value={data.stats.missedCalls} trend={data.stats.trends.missedCalls} />
       </section>
@@ -51,8 +53,8 @@ export default async function DashboardPage() {
         <Panel>
           <div className="flex items-center justify-between">
             <div>
-              <div className="section-title">Rezervasyon Trendi</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Son 7 gün rezervasyon akışı</h2>
+              <div className="section-title">{industry.reservationLabel} Trendi</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Son 7 gün {industry.reservationLabel.toLocaleLowerCase("tr-TR")} akışı</h2>
             </div>
             <div className="rounded-full bg-[color:var(--accent-soft)] px-4 py-2 text-sm font-semibold text-moss">
               Haftalık görünüm
@@ -64,9 +66,9 @@ export default async function DashboardPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">Doluluk Özeti</div>
+          <div className="section-title">{industry.capacityLabel} Özeti</div>
           <div className="mt-4">
-            <RingChart value={data.stats.occupancyRate} label={`${data.stats.totalGuests} misafir / ${data.settings.seatingCapacity} kapasite`} />
+            <RingChart value={data.stats.occupancyRate} label={`${data.stats.totalGuests} ${industry.customerLabel.toLocaleLowerCase("tr-TR")} / ${data.settings.seatingCapacity} kapasite`} />
           </div>
           <div className="mt-6 grid gap-3">
             {data.charts.reservationsBySource.map((item) => (
@@ -83,8 +85,8 @@ export default async function DashboardPage() {
         <Panel>
           <div className="flex items-center justify-between">
             <div>
-              <div className="section-title">Yaklaşan Rezervasyonlar</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Onaylanmış ve yaklaşan servis akışı</h2>
+              <div className="section-title">Yaklaşan {industry.reservationLabelPlural}</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Onaylanmış ve yaklaşan operasyon akışı</h2>
             </div>
           </div>
           <div className="mt-5 space-y-3">
@@ -94,13 +96,13 @@ export default async function DashboardPage() {
                   <div>
                     <div className="font-semibold text-ink">{reservation.guestName}</div>
                     <div className="mt-1 text-sm text-sage">
-                      {formatDateTime(reservation.startAt)} • {reservation.guestCount} kişi
+                      {formatDateTime(reservation.startAt)} • {reservation.guestCount} {industry.guestCountLabel.toLocaleLowerCase("tr-TR")}
                     </div>
                   </div>
                   <StatusBadge value={reservation.status} />
                 </div>
                 <div className="mt-4 flex items-center justify-between text-sm text-sage">
-                  <span>{reservation.assignedTable ? reservation.assignedTable.number : "Masa ataması bekliyor"}</span>
+                  <span>{reservation.assignedTable ? reservation.assignedTable.number : `${industry.primaryResourceLabel} ataması bekliyor`}</span>
                   <span>{reservation.guestPhone}</span>
                 </div>
               </div>
@@ -113,10 +115,10 @@ export default async function DashboardPage() {
         <Panel>
           <div className="flex items-center justify-between">
             <div>
-              <div className="section-title">Masa Planı</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Canlı salon durumu</h2>
+              <div className="section-title">{industry.primaryResourceLabelPlural}</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Canlı kaynak durumu</h2>
             </div>
-            <div className="text-sm text-sage">{data.tables.length} masa</div>
+            <div className="text-sm text-sage">{data.tables.length} {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}</div>
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {data.tables.map((table) => (
@@ -130,7 +132,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="mt-6 flex items-end justify-between">
                   <div className="font-[family-name:var(--font-display)] text-3xl text-ink">{table.seatCapacity}</div>
-                  <div className="text-sm text-sage">kişilik</div>
+                  <div className="text-sm text-sage">{industry.guestCountLabel.toLocaleLowerCase("tr-TR")}</div>
                 </div>
               </div>
             ))}

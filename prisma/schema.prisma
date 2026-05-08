@@ -14,6 +14,25 @@ enum UserRole {
   STAFF
 }
 
+enum BusinessType {
+  RESTAURANT
+  CAFE
+  BEAUTY_SALON
+  BARBER
+  CLINIC
+  DENTIST
+  FITNESS
+  HOTEL
+  CAR_SERVICE
+  CAR_WASH
+  EVENT_VENUE
+  EDUCATION
+  CONSULTING
+  SPA
+  WELLNESS
+  OTHER
+}
+
 enum BusinessStatus {
   ACTIVE
   SUSPENDED
@@ -258,6 +277,7 @@ model Business {
   id                    String               @id @default(cuid())
   name                  String
   slug                  String               @unique
+  businessType          BusinessType         @default(RESTAURANT)
   ownerName             String
   ownerEmail            String
   ownerPhone            String
@@ -301,6 +321,7 @@ model Business {
   @@index([status])
   @@index([subscriptionStatus])
   @@index([ownerEmail])
+  @@index([businessType])
 }
 
 model PlatformConfig {

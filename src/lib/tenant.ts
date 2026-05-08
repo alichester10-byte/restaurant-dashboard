@@ -1,11 +1,12 @@
 import bcrypt from "bcryptjs";
-import { AuditCategory, BusinessStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, UserRole } from "@prisma/client";
+import { AuditCategory, BusinessStatus, BusinessType, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, UserRole } from "@prisma/client";
 import { safeCreateAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueBusinessSlug } from "@/lib/slug";
 
 type CreateBusinessInput = {
   businessName: string;
+  businessType: BusinessType;
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;
@@ -53,6 +54,7 @@ export class CreateBusinessError extends Error {
 
 export async function createBusinessWithAdmin(input: CreateBusinessInput) {
   const businessName = input.businessName.trim();
+  const businessType = input.businessType;
   const ownerName = input.ownerName.trim();
   const ownerEmail = input.ownerEmail.trim().toLowerCase();
   const ownerPhone = input.ownerPhone.trim();
@@ -84,6 +86,7 @@ export async function createBusinessWithAdmin(input: CreateBusinessInput) {
       data: {
         name: businessName,
         slug: businessSlug,
+        businessType,
         ownerName,
         ownerEmail,
         ownerPhone,

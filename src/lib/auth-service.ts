@@ -560,6 +560,7 @@ export async function registerBusinessAccount(formData: FormData) {
     await import("@/lib/validation")
   ).businessOnboardingSchema.safeParse({
     businessName: sanitizeText(formData.get("businessName")),
+    businessType: formData.get("businessType"),
     ownerName: sanitizeText(formData.get("ownerName")),
     ownerEmail: email,
     ownerPhone: sanitizeText(formData.get("ownerPhone")),

@@ -1,9 +1,11 @@
 "use client";
 
+import { BusinessType } from "@prisma/client";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FormMessage } from "@/components/ui/form-message";
+import { industryOptions } from "@/lib/industry-config";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -85,21 +87,33 @@ export function RegisterForm() {
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-ink">Restoran Tipi</span>
-          <input className="field" name="restaurantType" placeholder="Modern Türk Mutfağı" required disabled={isPending} />
+          <span className="text-sm font-semibold text-ink">İşletme Türü</span>
+          <select className="field" name="businessType" defaultValue={BusinessType.RESTAURANT} required disabled={isPending}>
+            {industryOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-ink">Tahmini Masa Sayısı</span>
-          <input className="field" type="number" name="estimatedTableCount" defaultValue={12} required disabled={isPending} />
+          <span className="text-sm font-semibold text-ink">Hizmet Odağı</span>
+          <input className="field" name="restaurantType" placeholder="Örn: Modern Türk mutfağı, saç kesimi, diş kontrolü" required disabled={isPending} />
         </label>
       </div>
-      <label className="space-y-2">
-        <span className="text-sm font-semibold text-ink">Notlar</span>
-        <textarea className="field min-h-24" name="notes" placeholder="Servis tipi, açılış hedefi, özel operasyon notları..." disabled={isPending} />
-      </label>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-ink">Tahmini Kapasite / Kaynak Sayısı</span>
+          <input className="field" type="number" name="estimatedTableCount" defaultValue={12} required disabled={isPending} />
+        </label>
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-ink">Notlar</span>
+          <textarea className="field min-h-24" name="notes" placeholder="Sunulan hizmetler, çalışma düzeni, özel operasyon notları..." disabled={isPending} />
+        </label>
+      </div>
       <label className="flex items-center gap-3 rounded-2xl border border-[color:var(--border)] bg-white/80 px-4 py-3 text-sm text-ink">
         <input type="checkbox" name="createDefaultTables" value="true" defaultChecked disabled={isPending} />
-        Varsayılan masa planını oluştur
+        Varsayılan kaynak planını oluştur
       </label>
       <button className="btn-primary w-full gap-2 disabled:cursor-not-allowed disabled:opacity-70" type="submit" disabled={isPending}>
         {isPending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : null}

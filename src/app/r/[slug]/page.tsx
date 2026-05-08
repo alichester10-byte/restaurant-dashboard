@@ -2,6 +2,7 @@ import { SubscriptionPlan } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { RestaurantChatWidget } from "@/components/chat/restaurant-chat-widget";
 import { PublicReservationRequestForm } from "@/components/integrations/public-reservation-request-form";
+import { getIndustryConfig } from "@/lib/industry-config";
 import { prisma } from "@/lib/prisma";
 
 export default async function PublicReservationPage({
@@ -28,10 +29,11 @@ export default async function PublicReservationPage({
 
   const embed = searchParams?.embed === "1";
   const settings = business.settings[0];
+  const industry = getIndustryConfig(business.businessType);
   const assistantEnabled = business.subscriptionPlan !== SubscriptionPlan.STARTER;
   const welcomeMessage =
-    `${settings?.restaurantName ?? business.name} için rezervasyon talebinizi memnuniyetle alırım. ` +
-    "İsim, telefon, tarih, saat ve kişi sayısını paylaşırsanız talebinizi ekip onayına hazırlayabilirim. Nihai uygunluğu restoran ekibi onaylar.";
+    `${settings?.restaurantName ?? business.name} için ${industry.requestLabel.toLocaleLowerCase("tr-TR")} memnuniyetle alırım. ` +
+    "Gerekli bilgileri paylaşırsanız talebinizi ekip onayına hazırlayabilirim. Nihai uygunluğu işletme ekibi onaylar.";
 
   return (
     <main className={embed ? "min-h-screen bg-transparent p-4" : "min-h-screen bg-[linear-gradient(180deg,#f6f3eb_0%,#ebe4d8_100%)] px-4 py-10"}>
@@ -39,13 +41,13 @@ export default async function PublicReservationPage({
         {!embed ? (
           <section className="glass-panel rounded-[36px] p-8">
             <div className="text-xs font-semibold uppercase tracking-[0.3em] text-moss">Limon Masa</div>
-            <h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl text-ink">Online rezervasyon talep akışı</h1>
+            <h1 className="mt-4 font-[family-name:var(--font-display)] text-5xl text-ink">Online {industry.requestLabel.toLocaleLowerCase("tr-TR")} akışı</h1>
             <p className="mt-4 max-w-xl text-base leading-8 text-sage">
-              Web, Google ve widget üzerinden gelen talepler doğrudan işletme ekibinin onay akışına düşer. Müşteri rezervasyonu kesinleştirmez; ekip uygunluğu kontrol edip dönüş yapar.
+              Web, Google ve widget üzerinden gelen talepler doğrudan işletme ekibinin onay akışına düşer. Müşteri kaydı kesinleştirmez; ekip uygunluğu kontrol edip dönüş yapar.
             </p>
           </section>
         ) : null}
-        <PublicReservationRequestForm businessSlug={business.slug} businessName={business.name} embed={embed} />
+        <PublicReservationRequestForm businessSlug={business.slug} businessName={business.name} industry={industry} embed={embed} />
       </div>
       {!embed ? (
         <RestaurantChatWidget

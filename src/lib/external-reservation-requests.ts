@@ -13,6 +13,20 @@ export async function createPendingReservationRequestFromExternalMessage(input: 
   sourceMessageId?: string | null;
   guestPhoneHint?: string | null;
   notes?: string | null;
+  structuredData?: {
+    guestName?: string | null;
+    guestPhone?: string | null;
+    customerEmail?: string | null;
+    requestedDate?: string | null;
+    requestedTime?: string | null;
+    endDate?: string | null;
+    guestCount?: number | null;
+    serviceType?: string | null;
+    resourcePreference?: string | null;
+    durationMinutes?: number | null;
+    notes?: string | null;
+    businessType?: string | null;
+  };
 }) {
   if (input.sourceMessageId) {
     const existing = await prisma.reservationRequest.findFirst({
@@ -30,7 +44,19 @@ export async function createPendingReservationRequestFromExternalMessage(input: 
     }
   }
 
-  const extracted = await extractReservationRequest(input.rawMessage, input.source);
+  const extracted = await extractReservationRequest(input.rawMessage, input.source, {
+    businessType: input.structuredData?.businessType ?? undefined
+  });
+  const merged = {
+    ...extracted,
+    ...input.structuredData,
+    guestName: input.structuredData?.guestName || extracted.guestName,
+    guestPhone: input.structuredData?.guestPhone || extracted.guestPhone || input.guestPhoneHint || null,
+    requestedDate: input.structuredData?.requestedDate || extracted.requestedDate,
+    requestedTime: input.structuredData?.requestedTime || extracted.requestedTime,
+    guestCount: input.structuredData?.guestCount ?? extracted.guestCount,
+    notes: input.structuredData?.notes || input.notes || extracted.notes || null
+  };
   const request = await prisma.reservationRequest.create({
     data: {
       businessId: input.businessId,
@@ -38,13 +64,13 @@ export async function createPendingReservationRequestFromExternalMessage(input: 
       status: ReservationRequestStatus.PENDING,
       sourceConversationId: input.sourceConversationId ?? null,
       sourceMessageId: input.sourceMessageId ?? null,
-      guestName: extracted.guestName || "Yeni talep",
-      guestPhone: extracted.guestPhone ?? input.guestPhoneHint ?? null,
-      requestedDate: extracted.requestedDate,
-      requestedTime: extracted.requestedTime,
-      guestCount: extracted.guestCount,
-      notes: input.notes ?? extracted.notes ?? null,
-      extractedData: extracted,
+      guestName: merged.guestName || "Yeni talep",
+      guestPhone: merged.guestPhone ?? null,
+      requestedDate: merged.requestedDate ?? null,
+      requestedTime: merged.requestedTime ?? null,
+      guestCount: merged.guestCount ?? null,
+      notes: merged.notes ?? null,
+      extractedData: merged,
       confidenceScore: extracted.confidenceScore,
       rawMessage: input.rawMessage
     }

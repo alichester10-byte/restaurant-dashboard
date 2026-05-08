@@ -11,6 +11,7 @@ import { getEmailTwoFactorSettingsState } from "@/lib/auth-service";
 import { getBusinessEntitlement } from "@/lib/billing";
 import { reminderChannelLabels } from "@/lib/constants";
 import { getSettingsData } from "@/lib/data";
+import { getIndustryConfig, getIndustryOptionLabel, industryOptions } from "@/lib/industry-config";
 
 const securityMessages: Record<string, { tone: "success" | "error"; text: string }> = {
   email_2fa_enabled: { tone: "success", text: "E-posta ile iki adımlı doğrulama etkinleştirildi." },
@@ -26,7 +27,8 @@ export default async function SettingsPage({
   searchParams?: { security?: string };
 }) {
   const session = await requireBusinessUser();
-  const settings = await getSettingsData(session.user.businessId);
+  const { settings, business } = await getSettingsData(session.user.businessId);
+  const industry = getIndustryConfig(business.businessType);
   const emailTwoFactorState = await getEmailTwoFactorSettingsState();
   const openingHours = settings.openingHours as Record<string, string>;
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
@@ -36,7 +38,7 @@ export default async function SettingsPage({
     <div className="space-y-6">
       <AppHeader
         title="Ayarlar"
-        subtitle="Restoran profilini, çalışma saatlerini ve rezervasyon kurallarını merkezi olarak yönetin."
+        subtitle={`${getIndustryOptionLabel(business.businessType)} profilini, çalışma saatlerini ve ${industry.requestLabel.toLocaleLowerCase("tr-TR")} kurallarını merkezi olarak yönetin.`}
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -54,13 +56,30 @@ export default async function SettingsPage({
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>
-          <div className="section-title">Restoran Profili</div>
+          <div className="section-title">İşletme Profili</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">Operasyon ayarları</h2>
           <form action={updateSettingsAction} className="mt-6 space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-ink">Restoran Adı</span>
+                <span className="text-sm font-semibold text-ink">İşletme Türü</span>
+                <select className="field" name="businessType" defaultValue={business.businessType} disabled={entitlement.isDemo}>
+                  {industryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-semibold text-ink">Görünen İşletme Adı</span>
                 <input className="field" name="restaurantName" defaultValue={settings.restaurantName} required disabled={entitlement.isDemo} />
+              </label>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-sm font-semibold text-ink">Hizmet Odağı</span>
+                <input className="field" name="serviceFocus" defaultValue={business.restaurantType ?? ""} required disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-ink">Telefon</span>
@@ -81,19 +100,19 @@ export default async function SettingsPage({
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-ink">Toplam Kapasite</span>
+                <span className="text-sm font-semibold text-ink">{industry.capacityLabel}</span>
                 <input className="field" type="number" name="seatingCapacity" defaultValue={settings.seatingCapacity} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-ink">Ortalama Servis Süresi</span>
+                <span className="text-sm font-semibold text-ink">Ortalama Hizmet Süresi</span>
                 <input className="field" type="number" name="averageDiningDurationMin" defaultValue={settings.averageDiningDurationMin} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-ink">Maks. Parti</span>
+                <span className="text-sm font-semibold text-ink">Maks. {industry.guestCountLabel}</span>
                 <input className="field" type="number" name="maxPartySize" defaultValue={settings.maxPartySize} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-ink">Rezervasyon Ufku</span>
+                <span className="text-sm font-semibold text-ink">{industry.requestLabel} Ufku</span>
                 <input className="field" type="number" name="reservationLeadTimeDays" defaultValue={settings.reservationLeadTimeDays} disabled={entitlement.isDemo} />
               </label>
             </div>
@@ -120,7 +139,7 @@ export default async function SettingsPage({
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-ink">Walk-in kabulü</span>
+                <span className="text-sm font-semibold text-ink">Doğrudan başvuru kabulü</span>
                 <select className="field" name="allowWalkIns" defaultValue={String(settings.allowWalkIns)} disabled={entitlement.isDemo}>
                   <option value="true">Açık</option>
                   <option value="false">Kapalı</option>

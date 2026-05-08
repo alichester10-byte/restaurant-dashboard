@@ -1,4 +1,4 @@
-import { BusinessStatus, CallOutcome, ReminderChannel, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus } from "@prisma/client";
+import { BusinessStatus, BusinessType, CallOutcome, ReminderChannel, ReservationRequestStatus, ReservationSource, ReservationStatus, SubscriptionPlan, SubscriptionStatus, TableArea, TableShape, TableStatus } from "@prisma/client";
 import { z } from "zod";
 
 const phoneSchema = z
@@ -28,6 +28,7 @@ export const resetPasswordSchema = z.object({
 
 export const businessOnboardingSchema = z.object({
   businessName: z.string().min(2, "İşletme adı gerekli.").max(100, "İşletme adı çok uzun."),
+  businessType: z.nativeEnum(BusinessType),
   ownerName: z.string().min(2, "Sahip adı gerekli.").max(80, "Sahip adı çok uzun."),
   ownerEmail: z.string().email("Geçerli bir e-posta girin."),
   ownerPhone: phoneSchema,
@@ -35,8 +36,8 @@ export const businessOnboardingSchema = z.object({
   businessAddress: z.string().min(5, "İşletme adresi gerekli.").max(200, "Adres çok uzun."),
   city: z.string().min(2, "Şehir gerekli.").max(80, "Şehir adı çok uzun."),
   district: z.string().min(2, "İlçe gerekli.").max(80, "İlçe adı çok uzun."),
-  restaurantType: z.string().min(2, "Restoran tipi gerekli.").max(80, "Restoran tipi çok uzun."),
-  estimatedTableCount: z.coerce.number().int().min(1, "Masa sayısı en az 1 olmalı.").max(150, "Masa sayısı çok yüksek."),
+  restaurantType: z.string().min(2, "Hizmet odağı gerekli.").max(80, "Hizmet odağı çok uzun."),
+  estimatedTableCount: z.coerce.number().int().min(1, "Tahmini kapasite en az 1 olmalı.").max(150, "Tahmini kapasite çok yüksek."),
   notes: z.string().max(500).optional().or(z.literal("")),
   adminPassword: z.string().min(8, "Şifre en az 8 karakter olmalı.").max(100, "Şifre çok uzun."),
   createDefaultTables: z.enum(["true", "false"]).default("true"),
@@ -163,10 +164,12 @@ export const aiChatSchema = z.object({
 });
 
 export const settingsSchema = z.object({
+  businessType: z.nativeEnum(BusinessType),
   restaurantName: z.string().min(2).max(80),
   phone: z.string().min(10).max(30),
   email: z.string().email().optional().or(z.literal("")),
   address: z.string().max(200).optional().or(z.literal("")),
+  serviceFocus: z.string().min(2).max(80),
   seatingCapacity: z.coerce.number().int().min(1).max(500),
   averageDiningDurationMin: z.coerce.number().int().min(30).max(240),
   maxPartySize: z.coerce.number().int().min(1).max(40),

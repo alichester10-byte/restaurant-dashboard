@@ -2,20 +2,9 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { UserRole } from "@prisma/client";
+import { BusinessType, UserRole } from "@prisma/client";
 import { NavItemLink } from "@/components/layout/nav-item-link";
-
-const businessItems = [
-  { href: "/dashboard" as Route, label: "Panel" },
-  { href: "/reservations" as Route, label: "Rezervasyon" },
-  { href: "/tables" as Route, label: "Masalar" },
-  { href: "/customers" as Route, label: "Müşteriler" },
-  { href: "/integrations" as Route, label: "Kanallar" },
-  { href: "/security" as Route, label: "Güvenlik" },
-  { href: "/billing" as Route, label: "Faturalama" },
-  { href: "/reports" as Route, label: "Raporlar" },
-  { href: "/settings" as Route, label: "Ayarlar" }
-];
+import { getIndustrySidebarLabels } from "@/lib/industry-config";
 
 const superAdminItems = [
   { href: "/super-admin" as Route, label: "Genel Bakış" },
@@ -31,13 +20,27 @@ const superAdminItems = [
 
 export function MobileNav({
   role,
+  businessType,
   modeLabel,
   canWrite
 }: {
   role: UserRole;
+  businessType?: BusinessType | null;
   modeLabel: string;
   canWrite: boolean;
 }) {
+  const labels = getIndustrySidebarLabels(businessType);
+  const businessItems = [
+    { href: "/dashboard" as Route, label: "Panel" },
+    { href: "/reservations" as Route, label: labels.reservations },
+    { href: "/tables" as Route, label: labels.tables },
+    { href: "/customers" as Route, label: labels.customers },
+    { href: "/integrations" as Route, label: labels.integrations },
+    { href: "/security" as Route, label: "Güvenlik" },
+    { href: "/billing" as Route, label: "Faturalama" },
+    { href: "/reports" as Route, label: "Raporlar" },
+    { href: "/settings" as Route, label: "Ayarlar" }
+  ];
   const items = role === UserRole.SUPER_ADMIN ? superAdminItems : businessItems;
 
   return (

@@ -1,12 +1,14 @@
 import "server-only";
 
-import { AuditCategory, ChatMessageRole, ChatSessionStatus, ReservationRequestStatus, ReservationSource } from "@prisma/client";
+import { AuditCategory, BusinessType, ChatMessageRole, ChatSessionStatus, ReservationRequestStatus, ReservationSource } from "@prisma/client";
 import { extractReservationRequest } from "@/lib/ai-reservation";
 import { safeCreateAuditLog } from "@/lib/audit";
+import { getIndustryConfig, getIndustryFieldLabel, type IndustryFieldKey } from "@/lib/industry-config";
 import { prisma } from "@/lib/prisma";
 
 type RestaurantContext = {
   businessId: string;
+  businessType: BusinessType;
   restaurantName: string;
   address: string | null;
   phone: string | null;
@@ -18,6 +20,12 @@ type RestaurantContext = {
   autoCreateReservationRequests: boolean;
   welcomeMessage: string;
   tone: "friendly" | "professional";
+  requiredFields: IndustryFieldKey[];
+  serviceTypes: string[];
+  unsupportedAdvice: string | null;
+  requestLabel: string;
+  primaryResourceLabel: string;
+  serviceTypeLabel: string;
 };
 
 type ChatSessionWithMessages = Awaited<ReturnType<typeof loadOrCreateChatSession>>;
@@ -30,14 +38,6 @@ type AssistantTurnResult = {
   confidenceScore?: number | null;
   missingFields: string[];
 };
-
-const MINIMUM_FIELDS: Array<keyof Pick<RestaurantContext, never> | "guestName" | "guestPhone" | "requestedDate" | "requestedTime" | "guestCount"> = [
-  "guestName",
-  "guestPhone",
-  "requestedDate",
-  "requestedTime",
-  "guestCount"
-];
 
 function formatOpeningHoursText(input: unknown) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -78,9 +78,11 @@ export async function loadRestaurantChatContext(restaurantId: string) {
   }
 
   const settings = business.settings[0];
+  const industry = getIndustryConfig(business.businessType);
 
   return {
     businessId: business.id,
+    businessType: business.businessType,
     restaurantName: settings?.restaurantName ?? business.name,
     address: settings?.address ?? business.businessAddress ?? null,
     phone: settings?.phone ?? business.businessPhone ?? null,
@@ -88,12 +90,18 @@ export async function loadRestaurantChatContext(restaurantId: string) {
     menuUrl: null,
     policyText:
       settings?.notes?.trim() ||
-      "Rezervasyon talepleri ekip onayından geçer. Nihai uygunluk restoran tarafından teyit edilir.",
+      `${industry.requestLabelPlural} ekip onayından geçer. Nihai uygunluk işletme tarafından teyit edilir.`,
     maxPartySize: settings?.maxPartySize ?? 12,
     assistantEnabled: true,
     autoCreateReservationRequests: true,
-    welcomeMessage: `${settings?.restaurantName ?? business.name} için rezervasyon talebinizi memnuniyetle alırım. İsim, telefon, tarih, saat ve kişi sayısını paylaşmanız yeterli.`,
-    tone: "friendly"
+    welcomeMessage: `${settings?.restaurantName ?? business.name} için ${industry.requestLabel.toLocaleLowerCase("tr-TR")} memnuniyetle alırım. Gerekli bilgileri paylaşırsanız talebinizi ekip onayına hazırlayabilirim.`,
+    tone: "friendly",
+    requiredFields: industry.requiredFields,
+    serviceTypes: industry.serviceTypes,
+    unsupportedAdvice: industry.unsupportedAdvice,
+    requestLabel: industry.requestLabel,
+    primaryResourceLabel: industry.primaryResourceLabel,
+    serviceTypeLabel: industry.serviceTypeLabel
   } satisfies RestaurantContext;
 }
 
@@ -154,40 +162,43 @@ function detectQuestionIntent(message: string) {
   };
 }
 
-function listMissingFields(extracted: {
+function listMissingFields(
+  context: RestaurantContext,
+  extracted: {
   guestName?: string;
   guestPhone?: string;
+  customerEmail?: string;
   requestedDate?: string;
   requestedTime?: string;
+  endDate?: string;
   guestCount?: number;
+  serviceType?: string;
 }) {
-  return MINIMUM_FIELDS.filter((field) => {
+  return context.requiredFields.filter((field) => {
+    if (field === "serviceType") {
+      return !extracted.serviceType;
+    }
     if (field === "guestCount") {
       return !extracted.guestCount;
     }
 
-    return !extracted[field];
+    return !extracted[field as keyof typeof extracted];
   });
 }
 
-function formatMissingFieldPrompt(fields: string[]) {
-  const labelMap: Record<string, string> = {
-    guestName: "isminizi",
-    guestPhone: "telefon numaranızı",
-    requestedDate: "rezervasyon tarihini",
-    requestedTime: "rezervasyon saatini",
-    guestCount: "kişi sayısını"
-  };
-
+function formatMissingFieldPrompt(fields: string[], context: RestaurantContext) {
   if (fields.length === 0) {
     return "";
   }
 
+  const labels = fields.map((field) =>
+    getIndustryFieldLabel(field as IndustryFieldKey, getIndustryConfig(context.businessType)).toLocaleLowerCase("tr-TR")
+  );
+
   if (fields.length === 1) {
-    return `Devam edebilmem için ${labelMap[fields[0]]} paylaşır mısınız?`;
+    return `Devam edebilmem için ${labels[0]} bilgisini paylaşır mısınız?`;
   }
 
-  const labels = fields.map((field) => labelMap[field]);
   const last = labels.pop();
   return `Devam edebilmem için ${labels.join(", ")} ve ${last} paylaşır mısınız?`;
 }
@@ -222,15 +233,19 @@ function buildRuleBasedReply(input: {
   }
 
   if (questionIntent.asksAvailability) {
-    parts.push("Uygunluğu kesinleştiremiyorum; talebinizi alırım ve restoran ekibi son müsaitliği onaylar.");
+    parts.push(`Uygunluğu kesinleştiremiyorum; talebinizi alırım ve işletme ekibi son müsaitliği onaylar.`);
+  }
+
+  if (input.context.unsupportedAdvice && /(tedavi|teşhis|ilaç|hukuk|mahkeme|yatırım|finans)/i.test(input.latestMessage)) {
+    parts.push(input.context.unsupportedAdvice);
   }
 
   if (input.requestCreated) {
-    parts.push("Rezervasyon talebiniz alındı ve ekip onayına iletildi. Restoran ekibi son uygunluğu teyit ederek sizinle iletişime geçecek.");
+    parts.push(`${input.context.requestLabel} alındı ve ekip onayına iletildi. İşletme ekibi son uygunluğu teyit ederek sizinle iletişime geçecek.`);
   } else if (input.missingFields.length > 0) {
-    parts.push(formatMissingFieldPrompt(input.missingFields));
+    parts.push(formatMissingFieldPrompt(input.missingFields, input.context));
   } else {
-    parts.push("Talebinizi hazırlıyorum. Restoran ekibi son uygunluğu onaylayacaktır.");
+    parts.push("Talebinizi hazırlıyorum. İşletme ekibi son uygunluğu onaylayacaktır.");
   }
 
   return parts.join(" ").trim();
@@ -256,7 +271,7 @@ async function maybeCreateReservationRequest(input: {
     return input.session.completedReservationRequestId;
   }
 
-  const missingFields = listMissingFields(input.extracted);
+  const missingFields = listMissingFields(input.context, input.extracted);
   if (missingFields.length > 0) {
     return null;
   }
@@ -300,7 +315,8 @@ async function maybeCreateReservationRequest(input: {
       extractedData: {
         ...input.extracted,
         channel: "WEBSITE_CHATBOT",
-        sessionId: input.session.id
+        sessionId: input.session.id,
+        businessType: input.context.businessType
       }
     }
   });
@@ -370,8 +386,11 @@ export async function handleRestaurantChatMessage(input: {
   });
 
   const conversationText = getLatestUserConversationText(session, input.message);
-  const extracted = await extractReservationRequest(conversationText, ReservationSource.AI);
-  const missingFields = listMissingFields(extracted);
+  const extracted = await extractReservationRequest(conversationText, ReservationSource.AI, {
+    businessType: context.businessType,
+    serviceTypes: context.serviceTypes
+  });
+  const missingFields = listMissingFields(context, extracted);
 
   await prisma.chatSession.update({
     where: {

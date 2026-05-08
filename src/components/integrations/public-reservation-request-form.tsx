@@ -1,19 +1,123 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { IndustryConfig, IndustryFieldKey } from "@/lib/industry-config";
+import { getIndustryFieldLabel } from "@/lib/industry-config";
+
+type FormState = Record<string, string>;
+
+function getVisibleFields(config: IndustryConfig): IndustryFieldKey[] {
+  return [...config.requiredFields, ...config.optionalFields.filter((field) => !config.requiredFields.includes(field))];
+}
+
+function getPlaceholder(field: IndustryFieldKey, config: IndustryConfig) {
+  switch (field) {
+    case "guestName":
+      return "Ad Soyad";
+    case "guestPhone":
+      return "+90 555 123 45 67";
+    case "customerEmail":
+      return "ornek@email.com";
+    case "requestedDate":
+      return config.businessType === "HOTEL" ? "Check-in tarihi" : "Tarih";
+    case "requestedTime":
+      return "Saat";
+    case "endDate":
+      return "Check-out tarihi";
+    case "guestCount":
+      return config.guestCountLabel;
+    case "serviceType":
+      return config.serviceTypes[0] ?? config.serviceTypeLabel;
+    case "resourcePreference":
+      return `${config.primaryResourceLabel} tercihi`;
+    case "durationMinutes":
+      return "Dakika";
+    case "notes":
+    default:
+      return "Ek notlar";
+  }
+}
 
 export function PublicReservationRequestForm({
   businessSlug,
   businessName,
+  industry,
   embed = false
 }: {
   businessSlug: string;
   businessName: string;
+  industry: IndustryConfig;
   embed?: boolean;
 }) {
-  const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [isPending, startTransition] = useTransition();
+  const [form, setForm] = useState<FormState>({});
+  const visibleFields = getVisibleFields(industry);
+
+  const updateField = (field: string, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const renderField = (field: IndustryFieldKey) => {
+    const label = getIndustryFieldLabel(field, industry);
+    const required = industry.requiredFields.includes(field);
+    const value = form[field] ?? "";
+
+    if (field === "serviceType") {
+      return (
+        <label key={field} className="space-y-2">
+          <span className="text-sm font-semibold text-ink">{label}</span>
+          <select className="field" value={value} onChange={(event) => updateField(field, event.target.value)} required={required}>
+            <option value="">{label} seçin</option>
+            {industry.serviceTypes.map((service) => (
+              <option key={service} value={service}>
+                {service}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+    }
+
+    if (field === "notes") {
+      return (
+        <label key={field} className="space-y-2 md:col-span-2">
+          <span className="text-sm font-semibold text-ink">{label}</span>
+          <textarea
+            className="field min-h-28"
+            placeholder={getPlaceholder(field, industry)}
+            value={value}
+            onChange={(event) => updateField(field, event.target.value)}
+            required={required}
+          />
+        </label>
+      );
+    }
+
+    const type =
+      field === "customerEmail"
+        ? "email"
+        : field === "requestedDate" || field === "endDate"
+          ? "date"
+          : field === "guestCount" || field === "durationMinutes"
+            ? "number"
+            : "text";
+
+    return (
+      <label key={field} className="space-y-2">
+        <span className="text-sm font-semibold text-ink">{label}</span>
+        <input
+          className="field"
+          type={type}
+          min={field === "guestCount" || field === "durationMinutes" ? 1 : undefined}
+          placeholder={type === "date" ? undefined : getPlaceholder(field, industry)}
+          value={value}
+          onChange={(event) => updateField(field, event.target.value)}
+          required={required}
+        />
+      </label>
+    );
+  };
 
   return (
     <form
@@ -28,35 +132,36 @@ export function PublicReservationRequestForm({
             },
             body: JSON.stringify({
               businessSlug,
-              guestName: message.split(/[,.!\n]/)[0] || "Web talebi",
-              message,
-              notes: message
+              businessType: industry.businessType,
+              guestName: form.guestName,
+              guestPhone: form.guestPhone,
+              customerEmail: form.customerEmail,
+              requestedDate: form.requestedDate,
+              requestedTime: form.requestedTime,
+              endDate: form.endDate,
+              guestCount: form.guestCount ? Number(form.guestCount) : undefined,
+              serviceType: form.serviceType,
+              resourcePreference: form.resourcePreference,
+              durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : undefined,
+              notes: form.notes
             })
           });
 
           setStatus(response.ok ? "success" : "error");
           if (response.ok) {
-            setMessage("");
+            setForm({});
           }
         });
       }}
     >
       <div className={embed ? "" : "rounded-[28px] border border-[color:var(--border)] bg-white/90 p-6"}>
-        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-moss">Reservation Request</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-moss">{industry.requestLabel}</div>
         <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl text-ink">{businessName}</h1>
-        <p className="mt-3 text-sm leading-6 text-sage">
-          Mesajınızı bırakın; ekip uygunluğu kontrol edip rezervasyon talebinizi onay akışına alır. Bu form rezervasyonu otomatik kesinleştirmez.
-        </p>
-        <textarea
-          className="field mt-5 min-h-36"
-          placeholder="Örn: Yarın akşam 20:00 için 4 kişilik masa rica ederim. Telefonum +90 555 111 22 33."
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          required
-        />
+        <p className="mt-3 text-sm leading-6 text-sage">{industry.publicDescription}</p>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">{visibleFields.map(renderField)}</div>
         <button className="btn-primary mt-5 w-full gap-2 sm:w-auto" type="submit" disabled={isPending}>
           {isPending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : null}
-          {isPending ? "Talebiniz gönderiliyor..." : "Rezervasyon Talebi Gönder"}
+          {isPending ? "Talebiniz gönderiliyor..." : industry.publicSubmitLabel}
         </button>
         {status === "success" ? (
           <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">

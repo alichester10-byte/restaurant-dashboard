@@ -14,11 +14,12 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         <Sidebar
           role={session.user.role}
           businessName={session.user.business.name}
+          businessType={session.user.business.businessType}
           modeLabel={entitlement.modeLabel}
           canWrite={entitlement.canWrite}
         />
         <div className="min-w-0 flex-1 space-y-4 md:space-y-6">
-          <MobileNav role={session.user.role} modeLabel={entitlement.modeLabel} canWrite={entitlement.canWrite} />
+          <MobileNav role={session.user.role} businessType={session.user.business.businessType} modeLabel={entitlement.modeLabel} canWrite={entitlement.canWrite} />
           {session.impersonatedByUserId ? (
             <div className="glass-panel flex flex-col gap-3 rounded-[24px] border border-amber-200 bg-amber-50/90 p-4 md:flex-row md:items-center md:justify-between">
               <div>

@@ -11,6 +11,7 @@ import {
   TableStatus
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getIndustryConfig } from "@/lib/industry-config";
 import { endOfDay, startOfDay } from "@/lib/utils";
 
 const activeReservationStatuses = new Set<ReservationStatus>([
@@ -142,6 +143,8 @@ export async function getDashboardDataForBusiness(businessId: string) {
       take: 6
     })
   ]);
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId }, select: { businessType: true } });
+  const industry = getIndustryConfig(business.businessType);
 
   const activeReservationsToday = reservationsToday.filter((reservation) => activeReservationStatuses.has(reservation.status));
 
@@ -214,7 +217,7 @@ export async function getDashboardDataForBusiness(businessId: string) {
     upcomingReservations,
     aiAssistant: {
       enabled: true,
-      welcomeMessage: `${settings.restaurantName} için rezervasyon talebinizi memnuniyetle alırım. İsim, telefon, tarih, saat ve kişi sayısını paylaşırsanız talebinizi ekip onayına hazırlayabilirim.`,
+      welcomeMessage: `${settings.restaurantName} için ${industry.requestLabel.toLocaleLowerCase("tr-TR")} memnuniyetle alırım. Gerekli bilgileri paylaşırsanız talebinizi ekip onayına hazırlayabilirim.`,
       pendingCount: aiRecentRequests.filter((request) => request.status === ReservationRequestStatus.PENDING).length,
       totalCount: aiRecentRequests.length,
       latestRequests: aiRecentRequests
@@ -553,11 +556,23 @@ export async function getReportsPageData(businessId: string) {
 }
 
 export async function getSettingsData(businessId: string) {
-  return prisma.restaurantSettings.findFirstOrThrow({
-    where: {
-      businessId
-    }
-  });
+  const [settings, business] = await Promise.all([
+    prisma.restaurantSettings.findFirstOrThrow({
+      where: {
+        businessId
+      }
+    }),
+    prisma.business.findUniqueOrThrow({
+      where: {
+        id: businessId
+      }
+    })
+  ]);
+
+  return {
+    settings,
+    business
+  };
 }
 
 export async function getSuperAdminData(input?: {

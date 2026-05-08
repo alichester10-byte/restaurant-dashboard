@@ -2,6 +2,7 @@ import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSourc
 import { NextResponse } from "next/server";
 import { createAuditLog } from "@/lib/audit";
 import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
+import { getIndustryConfig } from "@/lib/industry-config";
 import { prisma } from "@/lib/prisma";
 import { rateLimitPlaceholder } from "@/lib/rate-limit";
 import { sanitizeNullableText, sanitizeText, verifySameOrigin } from "@/lib/security";
@@ -20,9 +21,14 @@ export async function POST(request: Request) {
   const businessSlug = sanitizeText(raw?.businessSlug);
   const guestName = sanitizeText(raw?.guestName);
   const guestPhone = sanitizeText(raw?.guestPhone);
+  const customerEmail = sanitizeNullableText(raw?.customerEmail);
   const requestedDate = sanitizeNullableText(raw?.requestedDate);
   const requestedTime = sanitizeNullableText(raw?.requestedTime);
+  const endDate = sanitizeNullableText(raw?.endDate);
+  const serviceType = sanitizeNullableText(raw?.serviceType);
+  const resourcePreference = sanitizeNullableText(raw?.resourcePreference);
   const notes = sanitizeNullableText(raw?.notes || raw?.message);
+  const durationMinutes = raw?.durationMinutes ? Number(raw.durationMinutes) : undefined;
   const guestCount = raw?.guestCount ? Number(raw.guestCount) : undefined;
   const source = contentType.includes("application/json") && !verifySameOrigin(request) ? ReservationSource.GOOGLE : ReservationSource.WEBSITE;
 
@@ -37,6 +43,23 @@ export async function POST(request: Request) {
   if (!business) {
     return NextResponse.json({ ok: false, error: "İşletme bulunamadı." }, { status: 404 });
   }
+
+  const industry = getIndustryConfig(business.businessType);
+  const rawMessage = [
+    `${industry.customerLabel}: ${guestName}`,
+    guestPhone ? `Telefon: ${guestPhone}` : null,
+    customerEmail ? `E-posta: ${customerEmail}` : null,
+    requestedDate ? `Tarih: ${requestedDate}` : null,
+    endDate ? `Bitiş: ${endDate}` : null,
+    requestedTime ? `Saat: ${requestedTime}` : null,
+    guestCount ? `${industry.guestCountLabel}: ${guestCount}` : null,
+    serviceType ? `${industry.serviceTypeLabel}: ${serviceType}` : null,
+    resourcePreference ? `${industry.primaryResourceLabel} tercihi: ${resourcePreference}` : null,
+    durationMinutes ? `Süre: ${durationMinutes} dk` : null,
+    notes ? `Not: ${notes}` : null
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   await prisma.integrationConnection.upsert({
     where: {
@@ -60,9 +83,23 @@ export async function POST(request: Request) {
   await createPendingReservationRequestFromExternalMessage({
     businessId: business.id,
     source,
-    rawMessage: `${guestName} ${guestPhone} ${requestedDate} ${requestedTime} ${guestCount ?? ""} ${notes}`.trim(),
+    rawMessage,
     guestPhoneHint: guestPhone || null,
-    notes: notes || null
+    notes: notes || null,
+    structuredData: {
+      guestName,
+      guestPhone: guestPhone || null,
+      customerEmail: customerEmail || null,
+      requestedDate: requestedDate || null,
+      requestedTime: requestedTime || null,
+      endDate: endDate || null,
+      guestCount: Number.isFinite(guestCount) ? guestCount : null,
+      serviceType: serviceType || null,
+      resourcePreference: resourcePreference || null,
+      durationMinutes: Number.isFinite(durationMinutes) ? durationMinutes : null,
+      notes: notes || null,
+      businessType: business.businessType
+    }
   });
 
   await createAuditLog({

@@ -19,10 +19,12 @@ export async function updateSettingsAction(formData: FormData) {
   const businessId = session.user.businessId;
 
   const parsed = settingsSchema.safeParse({
+    businessType: formData.get("businessType"),
     restaurantName: sanitizeText(formData.get("restaurantName")),
     phone: sanitizeText(formData.get("phone")),
     email: sanitizeNullableText(formData.get("email")),
     address: sanitizeNullableText(formData.get("address")),
+    serviceFocus: sanitizeText(formData.get("serviceFocus")),
     seatingCapacity: formData.get("seatingCapacity"),
     averageDiningDurationMin: formData.get("averageDiningDurationMin"),
     maxPartySize: formData.get("maxPartySize"),
@@ -52,34 +54,45 @@ export async function updateSettingsAction(formData: FormData) {
     }
   });
 
-  await prisma.restaurantSettings.update({
-    where: { id: settings.id },
-    data: {
-      restaurantName: parsed.data.restaurantName,
-      phone: parsed.data.phone,
-      email: parsed.data.email || null,
-      address: parsed.data.address || null,
-      seatingCapacity: parsed.data.seatingCapacity,
-      averageDiningDurationMin: parsed.data.averageDiningDurationMin,
-      maxPartySize: parsed.data.maxPartySize,
-      reservationLeadTimeDays: parsed.data.reservationLeadTimeDays,
-      reminderEnabled: parsed.data.reminderEnabled === "true",
-      reminderTimingHours: parsed.data.reminderTimingHours,
-      reminderChannel: parsed.data.reminderChannel,
-      allowWalkIns: parsed.data.allowWalkIns === "true",
-      requirePhoneVerification: parsed.data.requirePhoneVerification === "true",
-      openingHours: {
-        monday: parsed.data.monday,
-        tuesday: parsed.data.tuesday,
-        wednesday: parsed.data.wednesday,
-        thursday: parsed.data.thursday,
-        friday: parsed.data.friday,
-        saturday: parsed.data.saturday,
-        sunday: parsed.data.sunday
+  await prisma.$transaction([
+    prisma.business.update({
+      where: {
+        id: businessId
       },
-      notes: parsed.data.notes || null
-    }
-  });
+      data: {
+        businessType: parsed.data.businessType,
+        restaurantType: parsed.data.serviceFocus
+      }
+    }),
+    prisma.restaurantSettings.update({
+      where: { id: settings.id },
+      data: {
+        restaurantName: parsed.data.restaurantName,
+        phone: parsed.data.phone,
+        email: parsed.data.email || null,
+        address: parsed.data.address || null,
+        seatingCapacity: parsed.data.seatingCapacity,
+        averageDiningDurationMin: parsed.data.averageDiningDurationMin,
+        maxPartySize: parsed.data.maxPartySize,
+        reservationLeadTimeDays: parsed.data.reservationLeadTimeDays,
+        reminderEnabled: parsed.data.reminderEnabled === "true",
+        reminderTimingHours: parsed.data.reminderTimingHours,
+        reminderChannel: parsed.data.reminderChannel,
+        allowWalkIns: parsed.data.allowWalkIns === "true",
+        requirePhoneVerification: parsed.data.requirePhoneVerification === "true",
+        openingHours: {
+          monday: parsed.data.monday,
+          tuesday: parsed.data.tuesday,
+          wednesday: parsed.data.wednesday,
+          thursday: parsed.data.thursday,
+          friday: parsed.data.friday,
+          saturday: parsed.data.saturday,
+          sunday: parsed.data.sunday
+        },
+        notes: parsed.data.notes || null
+      }
+    })
+  ]);
 
   await createAuditLog({
     businessId,
@@ -87,7 +100,7 @@ export async function updateSettingsAction(formData: FormData) {
     actorRole: session.user.role,
     category: AuditCategory.BUSINESS,
     action: "settings_updated",
-    message: "Restaurant settings updated."
+    message: "Business settings updated."
   });
 
   revalidatePath("/dashboard");
