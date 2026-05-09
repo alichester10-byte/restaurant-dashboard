@@ -9,8 +9,8 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
 
   return (
-    <main className="app-shell min-h-screen p-4 md:p-6">
-      <div className="mx-auto flex max-w-[1560px] gap-6">
+    <main className="app-shell min-h-screen p-3 md:p-5">
+      <div className="mx-auto flex max-w-[1560px] gap-4 xl:gap-5">
         <Sidebar
           role={session.user.role}
           businessName={session.user.business.name}
@@ -18,7 +18,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
           modeLabel={entitlement.modeLabel}
           canWrite={entitlement.canWrite}
         />
-        <div className="min-w-0 flex-1 space-y-4 md:space-y-6">
+        <div className="min-w-0 flex-1 space-y-4 md:space-y-5">
           <MobileNav role={session.user.role} businessType={session.user.business.businessType} modeLabel={entitlement.modeLabel} canWrite={entitlement.canWrite} />
           {session.impersonatedByUserId ? (
             <div className="glass-panel flex flex-col gap-3 rounded-[24px] border border-amber-200 bg-amber-50/90 p-4 md:flex-row md:items-center md:justify-between">

@@ -41,25 +41,25 @@ export default async function DashboardPage() {
         />
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <Panel className="overflow-hidden">
-          <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-            <div className="space-y-4">
+      <section className="grid grid-cols-12 gap-4">
+        <Panel className="col-span-12 overflow-hidden xl:col-span-8">
+          <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+            <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-emerald-800">
                   {session.user.business.name}
                 </span>
-                <span className="rounded-full border border-[color:var(--border)] bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sage">
-                  Günlük özet
+                <span className="rounded-full border border-[color:var(--border)] bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-sage">
+                  Genel operasyon görünümü
                 </span>
               </div>
-              <div>
-                <h2 className="text-[28px] font-semibold leading-[1.08] tracking-[-0.03em] text-ink">Bugünkü operasyonu tek bakışta yönetin</h2>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-sage">
-                  {industry.requestLabelPlural}, kanal akışları, kaynak kullanımı ve ekip yoğunluğu aynı ekranda daha sakin bir operasyon görünümüyle sunulur.
+              <div className="max-w-2xl">
+                <h2 className="text-[30px] font-semibold leading-[1.02] tracking-[-0.04em] text-ink">Operasyonu daha hızlı okuyun, daha az ekran değiştirin</h2>
+                <p className="mt-3 text-sm leading-6 text-sage">
+                  {industry.requestLabelPlural}, kanal akışları, kaynak yoğunluğu ve günlük iletişimler tek bir bağlı dashboard düzeninde toplanır.
                 </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex flex-wrap gap-2.5">
                 {[
                   { href: "/reservations?compose=1", label: "Yeni Talep", icon: "＋", primary: true },
                   { href: "/reservations", label: `${industry.reservationLabelPlural}ı Gör`, icon: "↗" },
@@ -69,7 +69,7 @@ export default async function DashboardPage() {
                   <a
                     key={action.label}
                     href={action.href}
-                    className={action.primary ? "btn-primary h-12 w-full gap-2" : "btn-secondary h-12 w-full gap-2"}
+                    className={action.primary ? "btn-primary h-11 min-w-[156px] gap-2 rounded-full px-4" : "btn-secondary h-11 min-w-[156px] gap-2 rounded-full px-4"}
                   >
                     <span className="text-sm">{action.icon}</span>
                     <span>{action.label}</span>
@@ -78,52 +78,71 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="grid gap-3">
               <div className="rounded-[26px] border border-[color:var(--border)] bg-[linear-gradient(145deg,#163329_0%,#214c3d_65%,#2f6b54_100%)] p-5 text-white shadow-soft">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/65">{entitlement.modeLabel}</div>
-                <div className="mt-2 text-xl font-semibold">Çalışma modu</div>
-                <p className="mt-2 text-sm leading-6 text-white/78">{entitlement.modeDescription}</p>
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-white/10 px-4 py-4">
-                    <div className="text-[10px] uppercase tracking-[0.12em] text-white/60">AI Talepleri</div>
-                    <div className="mt-2 text-2xl font-semibold">{data.aiAssistant.pendingCount}</div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/60">{entitlement.modeLabel}</div>
+                    <div className="mt-2 text-lg font-semibold">Çalışma modu</div>
                   </div>
-                  <div className="rounded-2xl bg-white/10 px-4 py-4">
-                    <div className="text-[10px] uppercase tracking-[0.12em] text-white/60">Yaklaşan</div>
-                    <div className="mt-2 text-2xl font-semibold">{data.upcomingReservations.length}</div>
-                  </div>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/75">
+                    Canlı görünüm
+                  </span>
                 </div>
+                <p className="mt-2 text-sm leading-6 text-white/78">{entitlement.modeDescription}</p>
               </div>
 
-              <div className="rounded-[26px] border border-[color:var(--border)] bg-white/92 p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sage">Kısa odak</div>
-                <div className="mt-2 text-lg font-semibold text-ink">Önce hangi alanlara bakmalısınız?</div>
-                <div className="mt-4 space-y-2">
-                  {[
-                    `${data.upcomingReservations.length} yaklaşan kayıt`,
-                    `${data.callsToday.length} çağrı hareketi`,
-                    `${data.tables.length} aktif ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}`
-                  ].map((item) => (
-                    <div key={item} className="rounded-2xl bg-[color:var(--bg-strong)] px-3 py-2.5 text-sm text-sage">
-                      {item}
-                    </div>
-                  ))}
-                </div>
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                {[
+                  { label: "Bekleyen AI Talebi", value: data.aiAssistant.pendingCount },
+                  { label: "Yaklaşan Kayıt", value: data.upcomingReservations.length },
+                  { label: "Aktif Kaynak", value: data.tables.length }
+                ].map((item) => (
+                  <div key={item.label} className="rounded-[22px] border border-[color:var(--border)] bg-white/92 px-4 py-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-sage">{item.label}</div>
+                    <div className="mt-2 text-[28px] font-semibold tracking-[-0.03em] text-ink">{item.value}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </Panel>
+
+        <Panel className="col-span-12 xl:col-span-4">
+          <div className="section-title">Kısa odak</div>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Bugün öncelik verilecek alanlar</h2>
+          <div className="mt-4 space-y-2.5">
+            {[
+              `${data.upcomingReservations.length} yaklaşan kayıt`,
+              `${data.callsToday.length} çağrı hareketi`,
+              `${data.tables.length} aktif ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}`,
+              `${data.aiAssistant.pendingCount} AI destekli bekleyen talep`
+            ].map((item) => (
+              <div key={item} className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+                {item}
+              </div>
+            ))}
+          </div>
+        </Panel>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-12 gap-4">
+        <div className="col-span-12 md:col-span-6 xl:col-span-3">
         <StatCard label={`Bugünkü ${industry.reservationLabelPlural}`} value={data.stats.dailyReservations} trend={data.stats.trends.dailyReservations} tone="accent" />
-        <StatCard label={industry.customerLabel} value={data.stats.totalGuests} trend={data.stats.trends.totalGuests} />
-        <StatCard label={industry.capacityLabel} value={data.stats.occupancyRate} />
-        <StatCard label="Çağrı Performansı" value={`${data.stats.answeredCalls}/${data.stats.missedCalls}`} />
+        </div>
+        <div className="col-span-12 md:col-span-6 xl:col-span-3">
+          <StatCard label={industry.customerLabel} value={data.stats.totalGuests} trend={data.stats.trends.totalGuests} />
+        </div>
+        <div className="col-span-12 md:col-span-6 xl:col-span-3">
+          <StatCard label={industry.capacityLabel} value={data.stats.occupancyRate} />
+        </div>
+        <div className="col-span-12 md:col-span-6 xl:col-span-3">
+          <StatCard label="Çağrı Performansı" value={`${data.stats.answeredCalls}/${data.stats.missedCalls}`} />
+        </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-        <Panel>
+      <section className="grid grid-cols-12 gap-4">
+        <Panel className="col-span-12 xl:col-span-8">
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">{industry.reservationLabel} Trendi</div>
@@ -136,7 +155,7 @@ export default async function DashboardPage() {
           </div>
         </Panel>
 
-        <Panel>
+        <Panel className="col-span-12 xl:col-span-4">
           <div className="section-title">{industry.capacityLabel} Özeti</div>
           <div className="mt-4">
             <RingChart value={data.stats.occupancyRate} label={`${data.stats.totalGuests} ${industry.customerLabel.toLocaleLowerCase("tr-TR")} / ${data.settings.seatingCapacity} kapasite`} />
@@ -152,8 +171,8 @@ export default async function DashboardPage() {
         </Panel>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Panel>
+      <section className="grid grid-cols-12 gap-4">
+        <Panel className="col-span-12 xl:col-span-7">
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">Yaklaşan {industry.reservationLabelPlural}</div>
@@ -191,7 +210,7 @@ export default async function DashboardPage() {
           </div>
         </Panel>
 
-        <Panel>
+        <Panel className="col-span-12 xl:col-span-5">
           <div className="section-title">Çağrılar</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">Son iletişim akışı</h2>
           <div className="mt-5 space-y-3">
@@ -222,8 +241,8 @@ export default async function DashboardPage() {
         </Panel>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <Panel>
+      <section className="grid grid-cols-12 gap-4">
+        <Panel className="col-span-12 xl:col-span-7">
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">{industry.primaryResourceLabelPlural}</div>
@@ -260,7 +279,7 @@ export default async function DashboardPage() {
           </div>
         </Panel>
 
-        <Panel>
+        <Panel className="col-span-12 xl:col-span-5">
           <div className="section-title">Yeni Çağrı / Not</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">Operasyona hızlı kayıt ekleyin</h2>
           <p className="mt-2 text-sm leading-6 text-sage">
