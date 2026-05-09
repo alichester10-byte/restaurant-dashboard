@@ -237,6 +237,9 @@ export default async function BillingPage({
               </div>
             </div>
           </div>
+          <div className="mt-6 rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-4 text-sm leading-6 text-sage">
+            Fatura, ödeme ve plan geçişleri bu merkezden yönetilir. PAYTR akışı hazır olduğunda plan aktivasyonu otomatik tamamlanır.
+          </div>
         </Panel>
       </section>
 

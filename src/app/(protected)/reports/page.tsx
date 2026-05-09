@@ -21,6 +21,11 @@ export default async function ReportsPage() {
   const data = await getReportsPageData(session.user.businessId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const industry = getIndustryConfig(session.user.business.businessType);
+  const totalRequests = data.sourceCounts.reduce((sum, item) => sum + item.total, 0);
+  const approvedBookings = data.summaryCards.todayReservations;
+  const conversionRate = data.summaryCards.completedRate;
+  const topChannel = data.sourceCounts[0]?.source ? getSourceLabel(data.sourceCounts[0].source) : "Henüz veri yok";
+  const hasReportData = totalRequests > 0 || data.weeklyTrend.some((item) => item.total > 0);
 
   return (
     <div className="space-y-6">
@@ -34,9 +39,33 @@ export default async function ReportsPage() {
         showUpgradeCta={entitlement.isDemo}
       />
 
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Toplam Talep", value: totalRequests },
+          { label: `Onaylı ${industry.reservationLabelPlural}`, value: approvedBookings },
+          { label: "Dönüşüm Oranı", value: formatPercent(conversionRate) },
+          { label: "Öne Çıkan Kanal", value: topChannel }
+        ].map((card) => (
+          <Panel key={card.label}>
+            <div className="text-sm text-sage">{card.label}</div>
+            <div className="mt-3 text-3xl font-semibold text-ink">{card.value}</div>
+          </Panel>
+        ))}
+      </section>
+
+      {!hasReportData ? (
+        <Panel className="text-center">
+          <div className="section-title">Analitik Hazırlanıyor</div>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">İlk talepler geldikçe raporlar burada oluşacak</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-sage">
+            Kanal performansı, booking trendi, kaynak kullanımı ve AI asistan hareketleri canlı veri geldikçe bu ekranda görünür.
+          </p>
+        </Panel>
+      ) : null}
+
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>
-          <div className="section-title">Özet</div>
+          <div className="section-title">Operasyon Özeti</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">Temel performans sinyalleri</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[
@@ -56,7 +85,7 @@ export default async function ReportsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">14 Günlük Akış</div>
+          <div className="section-title">Booking Trendi</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">{industry.reservationLabel} ve {industry.customerLabel.toLocaleLowerCase("tr-TR")} hacmi</h2>
           <div className="mt-6">
             <MiniBarChart items={data.reservationsByDay.map((item) => ({ label: item.label, total: item.reservations }))} color="bg-gold" />
@@ -81,7 +110,7 @@ export default async function ReportsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">{industry.reservationLabel} Kaynakları</div>
+          <div className="section-title">Kanal Performansı</div>
           <div className="mt-5 space-y-3">
             {data.sourceCounts.map((item) => (
               <div key={item.source} className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3">
@@ -126,7 +155,7 @@ export default async function ReportsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">En Popüler Saatler</div>
+          <div className="section-title">Kaynak Dağılımı</div>
           <div className="mt-5 space-y-3">
             {data.popularHours.map((item) => (
               <div key={item.label} className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3">
@@ -134,6 +163,9 @@ export default async function ReportsPage() {
                 <div className="text-sm text-sage">{item.total} {industry.reservationLabel.toLocaleLowerCase("tr-TR")}</div>
               </div>
             ))}
+          </div>
+          <div className="mt-6 rounded-[24px] bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
+            {entitlement.features.aiAssistant ? "AI asistanı ve kanal akışları bu ekranda birlikte ölçümlenir." : "AI asistanı etkinleştiğinde ek kullanım metrikleri de bu alana eklenir."}
           </div>
         </Panel>
       </section>

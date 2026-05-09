@@ -18,6 +18,10 @@ export default async function CustomersPage({
   const data = await getCustomersPageData(session.user.businessId, searchParams.customerId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const industry = getIndustryConfig(session.user.business.businessType);
+  const totalCustomers = data.customers.length;
+  const returningCustomers = data.customers.filter((customer) => customer.reservations.length > 1).length;
+  const recentCustomers = data.customers.filter((customer) => customer.reservations.length > 0).length;
+  const contactableCustomers = data.customers.filter((customer) => Boolean(customer.phone)).length;
 
   return (
     <div className="space-y-6">
@@ -39,25 +43,60 @@ export default async function CustomersPage({
         />
       ) : null}
 
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Toplam Müşteri", value: totalCustomers, hint: "Kayıtlı iletişim ve talep geçmişi" },
+          { label: "Geri Dönen Müşteri", value: returningCustomers, hint: "Birden fazla kayıt oluşturanlar" },
+          { label: "Yakın Dönem Müşteri", value: recentCustomers, hint: "Son taleplerde görünenler" },
+          { label: "İletişime Uygun", value: contactableCustomers, hint: "Telefon veya e-posta bilgisi olanlar" }
+        ].map((card) => (
+          <Panel key={card.label}>
+            <div className="text-sm text-sage">{card.label}</div>
+            <div className="mt-3 text-3xl font-semibold text-ink">{card.value}</div>
+            <div className="mt-2 text-sm text-sage">{card.hint}</div>
+          </Panel>
+        ))}
+      </section>
+
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Panel>
-          <div className="section-title">Müşteri Listesi</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Segmentler ve rezervasyon geçmişi</h2>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="section-title">Müşteri Listesi</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Talep ve kayıt geçmişi tek görünümde</h2>
+            </div>
+            <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
+              {totalCustomers === 0
+                ? "Müşteriler, yeni talepler veya kayıtlar oluştukça burada görünür."
+                : `${totalCustomers} müşteri kartı hazır`}
+            </div>
+          </div>
           <div className="mt-6 space-y-3">
-            {data.customers.map((customer) => (
+            {data.customers.length === 0 ? (
+              <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-8 text-center">
+                <div className="text-lg font-semibold text-ink">Henüz müşteri oluşmadı</div>
+                <p className="mt-3 text-sm leading-6 text-sage">
+                  Customers will appear here after requests or bookings are created.
+                </p>
+              </div>
+            ) : data.customers.map((customer) => (
               <Link
                 key={customer.id}
                 href={`/customers?customerId=${customer.id}`}
                 className="block rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4 transition hover:-translate-y-1 hover:shadow-soft"
               >
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-ink">{customer.name}</div>
-                    <div className="mt-1 text-sm text-sage">{formatPhone(customer.phone)}</div>
+                    <div className="mt-1 text-sm text-sage">{customer.phone ? formatPhone(customer.phone) : "İletişim bilgisi eklenmedi"}</div>
                   </div>
                   <StatusBadge value={customer.tag} />
                 </div>
-                <div className="mt-3 text-sm text-sage">{customer.reservations.length} son {industry.reservationLabel.toLocaleLowerCase("tr-TR")} kaydı</div>
+                <div className="mt-4 grid gap-3 text-sm text-sage sm:grid-cols-3">
+                  <div>{customer.reservations.length} {industry.reservationLabel.toLocaleLowerCase("tr-TR")} kaydı</div>
+                  <div>{customer.tag} segmenti</div>
+                  <div>{customer.notes ? "Not mevcut" : "Not yok"}</div>
+                </div>
               </Link>
             ))}
           </div>

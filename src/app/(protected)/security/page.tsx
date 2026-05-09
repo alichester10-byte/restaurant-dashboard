@@ -62,11 +62,27 @@ export default async function SecurityPage() {
         </Panel>
       </section>
 
+      <section className="grid gap-4 md:grid-cols-3">
+        {[
+          { label: "2FA Durumu", value: "Erişim bazlı", hint: "Hesap güvenliği ve yönetici politikalarına göre uygulanır." },
+          { label: "Oturum Koruması", value: "Aktif", hint: "Rol, tenant ve cihaz bağlamı ile doğrulanır." },
+          { label: "Veri Erişimi", value: "Sınırlı", hint: "İşletme verileri yalnız yetkili ekip için görünür." }
+        ].map((item) => (
+          <Panel key={item.label}>
+            <div className="text-sm text-sage">{item.label}</div>
+            <div className="mt-3 text-2xl font-semibold text-ink">{item.value}</div>
+            <div className="mt-2 text-sm leading-6 text-sage">{item.hint}</div>
+          </Panel>
+        ))}
+      </section>
+
       <section className="grid gap-6 xl:grid-cols-3">
         <Panel>
           <div className="section-title">Son Girişler</div>
           <div className="mt-4 space-y-3">
-            {data.recentLogins.map((item) => (
+            {data.recentLogins.length === 0 ? (
+              <div className="rounded-2xl bg-white/90 px-4 py-3 text-sm text-sage">Yakın dönemde yeni giriş kaydı görünmüyor.</div>
+            ) : data.recentLogins.map((item) => (
               <div key={item.id} className="rounded-2xl bg-white/90 px-4 py-3">
                 <div className="font-semibold text-ink">{item.message}</div>
                 <div className="mt-1 text-sm text-sage">{formatDateTime(item.createdAt)}</div>

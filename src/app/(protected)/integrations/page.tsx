@@ -13,22 +13,26 @@ import { getIndustryConfig } from "@/lib/industry-config";
 const roadmapCards = [
   {
     title: "WhatsApp Business",
-    status: "Yakında aktif",
+    status: "Meta approval pending",
+    tone: "waiting",
     body: "Meta onayı tamamlandığında işletme sahibi kendi panelinden WhatsApp hesabını bağlayabilecek. Gelen mesajlar talep olarak bekleyen kuyruğa düşecek."
   },
   {
     title: "Instagram DM",
-    status: "Meta onayı bekleniyor",
+    status: "Ready after approval",
+    tone: "waiting",
     body: "Instagram Professional hesaplarından gelen DM'ler, Meta review tamamlandıktan sonra doğrudan Kanal Talepleri akışına taşınacak."
   },
   {
     title: "Website Widget",
-    status: "Canlı kullanıma hazır",
+    status: "Available now",
+    tone: "ready",
     body: "Paylaşım bağlantısını veya widget akışını kullanarak talebi doğrudan Limon Masa akışına alabilirsiniz. Son onay yine işletme ekibindedir."
   },
   {
     title: "AI Reservation Assistant",
-    status: "Panel içinde hazır",
+    status: "Available now",
+    tone: "ready",
     body: "AI operasyon asistanı müşteri mesajlarını talebe dönüştürür, eksik alanları bulur ve rezervasyon ekibine düzenli bir ön izleme sunar."
   }
 ];
@@ -66,6 +70,17 @@ export default async function IntegrationsPage() {
   const industry = getIndustryConfig(session.user.business.businessType);
   const publicReservationLink = `${getAppBaseUrl()}/r/${session.user.business.slug}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(publicReservationLink)}`;
+  const readinessItems = [
+    { label: "Website Widget", value: "Available now", tone: "ready" as const },
+    { label: "AI Assistant", value: entitlement.isDemo ? "Plan required" : "Available now", tone: entitlement.isDemo ? "plan" as const : "ready" as const },
+    { label: "WhatsApp", value: "Meta approval pending", tone: "waiting" as const },
+    { label: "Instagram", value: "Meta approval pending", tone: "waiting" as const }
+  ];
+  const toneClasses = {
+    ready: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    waiting: "border-amber-200 bg-amber-50 text-amber-800",
+    plan: "border-slate-200 bg-slate-100 text-slate-700"
+  } as const;
 
   return (
     <div className="space-y-6">
@@ -123,14 +138,41 @@ export default async function IntegrationsPage() {
             </div>
           </div>
         </div>
+
+        <div className="mt-8 grid gap-4 border-t border-[color:var(--border)] pt-6 lg:grid-cols-4">
+          {readinessItems.map((item) => (
+            <div key={item.label} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold text-ink">{item.label}</div>
+                <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${toneClasses[item.tone]}`}>
+                  {item.value}
+                </span>
+              </div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-[color:var(--bg-strong)]">
+                <div
+                  className={`h-full rounded-full ${
+                    item.tone === "ready" ? "w-full bg-emerald-500" : item.tone === "plan" ? "w-1/2 bg-slate-500" : "w-2/3 bg-amber-400"
+                  }`}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </Panel>
 
       <section className="grid gap-6 xl:grid-cols-4">
         {roadmapCards.map((card) => (
           <Panel key={card.title}>
-            <div className="section-title">{card.status}</div>
-            <h3 className="mt-2 text-xl font-semibold text-ink">{card.title}</h3>
-            <p className="mt-3 text-sm leading-6 text-sage">{card.body}</p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="section-title">{card.title}</div>
+              <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${toneClasses[card.tone as keyof typeof toneClasses]}`}>
+                {card.status}
+              </span>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-sage">{card.body}</p>
+            <div className="mt-5 border-t border-[color:var(--border)] pt-4 text-sm font-medium text-ink">
+              {card.tone === "ready" ? "Yönetim ve paylaşım akışına hazır." : "Meta review tamamlandığında açılacak."}
+            </div>
           </Panel>
         ))}
       </section>

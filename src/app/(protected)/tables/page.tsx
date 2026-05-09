@@ -64,17 +64,17 @@ export default async function TablesPage({
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-4">
-        <Panel><div className="text-sm text-sage">Boş</div><div className="mt-2 text-3xl font-bold">{data.summary.empty}</div></Panel>
-        <Panel><div className="text-sm text-sage">Dolu</div><div className="mt-2 text-3xl font-bold">{data.summary.occupied}</div></Panel>
-        <Panel><div className="text-sm text-sage">Rezerve</div><div className="mt-2 text-3xl font-bold">{data.summary.reserved}</div></Panel>
-        <Panel><div className="text-sm text-sage">Bakım</div><div className="mt-2 text-3xl font-bold">{data.summary.maintenance}</div></Panel>
+        <Panel><div className="text-sm text-sage">Müsait</div><div className="mt-2 text-3xl font-bold">{data.summary.empty}</div><div className="mt-2 text-sm text-sage">Hemen atamaya uygun kaynaklar</div></Panel>
+        <Panel><div className="text-sm text-sage">Dolu</div><div className="mt-2 text-3xl font-bold">{data.summary.occupied}</div><div className="mt-2 text-sm text-sage">Aktif kayıt taşıyan kaynaklar</div></Panel>
+        <Panel><div className="text-sm text-sage">Ayrılmış</div><div className="mt-2 text-3xl font-bold">{data.summary.reserved}</div><div className="mt-2 text-sm text-sage">Yaklaşan kayıt için bloklu</div></Panel>
+        <Panel><div className="text-sm text-sage">Pasif / Bakım</div><div className="mt-2 text-3xl font-bold">{data.summary.maintenance}</div><div className="mt-2 text-sm text-sage">Geçici olarak kullanıma kapalı</div></Panel>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <Panel>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="section-title">Salon Yerleşimi</div>
+              <div className="section-title">Kaynak Panosu</div>
               <h2 className="mt-2 text-xl font-semibold text-ink">Canlı {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} görünümü</h2>
             </div>
             {!entitlement.isDemo ? (
@@ -108,6 +108,7 @@ export default async function TablesPage({
                   <div className="font-[family-name:var(--font-display)] text-4xl text-ink">{table.seatCapacity}</div>
                   <div className="text-sm text-sage">{tableShapeLabels[table.shape]}</div>
                 </div>
+                <div className="mt-4 text-sm text-sage">{table.notes || `${industry.primaryResourceLabel} planına operasyon notu eklenmedi.`}</div>
               </Link>
             ))}
           </div>
