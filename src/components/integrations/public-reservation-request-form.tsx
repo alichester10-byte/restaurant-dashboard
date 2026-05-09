@@ -61,15 +61,15 @@ function getPlaceholder(field: IndustryFieldKey, config: IndustryConfig) {
     case "customerEmail":
       return "ornek@email.com";
     case "requestedDate":
-      return config.businessType === "HOTEL" ? "Check-in tarihi" : "Tarih";
+      return config.dateLabel;
     case "requestedTime":
-      return "Saat";
+      return config.timeLabel;
     case "endDate":
       return "Check-out tarihi";
     case "guestCount":
       return config.guestCountLabel;
     case "serviceType":
-      return config.serviceTypes[0] ?? config.serviceTypeLabel;
+      return config.serviceExamples[0] ?? config.serviceTypeLabel;
     case "resourcePreference":
       return `${config.primaryResourceLabel} tercihi`;
     case "durationMinutes":
@@ -118,7 +118,7 @@ export function PublicReservationRequestForm({
           <span className="text-sm font-semibold text-ink">{label}</span>
           <select className="field" value={value} onChange={(event) => updateField(field, event.target.value)} required={required}>
             <option value="">{label} seçin</option>
-            {(services.length > 0 ? services.map((service) => service.name) : industry.serviceTypes).map((service) => (
+            {(services.length > 0 ? services.map((service) => service.name) : industry.serviceExamples).map((service) => (
               <option key={service} value={service}>
                 {service}
               </option>
@@ -212,14 +212,14 @@ export function PublicReservationRequestForm({
       }}
     >
       <div className={embed ? "" : "rounded-[28px] border border-[color:var(--border)] bg-white/90 p-6"}>
-        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-moss">{industry.requestLabel}</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-moss">Talep Oluştur</div>
         <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl text-ink">{businessName}</h1>
-        <p className="mt-3 text-sm leading-6 text-sage">{industry.publicDescription}</p>
+        <p className="mt-3 text-sm leading-6 text-sage">{industry.publicFormIntro}</p>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           {visibleFields.map(renderField)}
           {staffMembers.length > 0 ? (
             <label className="space-y-2">
-              <span className="text-sm font-semibold text-ink">Tercih Edilen Ekip</span>
+              <span className="text-sm font-semibold text-ink">Tercih Edilen {industry.staffLabel}</span>
               <select className="field" value={form.staffId ?? ""} onChange={(event) => updateField("staffId", event.target.value)}>
                 <option value="">Tercih yok</option>
                 {staffMembers.map((member) => (
@@ -250,7 +250,7 @@ export function PublicReservationRequestForm({
         </button>
         {status === "success" ? (
           <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            Talebiniz alındı. İşletme ekibi uygunluğu kontrol edip kısa süre içinde sizinle iletişime geçecek.
+            {industry.bookingConfirmationCopy}
           </div>
         ) : null}
         {status === "error" ? (

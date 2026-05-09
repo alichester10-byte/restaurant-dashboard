@@ -115,9 +115,9 @@ export default async function SettingsPage({
           {[
             ["#business-settings", "İşletme Bilgileri"],
             ["#plan-usage", "Plan ve Kullanım"],
-            ["#services", "Hizmetler"],
-            ["#staff", "Personel"],
-            ["#resources", "Kaynaklar"],
+            ["#services", industry.settingsSections[1] ?? "Hizmetler"],
+            ["#staff", industry.settingsSections[2] ?? "Personel"],
+            ["#resources", industry.settingsSections[3] ?? "Kaynaklar"],
             ["#security-settings", "Güvenlik"]
           ].map(([href, label]) => (
             <a key={href} href={href} className="rounded-full border border-[color:var(--border)] bg-white px-4 py-2 font-medium text-sage transition hover:border-moss hover:text-moss">
@@ -151,7 +151,7 @@ export default async function SettingsPage({
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-ink">Hizmet Odağı</span>
+                <span className="text-sm font-semibold text-ink">{industry.serviceLabel} Odağı</span>
                 <input className="field" name="serviceFocus" defaultValue={business.restaurantType ?? ""} required disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
@@ -177,7 +177,7 @@ export default async function SettingsPage({
                 <input className="field" type="number" name="seatingCapacity" defaultValue={settings.seatingCapacity} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-semibold text-ink">Ortalama Hizmet Süresi</span>
+                <span className="text-sm font-semibold text-ink">Ortalama {industry.serviceLabel} Süresi</span>
                 <input className="field" type="number" name="averageDiningDurationMin" defaultValue={settings.averageDiningDurationMin} disabled={entitlement.isDemo} />
               </label>
               <label className="space-y-2">
@@ -248,7 +248,7 @@ export default async function SettingsPage({
             </div>
 
             <label className="space-y-2">
-              <span className="text-sm font-semibold text-ink">Notlar ve Kurallar</span>
+              <span className="text-sm font-semibold text-ink">{industry.notesLabel} ve Kurallar</span>
               <textarea className="field min-h-28" name="notes" defaultValue={settings.notes ?? ""} disabled={entitlement.isDemo} />
             </label>
 
@@ -352,15 +352,15 @@ export default async function SettingsPage({
           </div>
 
           <div id="services" className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
-            <div className="section-title">Hizmetler</div>
-            <h3 className="mt-2 text-lg font-semibold text-ink">Sunulan servis kataloğu</h3>
+            <div className="section-title">{industry.settingsSections[1] ?? "Hizmetler"}</div>
+            <h3 className="mt-2 text-lg font-semibold text-ink">Sunulan {industry.serviceLabel.toLocaleLowerCase("tr-TR")} kataloğu</h3>
             <p className="mt-2 text-sm leading-6 text-sage">
               AI asistanı ve public talep formu bu listeyi kullanarak müşteriye doğru hizmet seçeneklerini gösterir.
             </p>
             <div className="mt-4 space-y-3">
               {services.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
-                  Henüz tanımlı hizmet yok. İlk hizmeti eklediğinizde public form ve AI akışı buna göre uyarlanır.
+                  Henüz tanımlı {industry.serviceLabel.toLocaleLowerCase("tr-TR")} yok. İlk kaydı eklediğinizde public form ve AI akışı buna göre uyarlanır.
                 </div>
               ) : (
                 services.map((service) => (
@@ -386,7 +386,7 @@ export default async function SettingsPage({
               )}
             </div>
             <form action={saveServiceAction} className="mt-4 grid gap-3 md:grid-cols-2">
-              <input className="field" name="name" placeholder="Hizmet adı" disabled={entitlement.isDemo} />
+              <input className="field" name="name" placeholder={`${industry.serviceLabel} adı`} disabled={entitlement.isDemo} />
               <input className="field" name="description" placeholder="Kısa açıklama" disabled={entitlement.isDemo} />
               <input className="field" type="number" min={0} name="durationMinutes" placeholder="Süre (dk)" disabled={entitlement.isDemo} />
               <input className="field" type="number" min={0} step="0.01" name="price" placeholder="Fiyat" disabled={entitlement.isDemo} />
@@ -444,26 +444,26 @@ export default async function SettingsPage({
               <input type="hidden" name="isActive" value="true" />
               {entitlement.isDemo ? (
                 <div className="md:col-span-2">
-                  <LockedAction fullWidth href="/billing?upgrade=staff" title="Ekip yönetimi Pro ile açılır" description="Demo modunda yapı görünür. Personel eklemek için Pro planına geçin." />
+                  <LockedAction fullWidth href="/billing?upgrade=staff" title={`${industry.settingsSections[2] ?? "Ekip"} yönetimi Pro ile açılır`} description="Demo modunda yapı görünür. Personel eklemek için Pro planına geçin." />
                 </div>
               ) : (
                 <button className="btn-primary md:col-span-2" type="submit">
-                  Ekip Üyesi Ekle
+                  {industry.staffLabel} Ekle
                 </button>
               )}
             </form>
           </div>
 
           <div id="resources" className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
-            <div className="section-title">Kaynaklar</div>
-            <h3 className="mt-2 text-lg font-semibold text-ink">Bookable kaynaklar</h3>
+            <div className="section-title">{industry.settingsSections[3] ?? "Kaynaklar"}</div>
+            <h3 className="mt-2 text-lg font-semibold text-ink">Rezervasyona açılan {industry.resourceLabelPlural.toLocaleLowerCase("tr-TR")}</h3>
             <p className="mt-2 text-sm leading-6 text-sage">
               Masa, oda, servis alanı, stüdyo, sınıf veya servis hattı gibi rezervasyona konu kaynakları tanımlayın.
             </p>
             <div className="mt-4 space-y-3">
               {bookableResources.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
-                  Henüz kaynak tanımı yok. Mevcut işletmeler bugünkü kaynak yapısıyla çalışmaya devam eder.
+                  Henüz {industry.resourceLabel.toLocaleLowerCase("tr-TR")} tanımı yok. Mevcut işletmeler bugünkü kaynak yapısıyla çalışmaya devam eder.
                 </div>
               ) : (
                 bookableResources.map((resource) => (
@@ -488,8 +488,8 @@ export default async function SettingsPage({
               )}
             </div>
             <form action={saveBookableResourceAction} className="mt-4 grid gap-3 md:grid-cols-2">
-              <input className="field" name="name" placeholder="Kaynak adı" disabled={entitlement.isDemo} />
-              <input className="field" name="type" placeholder="Türü (oda, servis alanı, sınıf...)" disabled={entitlement.isDemo} />
+              <input className="field" name="name" placeholder={`${industry.resourceLabel} adı`} disabled={entitlement.isDemo} />
+              <input className="field" name="type" placeholder={`Türü (${industry.resourceExamples.slice(0, 2).join(", ").toLocaleLowerCase("tr-TR")}...)`} disabled={entitlement.isDemo} />
               <input className="field" type="number" min={0} name="capacity" placeholder="Kapasite" disabled={entitlement.isDemo} />
               <input type="hidden" name="isActive" value="true" />
               {entitlement.isDemo ? (
@@ -508,7 +508,7 @@ export default async function SettingsPage({
             <div className="text-sm font-semibold text-ink">Hatırlatıcı Akışı</div>
             <div className="mt-3 grid gap-3">
               {[
-                "Yaklaşan rezervasyonlar seçilen saat aralığına göre planlanır.",
+                `Yaklaşan ${industry.reservationLabelPlural.toLocaleLowerCase("tr-TR")} seçilen saat aralığına göre planlanır.`,
                 "E-posta kanalı hazırdır; WhatsApp ve SMS akışları provider bağlandığında etkinleşir.",
                 "Cron endpoint'i Vercel Scheduler ile bağlanmaya hazırdır."
               ].map((item) => (

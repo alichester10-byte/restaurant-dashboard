@@ -113,7 +113,7 @@ export async function loadRestaurantChatContext(restaurantId: string) {
     welcomeMessage: `${settings?.restaurantName ?? business.name} için ${industry.requestLabel.toLocaleLowerCase("tr-TR")} memnuniyetle alırım. Gerekli bilgileri paylaşırsanız talebinizi ekip onayına hazırlayabilirim.`,
     tone: "friendly",
     requiredFields: industry.requiredFields,
-    serviceTypes: business.services.length > 0 ? business.services.map((service) => service.name) : industry.serviceTypes,
+    serviceTypes: business.services.length > 0 ? business.services.map((service) => service.name) : industry.serviceExamples,
     staffOptions: business.staffMembers.map((member) => member.name),
     resourceOptions: business.bookableResources.map((resource) => resource.name),
     unsupportedAdvice: industry.unsupportedAdvice,

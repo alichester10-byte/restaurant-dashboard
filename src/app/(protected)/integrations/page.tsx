@@ -27,22 +27,22 @@ const roadmapCards = [
     title: "Website Widget",
     status: "Available now",
     tone: "ready",
-    body: "Paylaşım bağlantısını veya widget akışını kullanarak talebi doğrudan Limon Masa akışına alabilirsiniz. Son onay yine işletme ekibindedir."
+    body: "Paylaşım bağlantısını veya widget akışını kullanarak talebi doğrudan işletme akışına alabilirsiniz. Son onay yine işletme ekibindedir."
   },
   {
-    title: "AI Reservation Assistant",
+    title: "AI Operasyon Asistanı",
     status: "Available now",
     tone: "ready",
-    body: "AI operasyon asistanı müşteri mesajlarını talebe dönüştürür, eksik alanları bulur ve rezervasyon ekibine düzenli bir ön izleme sunar."
+    body: "AI operasyon asistanı müşteri mesajlarını talebe dönüştürür, eksik alanları bulur ve operasyon ekibine düzenli bir ön izleme sunar."
   }
 ];
 
 const steps = [
   "Müşteri WhatsApp, Instagram, web formu veya AI destekli sohbet üzerinden mesaj bırakır.",
-  "Sistem isim, telefon, tarih, saat ve kişi sayısını çıkarır.",
+  "Sistem gerekli alanları çıkarır ve eksik bilgileri işaretler.",
   "Talep Rezervasyonlar > Kanal Talepleri alanına düşer.",
   "İşletme ekibi talebi inceler, onaylar veya reddeder.",
-  "Onaylanan kayıt gerçek rezervasyona dönüşür."
+  "Onaylanan talep ana kayıt akışına taşınır."
 ];
 
 const afterApproval = [
@@ -54,8 +54,8 @@ const afterApproval = [
 ];
 
 const nowAvailable = [
-  "Website rezervasyon talep formu",
-  "Public reservation page",
+  "Website talep formu",
+  "Public talep sayfası",
   "AI ile manuel mesaj çözümleme",
   "Kanal Talepleri içinde onay / red akışı",
   "Tenant ve rol kontrollü güvenli pending request sistemi"
@@ -230,10 +230,10 @@ export default async function IntegrationsPage() {
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Panel id="ai-assistant-testing">
-          <div className="section-title">AI Reservation Assistant</div>
+          <div className="section-title">AI Operasyon Asistanı</div>
           <h2 className="mt-2 text-2xl font-semibold text-ink">Mesajı yapıştır, talebi önizle</h2>
           <p className="mt-2 text-sm leading-6 text-sage">
-            Müşteriden gelen bir WhatsApp, Instagram veya web mesajını buraya yapıştırın. Sistem önce rezervasyon talebini çıkarır, sonra siz onay verirsiniz.
+            Müşteriden gelen bir WhatsApp, Instagram veya web mesajını buraya yapıştırın. Sistem önce {industry.requestLabel.toLocaleLowerCase("tr-TR")} bilgisini çıkarır, sonra siz onay verirsiniz.
           </p>
 
           <div className="mt-6">
@@ -261,7 +261,7 @@ export default async function IntegrationsPage() {
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>
                 <div className="text-xs uppercase tracking-[0.24em] text-moss">Paylaşım kartı</div>
-                <div className="mt-2 text-lg font-semibold text-ink">Rezervasyon sayfasını aç</div>
+                <div className="mt-2 text-lg font-semibold text-ink">Talep sayfasını aç</div>
                 <div className="mt-2 text-sm text-sage">Tıklayınca QR kod ve sosyal medya biyografisine koyacağınız bağlantı görünür.</div>
               </div>
               <div className="rounded-full bg-[color:var(--bg-strong)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-moss transition group-open:bg-emerald-100 group-open:text-emerald-800">
@@ -286,15 +286,18 @@ export default async function IntegrationsPage() {
                 <div className="rounded-[24px] border border-[color:var(--border)] bg-white p-4">
                   <div className="text-xs uppercase tracking-[0.24em] text-moss">Bio / profil bağlantısı</div>
                   <div className="mt-3 break-all rounded-2xl bg-[color:var(--bg-strong)] px-4 py-3 font-medium text-ink">{publicReservationLink}</div>
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <a href={publicReservationLink} target="_blank" rel="noreferrer" className="btn-primary">
-                      Bağlantıyı Aç
-                    </a>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <a href={publicReservationLink} target="_blank" rel="noreferrer" className="btn-primary">
+                        Bağlantıyı Aç
+                      </a>
+                      <a href="#ai-assistant-testing" className="btn-secondary">
+                        AI Asistanı Aç
+                      </a>
+                    </div>
                   </div>
-                </div>
 
                 <div className="rounded-[24px] border border-[color:var(--border)] bg-white p-4 text-sm leading-6 text-sage">
-                  Müşteri bu linkten yalnızca talep bırakır. Talep <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> alanına düşer ve ekip onayından sonra gerçek rezervasyona dönüşür.
+                  Müşteri bu linkten yalnızca talep bırakır. Talep <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> alanına düşer ve ekip onayından sonra ana kayıt akışına taşınır.
                 </div>
               </div>
             </div>

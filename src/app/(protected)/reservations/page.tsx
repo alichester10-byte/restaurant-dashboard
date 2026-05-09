@@ -128,7 +128,7 @@ export default async function ReservationsPage({
           <p className="mt-2 text-sm leading-6 text-sage">Takvimde ve operasyon akışında yer alan ana kayıtlar.</p>
         </Panel>
         <Panel>
-          <div className="section-title">Bekleyen Kanal Talepleri</div>
+          <div className="section-title">Bekleyen Talepler</div>
           <div className="mt-2 text-2xl font-semibold text-ink">
             {data.channelRequests.filter((request) => request.status === ReservationRequestStatus.PENDING).length}
           </div>
@@ -247,10 +247,10 @@ export default async function ReservationsPage({
           <div className="mt-8 border-t border-[color:var(--border)] pt-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-              <div className="section-title">Kanal Talepleri</div>
+              <div className="section-title">{industry.channelRequestsLabel}</div>
               <h2 className="mt-2 text-xl font-semibold text-ink">Dış kanallardan gelen {industry.requestLabel.toLocaleLowerCase("tr-TR")} istekleri</h2>
                 <p className="mt-2 text-sm leading-6 text-sage">
-                  WhatsApp, Instagram, Google/Web, Website Widget ve AI Assistant kaynaklı talepler burada toplanır. İnsan onayı olmadan {industry.reservationLabel.toLocaleLowerCase("tr-TR")} kesinleşmez.
+                  {industry.channelRequestCopy}
                 </p>
               </div>
               <div className="badge bg-[color:var(--bg-strong)] text-ink">{data.channelRequests.filter((request) => request.status === ReservationRequestStatus.PENDING).length} bekleyen talep</div>
@@ -259,7 +259,7 @@ export default async function ReservationsPage({
             <div className="mt-6 space-y-4" id="channel-requests">
               {data.channelRequests.length === 0 ? (
                 <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-6 text-sm leading-6 text-sage">
-                  Henüz dış kanallardan gelen talep yok. Yeni talepler WhatsApp, Instagram, web formu ve AI akışlarından geldikçe burada görünecek.
+                  {industry.emptyStates.requests.description}
                 </div>
               ) : (
                 data.channelRequests.map((request) => (

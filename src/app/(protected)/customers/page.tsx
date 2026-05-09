@@ -26,7 +26,7 @@ export default async function CustomersPage({
   return (
     <div className="space-y-6">
       <AppHeader
-        title="Müşteriler"
+        title={industry.customerLabelPlural}
         subtitle={`VIP, düzenli ve yeni ${industry.customerLabelPlural.toLocaleLowerCase("tr-TR")} davranış geçmişiyle birlikte takip edin.`}
         businessName={session.user.business.name}
         role={session.user.role}
@@ -37,17 +37,17 @@ export default async function CustomersPage({
 
       {entitlement.isDemo ? (
         <DemoModeBanner
-          title="Müşteri hafızası demo modunda tamamen görünür."
-          description="Geçmiş rezervasyonları, notları ve segmentleri keşfedebilirsiniz. Müşteri notlarını ve segment güncellemelerini açmak için Pro planını etkinleştirin."
+          title={`${industry.customerLabelPlural} görünümü demo modunda tamamen açık.`}
+          description={`Geçmiş ${industry.reservationLabelPlural.toLocaleLowerCase("tr-TR")}, notları ve segmentleri keşfedebilirsiniz. ${industry.customerLabel} notlarını ve segment güncellemelerini açmak için Pro planını etkinleştirin.`}
           href="/billing?upgrade=customers"
         />
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Toplam Müşteri", value: totalCustomers, hint: "Kayıtlı iletişim ve talep geçmişi" },
-          { label: "Geri Dönen Müşteri", value: returningCustomers, hint: "Birden fazla kayıt oluşturanlar" },
-          { label: "Yakın Dönem Müşteri", value: recentCustomers, hint: "Son taleplerde görünenler" },
+          { label: `Toplam ${industry.customerLabel}`, value: totalCustomers, hint: "Kayıtlı iletişim ve talep geçmişi" },
+          { label: `Geri Dönen ${industry.customerLabel}`, value: returningCustomers, hint: `Birden fazla ${industry.reservationLabel.toLocaleLowerCase("tr-TR")} oluşturanlar` },
+          { label: `Yakın Dönem ${industry.customerLabel}`, value: recentCustomers, hint: "Son taleplerde görünenler" },
           { label: "İletişime Uygun", value: contactableCustomers, hint: "Telefon veya e-posta bilgisi olanlar" }
         ].map((card) => (
           <Panel key={card.label}>
@@ -62,21 +62,21 @@ export default async function CustomersPage({
         <Panel>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <div className="section-title">Müşteri Listesi</div>
+              <div className="section-title">{industry.customerLabelPlural}</div>
               <h2 className="mt-2 text-xl font-semibold text-ink">Talep ve kayıt geçmişi tek görünümde</h2>
             </div>
             <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
               {totalCustomers === 0
-                ? "Müşteriler, yeni talepler veya kayıtlar oluştukça burada görünür."
-                : `${totalCustomers} müşteri kartı hazır`}
+                ? industry.emptyStates.customers.description
+                : `${totalCustomers} ${industry.customerLabel.toLocaleLowerCase("tr-TR")} kartı hazır`}
             </div>
           </div>
           <div className="mt-6 space-y-3">
             {data.customers.length === 0 ? (
               <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-8 text-center">
-                <div className="text-lg font-semibold text-ink">Henüz müşteri oluşmadı</div>
+                <div className="text-lg font-semibold text-ink">{industry.emptyStates.customers.title}</div>
                 <p className="mt-3 text-sm leading-6 text-sage">
-                  Customers will appear here after requests or bookings are created.
+                  {industry.emptyStates.customers.description}
                 </p>
               </div>
             ) : data.customers.map((customer) => (
@@ -105,7 +105,7 @@ export default async function CustomersPage({
         <Panel>
           {data.selectedCustomer ? (
             <>
-              <div className="section-title">Müşteri Kartı</div>
+              <div className="section-title">{industry.customerLabel} Kartı</div>
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <h2 className="text-2xl font-semibold text-ink">{data.selectedCustomer.name}</h2>
                 <StatusBadge value={data.selectedCustomer.tag} />
@@ -146,7 +146,7 @@ export default async function CustomersPage({
               </div>
 
               <div className="mt-8">
-                <div className="text-sm font-semibold text-ink">Son Çağrılar</div>
+                <div className="text-sm font-semibold text-ink">Son İletişimler</div>
                 <div className="mt-3 space-y-3">
                   {data.selectedCustomer.callLogs.map((call) => (
                     <div key={call.id} className="rounded-2xl border border-[color:var(--border)] bg-white/80 p-4">

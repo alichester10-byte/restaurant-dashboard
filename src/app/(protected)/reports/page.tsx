@@ -41,10 +41,10 @@ export default async function ReportsPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Toplam Talep", value: totalRequests },
+          { label: industry.reportMetrics[0]?.label ?? "Toplam Talep", value: totalRequests },
           { label: `Onaylı ${industry.reservationLabelPlural}`, value: approvedBookings },
           { label: "Dönüşüm Oranı", value: formatPercent(conversionRate) },
-          { label: "Öne Çıkan Kanal", value: topChannel }
+          { label: industry.reportMetrics[2]?.label ?? "Öne Çıkan Kanal", value: topChannel }
         ].map((card) => (
           <Panel key={card.label}>
             <div className="text-sm text-sage">{card.label}</div>
@@ -56,9 +56,9 @@ export default async function ReportsPage() {
       {!hasReportData ? (
         <Panel className="text-center">
           <div className="section-title">Analitik Hazırlanıyor</div>
-          <h2 className="mt-2 text-2xl font-semibold text-ink">İlk talepler geldikçe raporlar burada oluşacak</h2>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">{industry.emptyStates.reports.title}</h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-sage">
-            Kanal performansı, booking trendi, kaynak kullanımı ve AI asistan hareketleri canlı veri geldikçe bu ekranda görünür.
+            {industry.emptyStates.reports.description}
           </p>
         </Panel>
       ) : null}
@@ -69,7 +69,7 @@ export default async function ReportsPage() {
           <h2 className="mt-2 text-xl font-semibold text-ink">Temel performans sinyalleri</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {[
-              { label: `Bugünkü ${industry.reservationLabel.toLocaleLowerCase("tr-TR")}`, value: data.summaryCards.todayReservations },
+              { label: industry.dashboardMetrics[0]?.label ?? `Bugünkü ${industry.reservationLabel.toLocaleLowerCase("tr-TR")}`, value: data.summaryCards.todayReservations },
               { label: "No-show oranı", value: formatPercent(data.summaryCards.noShowRate) },
               { label: "İptal oranı", value: formatPercent(data.summaryCards.cancellationRate) },
               { label: "Tamamlanan oran", value: formatPercent(data.summaryCards.completedRate) },
@@ -85,7 +85,7 @@ export default async function ReportsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">Booking Trendi</div>
+          <div className="section-title">{industry.reportMetrics[0]?.label ?? "Trend"}</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">{industry.reservationLabel} ve {industry.customerLabel.toLocaleLowerCase("tr-TR")} hacmi</h2>
           <div className="mt-6">
             <MiniBarChart items={data.reservationsByDay.map((item) => ({ label: item.label, total: item.reservations }))} color="bg-gold" />
@@ -155,7 +155,7 @@ export default async function ReportsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">Kaynak Dağılımı</div>
+          <div className="section-title">{industry.reportMetrics[1]?.label ?? "Kaynak Dağılımı"}</div>
           <div className="mt-5 space-y-3">
             {data.popularHours.map((item) => (
               <div key={item.label} className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3">

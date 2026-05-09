@@ -58,17 +58,13 @@ export default async function PublicReservationPage({
       <div className={embed ? "mx-auto max-w-3xl" : "mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]"}>
         {!embed ? (
           <section className="glass-panel rounded-[32px] p-8">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-moss">Talep Oluştur</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-moss">{industry.appNameLabel}</div>
             <h1 className="mt-4 font-[family-name:var(--font-display)] text-4xl text-ink">İşletme ekibine yeni {industry.requestLabel.toLocaleLowerCase("tr-TR")} bırakın</h1>
             <p className="mt-4 max-w-xl text-base leading-7 text-sage">
-              Formu doldurun, talebiniz işletme ekibinin onay akışına düşsün. Uygunluk kontrolü yapıldıktan sonra sizinle dönüş yapılır.
+              {industry.publicDescription}
             </p>
             <div className="mt-6 grid gap-3">
-              {[
-                "Talep önce kontrol edilir, doğrudan kesinleşmez.",
-                "Gerekli bilgiler eksikse ekip sizinle iletişime geçer.",
-                "AI asistan açıksa ek bilgileri toplamanıza yardımcı olur."
-              ].map((item) => (
+              {[industry.bookingRules[0], industry.bookingRules[1] ?? "Gerekli bilgiler eksikse ekip sizinle iletişime geçer.", "AI asistan açıksa ek bilgileri toplamanıza yardımcı olur."].map((item) => (
                 <div key={item} className="rounded-[20px] border border-[color:var(--border)] bg-white/80 px-4 py-3 text-sm leading-6 text-sage">
                   {item}
                 </div>

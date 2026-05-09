@@ -52,9 +52,9 @@ function createAssistantPlaceholder(): ChatMessage {
 }
 
 const OPERATOR_EXAMPLES = [
-  "Müşteriden gelen mesaj: Yarın akşam 20.30 için 4 kişilik rezervasyon talebi bırakmak istiyoruz. Adım Elif, telefonum 0555 222 33 44.",
-  "Bu rezervasyon mesajında eksik bilgi var mı? Cumartesi 19.00 için 2 kişiyiz, adım Burak.",
-  "Yeni bir rezervasyon talebi hazırlamak istiyorum: Cuma 21.00, 6 kişi, Ahmet, 0532 444 55 66."
+  "Müşteriden gelen mesaj: Yarın akşam 20.30 için 4 kişilik talep bırakmak istiyoruz. Adım Elif, telefonum 0555 222 33 44.",
+  "Bu mesajda eksik bilgi var mı? Cumartesi 19.00 için 2 kişiyiz, adım Burak.",
+  "Yeni bir talep hazırlamak istiyorum: Cuma 21.00, 6 kişi, Ahmet, 0532 444 55 66."
 ];
 
 function buildStorageKey(restaurantId: string, mode: "floating" | "operator") {
@@ -202,7 +202,7 @@ export function RestaurantChatWidget({
         setError(payload?.error || "AI asistanı şu anda yanıt veremiyor. Dilerseniz form üzerinden talep bırakabilirsiniz.");
         setMessages((current) => [
           ...current,
-          assistantMessage(payload?.error || "Şu anda bir sorun yaşıyorum. İsterseniz rezervasyon talebinizi form üzerinden iletebilirsiniz.")
+          assistantMessage(payload?.error || "Şu anda bir sorun yaşıyorum. İsterseniz talebinizi form üzerinden iletebilirsiniz.")
         ]);
         return;
       }
@@ -288,17 +288,17 @@ export function RestaurantChatWidget({
             message.id === assistantDraft.id
               ? {
                   ...message,
-                  content: "Şu anda yanıt oluşturulamadı. Dilerseniz rezervasyon formunu kullanabilirsiniz."
+                  content: "Şu anda yanıt oluşturulamadı. Dilerseniz talep formunu kullanabilirsiniz."
                 }
               : message
           )
         );
       }
     } catch {
-      setError("Bağlantı kurulamadı. Dilerseniz rezervasyon formunu kullanarak talebinizi iletebilirsiniz.");
+      setError("Bağlantı kurulamadı. Dilerseniz talep formunu kullanarak talebinizi iletebilirsiniz.");
       setMessages((current) => [
         ...current,
-        assistantMessage("Şu anda bağlantı kurulamadı. Dilerseniz rezervasyon formunu kullanarak talebinizi iletebilirsiniz.")
+        assistantMessage("Şu anda bağlantı kurulamadı. Dilerseniz talep formunu kullanarak talebinizi iletebilirsiniz.")
       ]);
     } finally {
       setIsSending(false);
@@ -317,7 +317,7 @@ export function RestaurantChatWidget({
       : "Talep detaylarını toplayıp işletme ekibine iletirim.";
   const inputPlaceholder =
     mode === "operator"
-      ? "Müşteri mesajını yapıştırın veya yeni rezervasyon talebini tarif edin."
+      ? "Müşteri mesajını yapıştırın veya yeni talebi tarif edin."
       : "Örn: Yarın akşam 20.30 için 4 kişiyiz. Adım Elif, telefonum 0555 222 33 44.";
   const helperText =
     mode === "operator"

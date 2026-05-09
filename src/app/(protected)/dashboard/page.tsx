@@ -50,7 +50,7 @@ export default async function DashboardPage() {
                   {session.user.business.name}
                 </span>
                 <span className="rounded-full border border-[color:var(--border)] bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-sage">
-                  Genel operasyon görünümü
+                  {industry.appNameLabel}
                 </span>
               </div>
               <div className="max-w-2xl">
@@ -61,7 +61,7 @@ export default async function DashboardPage() {
               </div>
               <div className="flex flex-wrap gap-2.5">
                 {[
-                  { href: "/reservations?compose=1", label: "Yeni Talep", icon: "＋", primary: true },
+                  { href: "/reservations?compose=1", label: industry.primaryActionLabel, icon: "＋", primary: true },
                   { href: "/reservations", label: `${industry.reservationLabelPlural}ı Gör`, icon: "↗" },
                   { href: "/integrations", label: "Kanalları Yönet", icon: "◎" },
                   { href: "#restaurant-chat-widget", label: "AI Asistan", icon: "✦" }
@@ -94,9 +94,9 @@ export default async function DashboardPage() {
 
               <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
                 {[
-                  { label: "Bekleyen AI Talebi", value: data.aiAssistant.pendingCount },
-                  { label: "Yaklaşan Kayıt", value: data.upcomingReservations.length },
-                  { label: "Aktif Kaynak", value: data.tables.length }
+                  { label: data.aiAssistant.pendingCount > 0 ? `Bekleyen AI ${industry.requestLabel}` : "AI Talep Kuyruğu", value: data.aiAssistant.pendingCount },
+                  { label: `Yaklaşan ${industry.reservationLabel}`, value: data.upcomingReservations.length },
+                  { label: `Aktif ${industry.resourceLabel}`, value: data.tables.length }
                 ].map((item) => (
                   <div key={item.label} className="rounded-[22px] border border-[color:var(--border)] bg-white/92 px-4 py-4">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-sage">{item.label}</div>
@@ -110,13 +110,13 @@ export default async function DashboardPage() {
 
         <Panel className="col-span-12 xl:col-span-4">
           <div className="section-title">Kısa odak</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Bugün öncelik verilecek alanlar</h2>
+          <h2 className="mt-2 text-xl font-semibold text-ink">{industry.dashboardMetrics[1]?.label ?? "Bugün öncelik verilecek alanlar"}</h2>
           <div className="mt-4 space-y-2.5">
             {[
-              `${data.upcomingReservations.length} yaklaşan kayıt`,
+              `${data.upcomingReservations.length} yaklaşan ${industry.reservationLabel.toLocaleLowerCase("tr-TR")}`,
               `${data.callsToday.length} çağrı hareketi`,
               `${data.tables.length} aktif ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}`,
-              `${data.aiAssistant.pendingCount} AI destekli bekleyen talep`
+              `${data.aiAssistant.pendingCount} AI destekli ${industry.requestLabel.toLocaleLowerCase("tr-TR")}`
             ].map((item) => (
               <div key={item} className="rounded-[20px] border border-[color:var(--border)] bg-[color:var(--bg-strong)] px-4 py-3 text-sm text-sage">
                 {item}
@@ -175,19 +175,19 @@ export default async function DashboardPage() {
         <Panel className="col-span-12 xl:col-span-7">
           <div className="flex items-center justify-between">
             <div>
-              <div className="section-title">Yaklaşan {industry.reservationLabelPlural}</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Onaylı ve yaklaşan kayıtlar</h2>
+          <div className="section-title">Yaklaşan {industry.reservationLabelPlural}</div>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Onaylı ve yaklaşan {industry.reservationLabelPlural.toLocaleLowerCase("tr-TR")}</h2>
             </div>
           </div>
           <div className="mt-5 space-y-3">
             {data.upcomingReservations.length === 0 ? (
               <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-8 text-center">
-                <div className="text-lg font-semibold text-ink">Bugün için yaklaşan kayıt görünmüyor</div>
+                <div className="text-lg font-semibold text-ink">{industry.emptyStates.dashboardPrimary.title}</div>
                 <p className="mt-3 text-sm leading-6 text-sage">
-                  Yeni bir talep oluşturabilir veya kanal akışından gelen kayıtları burada takip edebilirsiniz.
+                  {industry.emptyStates.dashboardPrimary.description}
                 </p>
                 <a href="/reservations?compose=1" className="btn-primary mt-5">
-                  Yeni Talep Oluştur
+                  {industry.emptyStates.dashboardPrimary.cta}
                 </a>
               </div>
             ) : data.upcomingReservations.map((reservation) => (
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
           <div className="mt-5 space-y-3">
             {data.callsToday.length === 0 ? (
               <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-8 text-center">
-                <div className="text-lg font-semibold text-ink">Henüz çağrı hareketi yok</div>
+                <div className="text-lg font-semibold text-ink">Henüz iletişim hareketi yok</div>
                 <p className="mt-3 text-sm leading-6 text-sage">
                   Gün içindeki arama notları ve geri dönüş kayıtları burada görünür.
                 </p>
@@ -246,19 +246,19 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">{industry.primaryResourceLabelPlural}</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Kaynak durumu</h2>
+              <h2 className="mt-2 text-xl font-semibold text-ink">{industry.resourceBoardTitle}</h2>
             </div>
             <div className="text-sm text-sage">{data.tables.length} {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}</div>
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {data.tables.length === 0 ? (
               <div className="col-span-full rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-8 text-center">
-                <div className="text-lg font-semibold text-ink">Henüz kaynak planı oluşturulmadı</div>
+                <div className="text-lg font-semibold text-ink">{industry.emptyStates.resources.title}</div>
                 <p className="mt-3 text-sm leading-6 text-sage">
-                  Kaynaklar eklendiğinde atama ve kapasite görünümü bu alanda çalışmaya başlar.
+                  {industry.emptyStates.resources.description}
                 </p>
                 <a href="/tables?create=1" className="btn-primary mt-5">
-                  Kaynak Ekle
+                  {industry.emptyStates.resources.cta}
                 </a>
               </div>
             ) : data.tables.map((table) => (
@@ -311,8 +311,8 @@ export default async function DashboardPage() {
         }}
         quickLinks={[
           { label: "Kanal Talepleri", href: "/reservations#channel-requests" },
-          { label: "Rezervasyonlar", href: "/reservations" },
-          { label: "Public Sayfa", href: `/r/${session.user.business.slug}` }
+          { label: industry.reservationLabelPlural, href: "/reservations" },
+          { label: "Paylaşım Sayfası", href: `/r/${session.user.business.slug}` }
         ]}
       />
     </div>
