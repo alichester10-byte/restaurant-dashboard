@@ -14,6 +14,68 @@ import { getTablesPageData } from "@/lib/data";
 import { getIndustryConfig } from "@/lib/industry-config";
 import { formatDateTime } from "@/lib/utils";
 
+function isRestaurantLikeIndustry(businessType: string) {
+  return businessType === "RESTAURANT" || businessType === "CAFE";
+}
+
+function getResourceZoneLabel(zone: string, fallbackArea: string, useOriginal: boolean) {
+  if (useOriginal) {
+    return zone;
+  }
+
+  const normalized = zone.trim().toLocaleLowerCase("tr-TR");
+  if (normalized.includes("teras") || normalized.includes("bahçe")) return "Dış Alan";
+  if (normalized.includes("vip") || normalized.includes("özel")) return "Özel Alan";
+  if (normalized.includes("kapı") || normalized.includes("giriş")) return "Giriş Alanı";
+  if (normalized.includes("bar")) return "Servis Alanı";
+
+  return fallbackArea;
+}
+
+function getResourceAreaLabel(areaLabel: string, useOriginal: boolean) {
+  if (useOriginal) {
+    return areaLabel;
+  }
+
+  const normalized = areaLabel.trim().toLocaleLowerCase("tr-TR");
+  if (normalized.includes("cam")) return "Ön Alan";
+  if (normalized.includes("kapı")) return "Giriş";
+  if (normalized.includes("bahçe") || normalized.includes("teras")) return "Dış Alan";
+  if (normalized.includes("vip") || normalized.includes("özel")) return "Özel Alan";
+  if (normalized.includes("bar")) return "Servis Alanı";
+  return "Ana Alan";
+}
+
+function getResourceTypeLabel(shapeLabel: string, useOriginal: boolean) {
+  if (useOriginal) {
+    return shapeLabel;
+  }
+
+  const normalized = shapeLabel.trim().toLocaleLowerCase("tr-TR");
+  if (normalized.includes("yuvarlak")) return "Dairesel";
+  if (normalized.includes("dikdörtgen")) return "Standart";
+  if (normalized.includes("kare")) return "Kompakt";
+  if (normalized.includes("booth")) return "Özel";
+  if (normalized.includes("bar")) return "Servis";
+  return "Standart";
+}
+
+function getDisplayResourceCode(code: string, index: number, resourceLabel: string, useOriginal: boolean) {
+  if (useOriginal) {
+    return code;
+  }
+
+  return `${resourceLabel} ${index + 1}`;
+}
+
+function getDisplayResourceName(label: string, index: number, examples: string[], resourceLabel: string, useOriginal: boolean) {
+  if (useOriginal) {
+    return label;
+  }
+
+  return examples[index % examples.length] ?? `${resourceLabel} Alanı ${index + 1}`;
+}
+
 export default async function TablesPage({
   searchParams
 }: {
@@ -23,6 +85,8 @@ export default async function TablesPage({
   const data = await getTablesPageData(session.user.businessId, searchParams.tableId);
   const entitlement = getBusinessEntitlement(session.user.business, session.user.role);
   const industry = getIndustryConfig(session.user.business.businessType);
+  const useOriginalResourceLabels = isRestaurantLikeIndustry(session.user.business.businessType);
+  const selectedTableIndex = data.selectedTable ? data.tables.findIndex((item) => item.id === data.selectedTable?.id) : -1;
   const feedback =
     searchParams.saved === "created"
       ? `Yeni ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")} eklendi.`
@@ -87,7 +151,7 @@ export default async function TablesPage({
             Konum, kapasite ve durum bilgisine göre tüm {industry.primaryResourceLabelPlural.toLocaleLowerCase("tr-TR")} tek ekranda yönetin.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {data.tables.map((table) => (
+            {data.tables.map((table, index) => (
               <Link
                 key={table.id}
                 href={`/tables?tableId=${table.id}`}
@@ -97,16 +161,22 @@ export default async function TablesPage({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm text-sage">
-                      {table.zone} • {tableAreaLabels[table.area]}
+                      {getResourceZoneLabel(table.zone, getResourceAreaLabel(tableAreaLabels[table.area], useOriginalResourceLabels), useOriginalResourceLabels)}
+                      {" • "}
+                      {getResourceAreaLabel(tableAreaLabels[table.area], useOriginalResourceLabels)}
                     </div>
-                    <div className="mt-1 text-xl font-semibold text-ink">{table.number}</div>
-                    <div className="mt-1 text-sm text-sage">{table.label}</div>
+                    <div className="mt-1 text-xl font-semibold text-ink">
+                      {getDisplayResourceCode(table.number, index, industry.primaryResourceLabel, useOriginalResourceLabels)}
+                    </div>
+                    <div className="mt-1 text-sm text-sage">
+                      {getDisplayResourceName(table.label, index, industry.resourceExamples, industry.primaryResourceLabel, useOriginalResourceLabels)}
+                    </div>
                   </div>
                   <StatusBadge value={table.status} />
                 </div>
                 <div className="mt-6 flex items-end justify-between">
                   <div className="font-[family-name:var(--font-display)] text-4xl text-ink">{table.seatCapacity}</div>
-                  <div className="text-sm text-sage">{tableShapeLabels[table.shape]}</div>
+                  <div className="text-sm text-sage">{getResourceTypeLabel(tableShapeLabels[table.shape], useOriginalResourceLabels)}</div>
                 </div>
                 <div className="mt-4 text-sm text-sage">{table.notes || `${industry.primaryResourceLabel} planına operasyon notu eklenmedi.`}</div>
               </Link>
@@ -124,7 +194,9 @@ export default async function TablesPage({
             <>
               <div className="section-title">Seçili {industry.primaryResourceLabel}</div>
               <h2 className="mt-2 text-xl font-semibold text-ink">
-                {data.selectedTable.number} • {data.selectedTable.label}
+                {getDisplayResourceCode(data.selectedTable.number, Math.max(selectedTableIndex, 0), industry.primaryResourceLabel, useOriginalResourceLabels)}{" "}
+                •{" "}
+                {getDisplayResourceName(data.selectedTable.label, Math.max(selectedTableIndex, 0), industry.resourceExamples, industry.primaryResourceLabel, useOriginalResourceLabels)}
               </h2>
               <div className="mt-4">
                 <StatusBadge value={data.selectedTable.status} />
@@ -132,11 +204,11 @@ export default async function TablesPage({
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl bg-white/80 p-4">
                   <div className="text-sm text-sage">Konum</div>
-                  <div className="mt-2 font-semibold text-ink">{tableAreaLabels[data.selectedTable.area]}</div>
+                  <div className="mt-2 font-semibold text-ink">{getResourceAreaLabel(tableAreaLabels[data.selectedTable.area], useOriginalResourceLabels)}</div>
                 </div>
                 <div className="rounded-2xl bg-white/80 p-4">
                   <div className="text-sm text-sage">{industry.primaryResourceLabel} tipi</div>
-                  <div className="mt-2 font-semibold text-ink">{tableShapeLabels[data.selectedTable.shape]}</div>
+                  <div className="mt-2 font-semibold text-ink">{getResourceTypeLabel(tableShapeLabels[data.selectedTable.shape], useOriginalResourceLabels)}</div>
                 </div>
                 <div className="rounded-2xl bg-white/80 p-4">
                   <div className="text-sm text-sage">Kapasite</div>

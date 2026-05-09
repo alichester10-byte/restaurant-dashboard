@@ -108,9 +108,9 @@ export const billingPaymentStatusLabels: Record<BillingPaymentStatus, string> = 
 export const integrationProviderLabels: Record<IntegrationProvider, string> = {
   WHATSAPP: "WhatsApp Business",
   INSTAGRAM: "Instagram DM",
-  GOOGLE_WEB: "Google / Web Rezervasyon",
+  GOOGLE_WEB: "Google / Web Talepleri",
   WEBSITE_WIDGET: "Website Widget",
-  AI_ASSISTANT: "AI Reservation Assistant"
+  AI_ASSISTANT: "AI Operasyon Asistanı"
 };
 
 export const integrationStatusLabels: Record<IntegrationStatus, string> = {

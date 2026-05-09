@@ -251,7 +251,7 @@ export default async function IntegrationsPage() {
         </Panel>
 
         <Panel>
-          <div className="section-title">Paylaşılabilir Rezervasyon Linki</div>
+          <div className="section-title">{industry.quickShareLabel}</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">QR ve bio bağlantısı hazır</h2>
           <p className="mt-3 text-sm leading-6 text-sage">
             Bu alan yalnızca paylaşmanız gereken müşteri bağlantısını gösterir. Instagram bio, WhatsApp profil ve Google Business için kullanabilirsiniz.
@@ -298,6 +298,19 @@ export default async function IntegrationsPage() {
 
                 <div className="rounded-[24px] border border-[color:var(--border)] bg-white p-4 text-sm leading-6 text-sage">
                   Müşteri bu linkten yalnızca talep bırakır. Talep <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> alanına düşer ve ekip onayından sonra ana kayıt akışına taşınır.
+                </div>
+
+                <div className="rounded-[24px] border border-[color:var(--border)] bg-white p-4">
+                  <div className="text-xs uppercase tracking-[0.24em] text-moss">Website Widget</div>
+                  <div className="mt-2 text-base font-semibold text-ink">Widget talep akışını aç</div>
+                  <div className="mt-2 text-sm leading-6 text-sage">
+                    Bu paylaşım alanından gelen tüm talepler otomatik olarak <span className="font-semibold text-ink">Rezervasyonlar &gt; Kanal Talepleri</span> bölümünde görünür.
+                  </div>
+                  <div className="mt-4">
+                    <a href="/reservations#channel-requests" className="btn-secondary">
+                      Widget Taleplerini Gör
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

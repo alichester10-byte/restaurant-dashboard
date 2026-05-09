@@ -5,6 +5,54 @@ import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { tableAreaLabels, tableShapeLabels, tableStatusLabels } from "@/lib/constants";
 import type { IndustryConfig } from "@/lib/industry-config";
 
+function getResourceCodePlaceholder(industry: IndustryConfig) {
+  if (industry.businessType === "RESTAURANT" || industry.businessType === "CAFE") {
+    return "T12";
+  }
+
+  return `${industry.primaryResourceLabel.slice(0, 1).toUpperCase()}-01`;
+}
+
+function getResourceLabelPlaceholder(industry: IndustryConfig) {
+  return industry.resourceExamples[0] ?? `${industry.primaryResourceLabel} Alanı`;
+}
+
+function getResourceZonePlaceholder(industry: IndustryConfig) {
+  if (industry.businessType === "RESTAURANT" || industry.businessType === "CAFE") {
+    return "İç Salon";
+  }
+
+  return "Ana Alan";
+}
+
+function getAreaDisplayLabel(label: string, industry: IndustryConfig) {
+  if (industry.businessType === "RESTAURANT" || industry.businessType === "CAFE") {
+    return label;
+  }
+
+  const normalized = label.trim().toLocaleLowerCase("tr-TR");
+  if (normalized.includes("cam")) return "Ön Alan";
+  if (normalized.includes("kapı")) return "Giriş";
+  if (normalized.includes("bahçe") || normalized.includes("teras")) return "Dış Alan";
+  if (normalized.includes("vip") || normalized.includes("özel")) return "Özel Alan";
+  if (normalized.includes("bar")) return "Servis Alanı";
+  return "Ana Alan";
+}
+
+function getShapeDisplayLabel(label: string, industry: IndustryConfig) {
+  if (industry.businessType === "RESTAURANT" || industry.businessType === "CAFE") {
+    return label;
+  }
+
+  const normalized = label.trim().toLocaleLowerCase("tr-TR");
+  if (normalized.includes("yuvarlak")) return "Dairesel";
+  if (normalized.includes("dikdörtgen")) return "Standart";
+  if (normalized.includes("kare")) return "Kompakt";
+  if (normalized.includes("booth")) return "Özel";
+  if (normalized.includes("bar")) return "Servis";
+  return "Standart";
+}
+
 export function TableForm({
   table,
   locked = false,
@@ -44,18 +92,18 @@ export function TableForm({
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2">
             <span className="text-sm font-semibold text-ink">{industry.primaryResourceLabel} Kodu</span>
-            <input className="field" name="number" defaultValue={table?.number} placeholder="T12" required />
+            <input className="field" name="number" defaultValue={table?.number} placeholder={getResourceCodePlaceholder(industry)} required />
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold text-ink">Görünür Etiket</span>
-            <input className="field" name="label" defaultValue={table?.label} placeholder="Cam Önü 2" required />
+            <input className="field" name="label" defaultValue={table?.label} placeholder={getResourceLabelPlaceholder(industry)} required />
           </label>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-ink">Salon / Bölge</span>
-            <input className="field" name="zone" defaultValue={table?.zone} placeholder="İç Salon" required />
+            <span className="text-sm font-semibold text-ink">Alan / Bölge</span>
+            <input className="field" name="zone" defaultValue={table?.zone} placeholder={getResourceZonePlaceholder(industry)} required />
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold text-ink">Kapasite</span>
@@ -69,7 +117,7 @@ export function TableForm({
             <select className="field" name="area" defaultValue={table?.area ?? TableArea.MAIN_DINING}>
               {Object.values(TableArea).map((value) => (
                 <option key={value} value={value}>
-                  {tableAreaLabels[value]}
+                  {getAreaDisplayLabel(tableAreaLabels[value], industry)}
                 </option>
               ))}
             </select>
@@ -79,7 +127,7 @@ export function TableForm({
             <select className="field" name="shape" defaultValue={table?.shape ?? TableShape.RECTANGLE}>
               {Object.values(TableShape).map((value) => (
                 <option key={value} value={value}>
-                  {tableShapeLabels[value]}
+                  {getShapeDisplayLabel(tableShapeLabels[value], industry)}
                 </option>
               ))}
             </select>
