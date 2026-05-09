@@ -18,12 +18,12 @@ export function StatCard({
   if (isAccent) {
     return (
       <Panel className="overflow-hidden border-[rgba(20,33,27,0.08)] bg-white/95 p-2">
-        <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,#163329_0%,#214c3d_58%,#285745_100%)] px-5 py-5 text-white">
+        <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(145deg,#163329_0%,#214c3d_55%,#2d6751_100%)] px-5 py-5 text-white">
           <div className="absolute inset-y-0 right-0 w-32 bg-[radial-gradient(circle_at_top_right,rgba(231,199,134,0.28),transparent_62%)]" />
           <div className="relative space-y-4">
-            <div className="text-sm font-semibold tracking-[0.02em] text-[#f3d9a4]">{label}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.08em] text-[#f3d9a4]">{label}</div>
             <div className="flex items-end justify-between gap-3">
-              <div className="text-3xl font-bold tracking-tight text-white">
+              <div className="text-[34px] font-semibold tracking-[-0.03em] text-white">
                 {typeof value === "number" && label.includes("Doluluk") ? formatPercent(value) : value}
               </div>
               {typeof trend === "number" ? (
@@ -40,12 +40,12 @@ export function StatCard({
   }
 
   return (
-    <Panel className="relative overflow-hidden">
-      <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+    <Panel className="relative overflow-hidden bg-white/92">
+      <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-[color:var(--accent-soft)] blur-2xl" />
       <div className="relative space-y-4">
-        <div className="text-sm font-medium text-sage">{label}</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-sage">{label}</div>
         <div className="flex items-end justify-between gap-3">
-          <div className="text-3xl font-bold tracking-tight text-ink">
+          <div className="text-[32px] font-semibold tracking-[-0.03em] text-ink">
             {typeof value === "number" && label.includes("Doluluk") ? formatPercent(value) : value}
           </div>
           {typeof trend === "number" ? (

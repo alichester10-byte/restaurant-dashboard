@@ -47,10 +47,17 @@ export function Sidebar({
   const items = role === UserRole.SUPER_ADMIN ? superAdminItems : businessItems;
 
   return (
-    <aside className="glass-panel hidden w-72 shrink-0 rounded-[30px] p-4 lg:flex lg:flex-col">
-      <div className="rounded-[24px] bg-[linear-gradient(135deg,#214c3d_0%,#172f27_100%)] p-4 text-white">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-white/60">{role === UserRole.SUPER_ADMIN ? "Platform" : industry.displayName}</div>
-        <div className="mt-2 text-xl font-semibold">{businessName}</div>
+    <aside className="glass-panel hidden w-[288px] shrink-0 rounded-[30px] p-3 lg:flex lg:flex-col">
+      <div className="rounded-[24px] border border-white/10 bg-[linear-gradient(145deg,#214c3d_0%,#172f27_100%)] p-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-white/60">{role === UserRole.SUPER_ADMIN ? "Platform" : industry.displayName}</div>
+            <div className="mt-2 text-lg font-semibold leading-tight">{businessName}</div>
+          </div>
+          <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/75">
+            {modeLabel}
+          </span>
+        </div>
         <p className="mt-2 text-sm leading-6 text-white/75">
           {role === UserRole.SUPER_ADMIN
             ? "İşletmeleri, trial durumlarını ve abonelik planlarını tek panelden yönetin."
@@ -58,14 +65,14 @@ export function Sidebar({
         </p>
       </div>
 
-      <nav className="mt-6 space-y-2">
+      <nav className="mt-5 space-y-1.5">
         {items.map((item) => (
           <NavItemLink key={item.href} href={item.href} label={item.label} short={item.short} />
         ))}
       </nav>
 
-      <div className="mt-auto rounded-[24px] bg-[color:var(--bg-strong)] p-4">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-sage">{modeLabel}</div>
+      <div className="mt-auto rounded-[24px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(243,237,227,0.88)_100%)] p-4">
+        <div className="text-[10px] uppercase tracking-[0.16em] text-sage">AI Operasyon Asistanı</div>
         <p className="mt-3 text-sm leading-6 text-ink">
           {role === UserRole.SUPER_ADMIN
             ? "Yeni işletmeleri açın, plan geçişlerini yönetin ve tüm portföyü tek merkezden izleyin."
@@ -73,11 +80,20 @@ export function Sidebar({
               ? `Canlı ${industry.reservationLabel.toLocaleLowerCase("tr-TR")} akışı, ${industry.primaryResourceLabelPlural.toLocaleLowerCase("tr-TR")} ve ayarlar üzerinde tam kontrol sizde.`
               : "Ürünü gerçek verilerle keşfedin. Kayıt oluşturma ve güncelleme akışlarını açmak için Pro'ya geçin."}
         </p>
-        {role !== UserRole.SUPER_ADMIN && !canWrite ? (
-          <Link href="/billing?upgrade=sidebar" className="btn-primary mt-4 w-full">
-            Go Pro
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/reservations" className="btn-secondary flex-1">
+            Talepleri Gör
           </Link>
-        ) : null}
+          {role !== UserRole.SUPER_ADMIN && !canWrite ? (
+            <Link href="/billing?upgrade=sidebar" className="btn-primary flex-1">
+              Pro&apos;ya Geç
+            </Link>
+          ) : (
+            <Link href="/integrations#ai-assistant-testing" className="btn-primary flex-1">
+              Asistanı Aç
+            </Link>
+          )}
+        </div>
       </div>
     </aside>
   );

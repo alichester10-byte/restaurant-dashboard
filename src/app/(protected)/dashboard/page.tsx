@@ -41,46 +41,75 @@ export default async function DashboardPage() {
         />
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Panel>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="section-title">Bugün</div>
-              <h2 className="mt-2 text-2xl font-semibold text-ink">Günün operasyon özeti</h2>
-              <p className="mt-2 text-sm leading-6 text-sage">
-                Günlük {industry.requestLabel.toLocaleLowerCase("tr-TR")} akışı, kapasite ve kanal görünürlüğü tek bir başlangıç ekranında toplandı.
-              </p>
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Panel className="overflow-hidden">
+          <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
+                  {session.user.business.name}
+                </span>
+                <span className="rounded-full border border-[color:var(--border)] bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sage">
+                  Günlük özet
+                </span>
+              </div>
+              <div>
+                <h2 className="text-[28px] font-semibold leading-[1.08] tracking-[-0.03em] text-ink">Bugünkü operasyonu tek bakışta yönetin</h2>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-sage">
+                  {industry.requestLabelPlural}, kanal akışları, kaynak kullanımı ve ekip yoğunluğu aynı ekranda daha sakin bir operasyon görünümüyle sunulur.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  { href: "/reservations?compose=1", label: "Yeni Talep", icon: "＋", primary: true },
+                  { href: "/reservations", label: `${industry.reservationLabelPlural}ı Gör`, icon: "↗" },
+                  { href: "/integrations", label: "Kanalları Yönet", icon: "◎" },
+                  { href: "#restaurant-chat-widget", label: "AI Asistan", icon: "✦" }
+                ].map((action) => (
+                  <a
+                    key={action.label}
+                    href={action.href}
+                    className={action.primary ? "btn-primary h-12 w-full gap-2" : "btn-secondary h-12 w-full gap-2"}
+                  >
+                    <span className="text-sm">{action.icon}</span>
+                    <span>{action.label}</span>
+                  </a>
+                ))}
+              </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <a href="/reservations?compose=1" className="btn-primary">
-                Yeni Talep
-              </a>
-              <a href="/reservations" className="btn-secondary">
-                Rezervasyonları Gör
-              </a>
-              <a href="/integrations" className="btn-secondary">
-                Kanalları Yönet
-              </a>
-              <a href="#restaurant-chat-widget" className="btn-secondary">
-                AI Asistan
-              </a>
-            </div>
-          </div>
-        </Panel>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <div className="rounded-[26px] border border-[color:var(--border)] bg-[linear-gradient(145deg,#163329_0%,#214c3d_65%,#2f6b54_100%)] p-5 text-white shadow-soft">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/65">{entitlement.modeLabel}</div>
+                <div className="mt-2 text-xl font-semibold">Çalışma modu</div>
+                <p className="mt-2 text-sm leading-6 text-white/78">{entitlement.modeDescription}</p>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-white/10 px-4 py-4">
+                    <div className="text-[10px] uppercase tracking-[0.12em] text-white/60">AI Talepleri</div>
+                    <div className="mt-2 text-2xl font-semibold">{data.aiAssistant.pendingCount}</div>
+                  </div>
+                  <div className="rounded-2xl bg-white/10 px-4 py-4">
+                    <div className="text-[10px] uppercase tracking-[0.12em] text-white/60">Yaklaşan</div>
+                    <div className="mt-2 text-2xl font-semibold">{data.upcomingReservations.length}</div>
+                  </div>
+                </div>
+              </div>
 
-        <Panel className="bg-[linear-gradient(135deg,#173428_0%,#214c3d_100%)] text-white">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">{entitlement.modeLabel}</div>
-          <h2 className="mt-2 text-2xl font-semibold">Çalışma modu</h2>
-          <p className="mt-2 text-sm leading-6 text-white/78">{entitlement.modeDescription}</p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-white/10 px-4 py-4">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/65">Bekleyen AI Talebi</div>
-              <div className="mt-2 text-2xl font-semibold">{data.aiAssistant.pendingCount}</div>
-            </div>
-            <div className="rounded-2xl bg-white/10 px-4 py-4">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/65">Yaklaşan Kayıt</div>
-              <div className="mt-2 text-2xl font-semibold">{data.upcomingReservations.length}</div>
+              <div className="rounded-[26px] border border-[color:var(--border)] bg-white/92 p-5">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sage">Kısa odak</div>
+                <div className="mt-2 text-lg font-semibold text-ink">Önce hangi alanlara bakmalısınız?</div>
+                <div className="mt-4 space-y-2">
+                  {[
+                    `${data.upcomingReservations.length} yaklaşan kayıt`,
+                    `${data.callsToday.length} çağrı hareketi`,
+                    `${data.tables.length} aktif ${industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}`
+                  ].map((item) => (
+                    <div key={item} className="rounded-2xl bg-[color:var(--bg-strong)] px-3 py-2.5 text-sm text-sage">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </Panel>
@@ -93,7 +122,7 @@ export default async function DashboardPage() {
         <StatCard label="Çağrı Performansı" value={`${data.stats.answeredCalls}/${data.stats.missedCalls}`} />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.25fr_0.95fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
         <Panel>
           <div className="flex items-center justify-between">
             <div>
@@ -123,7 +152,7 @@ export default async function DashboardPage() {
         </Panel>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.12fr_0.88fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel>
           <div className="flex items-center justify-between">
             <div>
@@ -132,7 +161,17 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="mt-5 space-y-3">
-            {data.upcomingReservations.map((reservation) => (
+            {data.upcomingReservations.length === 0 ? (
+              <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-8 text-center">
+                <div className="text-lg font-semibold text-ink">Bugün için yaklaşan kayıt görünmüyor</div>
+                <p className="mt-3 text-sm leading-6 text-sage">
+                  Yeni bir talep oluşturabilir veya kanal akışından gelen kayıtları burada takip edebilirsiniz.
+                </p>
+                <a href="/reservations?compose=1" className="btn-primary mt-5">
+                  Yeni Talep Oluştur
+                </a>
+              </div>
+            ) : data.upcomingReservations.map((reservation) => (
               <div key={reservation.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
@@ -156,7 +195,14 @@ export default async function DashboardPage() {
           <div className="section-title">Çağrılar</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">Son iletişim akışı</h2>
           <div className="mt-5 space-y-3">
-            {data.callsToday.map((call) => (
+            {data.callsToday.length === 0 ? (
+              <div className="rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-8 text-center">
+                <div className="text-lg font-semibold text-ink">Henüz çağrı hareketi yok</div>
+                <p className="mt-3 text-sm leading-6 text-sage">
+                  Gün içindeki arama notları ve geri dönüş kayıtları burada görünür.
+                </p>
+              </div>
+            ) : data.callsToday.map((call) => (
               <div key={call.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
@@ -176,7 +222,7 @@ export default async function DashboardPage() {
         </Panel>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
         <Panel>
           <div className="flex items-center justify-between">
             <div>
@@ -186,7 +232,17 @@ export default async function DashboardPage() {
             <div className="text-sm text-sage">{data.tables.length} {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}</div>
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {data.tables.map((table) => (
+            {data.tables.length === 0 ? (
+              <div className="col-span-full rounded-[24px] border border-dashed border-[color:var(--border)] bg-white/80 p-8 text-center">
+                <div className="text-lg font-semibold text-ink">Henüz kaynak planı oluşturulmadı</div>
+                <p className="mt-3 text-sm leading-6 text-sage">
+                  Kaynaklar eklendiğinde atama ve kapasite görünümü bu alanda çalışmaya başlar.
+                </p>
+                <a href="/tables?create=1" className="btn-primary mt-5">
+                  Kaynak Ekle
+                </a>
+              </div>
+            ) : data.tables.map((table) => (
               <div key={table.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
                 <div className="flex items-start justify-between">
                   <div>

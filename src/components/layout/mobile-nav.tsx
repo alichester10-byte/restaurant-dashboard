@@ -45,7 +45,7 @@ export function MobileNav({
 
   return (
     <div className="glass-panel space-y-3 rounded-[26px] p-3 lg:hidden">
-      <div className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3">
+      <div className="flex items-center justify-between rounded-2xl bg-white/90 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sage">{modeLabel}</div>
         {role !== UserRole.SUPER_ADMIN && !canWrite ? (
           <Link href="/billing?upgrade=mobile-nav" className="btn-primary px-3 py-2 text-xs">

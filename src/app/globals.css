@@ -56,11 +56,11 @@ textarea {
   background: var(--surface);
   backdrop-filter: blur(18px);
   border: 1px solid var(--border);
-  box-shadow: 0 18px 48px rgba(27, 36, 31, 0.06);
+  box-shadow: 0 16px 40px rgba(27, 36, 31, 0.05), 0 2px 10px rgba(27, 36, 31, 0.02);
 }
 
 .section-title {
-  @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-sage;
+  @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-sage;
 }
 
 .field {
@@ -68,11 +68,11 @@ textarea {
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center rounded-2xl bg-moss px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink;
+  @apply inline-flex items-center justify-center rounded-2xl bg-moss px-4 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-ink hover:shadow-soft;
 }
 
 .btn-secondary {
-  @apply inline-flex items-center justify-center rounded-2xl border border-[color:var(--border)] bg-white px-4 py-3 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss;
+  @apply inline-flex items-center justify-center rounded-2xl border border-[color:var(--border)] bg-white px-4 py-3 text-sm font-semibold text-ink transition duration-200 hover:-translate-y-0.5 hover:border-moss hover:text-moss hover:shadow-soft;
 }
 
 .btn-danger {
