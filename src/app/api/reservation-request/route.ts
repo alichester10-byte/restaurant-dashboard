@@ -1,7 +1,14 @@
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationSource } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { PlanLimitError } from "@/lib/plan-config";
-import { checkReservationConflict, getBusinessAvailabilityContext, resolveReservationWindow } from "@/lib/availability";
+import {
+  checkReservationConflict,
+  getBusinessAvailabilityContext,
+  InvalidBookingDateTimeError,
+  normalizeBookingDate,
+  normalizeBookingTime,
+  resolveReservationWindow
+} from "@/lib/availability";
 import { createAuditLog } from "@/lib/audit";
 import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
 import { getIndustryConfig } from "@/lib/industry-config";
@@ -24,9 +31,9 @@ export async function POST(request: Request) {
   const guestName = sanitizeText(raw?.guestName);
   const guestPhone = sanitizeText(raw?.guestPhone);
   const customerEmail = sanitizeNullableText(raw?.customerEmail);
-  const requestedDate = sanitizeNullableText(raw?.requestedDate);
-  const requestedTime = sanitizeNullableText(raw?.requestedTime);
-  const endDate = sanitizeNullableText(raw?.endDate);
+  const requestedDateInput = sanitizeNullableText(raw?.requestedDate);
+  const requestedTimeInput = sanitizeNullableText(raw?.requestedTime);
+  const endDateInput = sanitizeNullableText(raw?.endDate);
   const serviceType = sanitizeNullableText(raw?.serviceType);
   const resourcePreference = sanitizeNullableText(raw?.resourcePreference);
   const notes = sanitizeNullableText(raw?.notes || raw?.message);
@@ -36,9 +43,16 @@ export async function POST(request: Request) {
   const staffId = sanitizeNullableText(raw?.staffId);
   const resourceId = sanitizeNullableText(raw?.resourceId);
   const source = contentType.includes("application/json") && !verifySameOrigin(request) ? ReservationSource.GOOGLE : ReservationSource.WEBSITE;
+  const requestedDate = normalizeBookingDate(requestedDateInput);
+  const requestedTime = normalizeBookingTime(requestedTimeInput);
+  const endDate = normalizeBookingDate(endDateInput);
 
   if (!businessSlug || !guestName) {
     return NextResponse.json({ ok: false, error: "Eksik alanlar var." }, { status: 400 });
+  }
+
+  if ((requestedDateInput && !requestedDate) || (requestedTimeInput && !requestedTime) || (endDateInput && !endDate)) {
+    return NextResponse.json({ ok: false, error: "Please enter a valid date and time." }, { status: 400 });
   }
 
   const business = await prisma.business.findUnique({
@@ -63,32 +77,39 @@ export async function POST(request: Request) {
   ]);
   const availabilityContext = await getBusinessAvailabilityContext(business.id);
   if (requestedDate && requestedTime) {
-    const { startAt, endAt } = resolveReservationWindow({
-      requestedDate,
-      requestedTime,
-      endDate,
-      durationMinutes: Number.isFinite(durationMinutes) ? durationMinutes : serviceRecord?.durationMinutes ?? null,
-      fallbackDurationMinutes: serviceRecord?.durationMinutes ?? availabilityContext?.averageDurationMinutes ?? 90
-    });
-    const conflict = await checkReservationConflict({
-      businessId: business.id,
-      startAt,
-      endAt,
-      guestCount: Number.isFinite(guestCount) ? guestCount : null,
-      serviceId: serviceRecord?.id ?? null,
-      staffMemberId: staffRecord?.id ?? null,
-      resourceId: resourceRecord?.id ?? null
-    });
-    if (!conflict.ok) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: conflict.message ?? "Seçilen saat için uygunluk bulunamadı.",
-          code: conflict.code,
-          suggestions: conflict.suggestions ?? []
-        },
-        { status: 409 }
-      );
+    try {
+      const { startAt, endAt } = resolveReservationWindow({
+        requestedDate,
+        requestedTime,
+        endDate,
+        durationMinutes: Number.isFinite(durationMinutes) ? durationMinutes : serviceRecord?.durationMinutes ?? null,
+        fallbackDurationMinutes: serviceRecord?.durationMinutes ?? availabilityContext?.averageDurationMinutes ?? 90
+      });
+      const conflict = await checkReservationConflict({
+        businessId: business.id,
+        startAt,
+        endAt,
+        guestCount: Number.isFinite(guestCount) ? guestCount : null,
+        serviceId: serviceRecord?.id ?? null,
+        staffMemberId: staffRecord?.id ?? null,
+        resourceId: resourceRecord?.id ?? null
+      });
+      if (!conflict.ok) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: conflict.message ?? "Seçilen saat için uygunluk bulunamadı.",
+            code: conflict.code,
+            suggestions: conflict.suggestions ?? []
+          },
+          { status: 409 }
+        );
+      }
+    } catch (error) {
+      if (error instanceof InvalidBookingDateTimeError) {
+        return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+      }
+      throw error;
     }
   }
 

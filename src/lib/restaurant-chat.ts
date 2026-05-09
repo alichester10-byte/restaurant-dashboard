@@ -32,6 +32,7 @@ type RestaurantContext = {
 };
 
 type ChatSessionWithMessages = Awaited<ReturnType<typeof loadOrCreateChatSession>>;
+type ExtractedReservationIntent = Awaited<ReturnType<typeof extractReservationRequest>>;
 
 type AssistantTurnResult = {
   sessionId: string;
@@ -280,7 +281,7 @@ function buildConversationSummary(session: ChatSessionWithMessages, latestMessag
 async function maybeCreateReservationRequest(input: {
   session: ChatSessionWithMessages;
   context: RestaurantContext;
-  extracted: Awaited<ReturnType<typeof extractReservationRequest>>;
+  extracted: ExtractedReservationIntent;
   latestMessage: string;
 }) {
   if (!input.context.autoCreateReservationRequests) {
@@ -370,11 +371,20 @@ async function maybeCreateReservationRequest(input: {
   return created.id;
 }
 
-export async function handleRestaurantChatMessage(input: {
+export async function persistRestaurantAssistantMessage(sessionId: string, reply: string) {
+  await prisma.chatMessage.create({
+    data: {
+      sessionId,
+      role: ChatMessageRole.ASSISTANT,
+      content: reply
+    }
+  });
+}
+
+export async function prepareRestaurantChatTurn(input: {
   restaurantId: string;
   sessionId?: string | null;
   message: string;
-  source?: string | null;
 }) {
   const context = await loadRestaurantChatContext(input.restaurantId);
 
@@ -382,7 +392,7 @@ export async function handleRestaurantChatMessage(input: {
     return {
       ok: false as const,
       status: 404,
-      error: "Restoran bulunamadı."
+      error: "İşletme bulunamadı."
     };
   }
 
@@ -390,7 +400,7 @@ export async function handleRestaurantChatMessage(input: {
     return {
       ok: false as const,
       status: 403,
-      error: "AI Assistant şu anda bu restoran için aktif değil."
+      error: "AI Assistant şu anda bu işletme için aktif değil."
     };
   }
 
@@ -435,33 +445,49 @@ export async function handleRestaurantChatMessage(input: {
     latestMessage: input.message
   });
 
-  const reply = buildRuleBasedReply({
+  return {
+    ok: true as const,
+    status: 200,
     context,
-    latestMessage: input.message,
+    session,
+    extracted,
     missingFields,
-    requestCreated: Boolean(requestId)
+    requestId
+  };
+}
+
+export async function handleRestaurantChatMessage(input: {
+  restaurantId: string;
+  sessionId?: string | null;
+  message: string;
+  source?: string | null;
+}) {
+  const prepared = await prepareRestaurantChatTurn(input);
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  const reply = buildRuleBasedReply({
+    context: prepared.context,
+    latestMessage: input.message,
+    missingFields: prepared.missingFields,
+    requestCreated: Boolean(prepared.requestId)
   });
 
-  await prisma.chatMessage.create({
-    data: {
-      sessionId: session.id,
-      role: ChatMessageRole.ASSISTANT,
-      content: reply
-    }
-  });
+  await persistRestaurantAssistantMessage(prepared.session.id, reply);
 
   return {
     ok: true as const,
     status: 200,
     payload: {
-      sessionId: session.id,
+      sessionId: prepared.session.id,
       reply,
-      requestCreated: Boolean(requestId),
-      reservationRequestId: requestId ?? undefined,
-      confidenceScore: extracted.confidenceScore ?? null,
-      missingFields,
+      requestCreated: Boolean(prepared.requestId),
+      reservationRequestId: prepared.requestId ?? undefined,
+      confidenceScore: prepared.extracted.confidenceScore ?? null,
+      missingFields: prepared.missingFields,
       context: {
-        restaurantName: context.restaurantName
+        restaurantName: prepared.context.restaurantName
       }
     } satisfies AssistantTurnResult & { context: { restaurantName: string } }
   };

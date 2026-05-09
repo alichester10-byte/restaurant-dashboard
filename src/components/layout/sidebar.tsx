@@ -47,11 +47,11 @@ export function Sidebar({
   const items = role === UserRole.SUPER_ADMIN ? superAdminItems : businessItems;
 
   return (
-    <aside className="glass-panel hidden w-72 shrink-0 rounded-[32px] p-5 lg:flex lg:flex-col">
-      <div className="rounded-[28px] bg-[linear-gradient(135deg,#214c3d_0%,#172f27_100%)] p-5 text-white">
-        <div className="text-xs uppercase tracking-[0.32em] text-white/60">{role === UserRole.SUPER_ADMIN ? "Platform" : `${industry.displayName} OS`}</div>
-        <div className="mt-3 font-[family-name:var(--font-display)] text-3xl">{businessName}</div>
-        <p className="mt-3 text-sm leading-6 text-white/75">
+    <aside className="glass-panel hidden w-72 shrink-0 rounded-[30px] p-4 lg:flex lg:flex-col">
+      <div className="rounded-[24px] bg-[linear-gradient(135deg,#214c3d_0%,#172f27_100%)] p-4 text-white">
+        <div className="text-[11px] uppercase tracking-[0.22em] text-white/60">{role === UserRole.SUPER_ADMIN ? "Platform" : industry.displayName}</div>
+        <div className="mt-2 text-xl font-semibold">{businessName}</div>
+        <p className="mt-2 text-sm leading-6 text-white/75">
           {role === UserRole.SUPER_ADMIN
             ? "İşletmeleri, trial durumlarını ve abonelik planlarını tek panelden yönetin."
             : `${industry.requestLabelPlural}, kanal akışları ve ${industry.primaryResourceLabelPlural.toLocaleLowerCase("tr-TR")} tek merkezden yönetin.`}
@@ -64,8 +64,8 @@ export function Sidebar({
         ))}
       </nav>
 
-      <div className="mt-auto rounded-[28px] bg-[color:var(--bg-strong)] p-4">
-        <div className="text-xs uppercase tracking-[0.24em] text-sage">{modeLabel}</div>
+      <div className="mt-auto rounded-[24px] bg-[color:var(--bg-strong)] p-4">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-sage">{modeLabel}</div>
         <p className="mt-3 text-sm leading-6 text-ink">
           {role === UserRole.SUPER_ADMIN
             ? "Yeni işletmeleri açın, plan geçişlerini yönetin ve tüm portföyü tek merkezden izleyin."

@@ -3,7 +3,7 @@
 import { AuditCategory, IntegrationProvider, IntegrationStatus, ReservationRequestStatus, ReservationStatus, ReservationSource, UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { checkReservationConflict, getBusinessAvailabilityContext, resolveReservationWindow } from "@/lib/availability";
+import { checkReservationConflict, getBusinessAvailabilityContext, InvalidBookingDateTimeError, resolveReservationWindow } from "@/lib/availability";
 import { requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { createPendingReservationRequestFromExternalMessage } from "@/lib/external-reservation-requests";
@@ -183,13 +183,27 @@ export async function reviewReservationRequestAction(formData: FormData) {
       })
     : null;
   const availabilityContext = await getBusinessAvailabilityContext(businessId);
-  const { startAt, endAt, durationMinutes } = resolveReservationWindow({
-    requestedDate: approvedRequestedDate,
-    requestedTime: approvedRequestedTime,
-    endDate: requestedEndDate,
-    durationMinutes: Number.isFinite(explicitDuration ?? NaN) ? explicitDuration : service?.durationMinutes ?? null,
-    fallbackDurationMinutes: service?.durationMinutes ?? availabilityContext?.averageDurationMinutes ?? settings.averageDiningDurationMin ?? 90
-  });
+  let startAt: Date;
+  let endAt: Date;
+  let durationMinutes: number;
+  try {
+    ({ startAt, endAt, durationMinutes } = resolveReservationWindow({
+      requestedDate: approvedRequestedDate,
+      requestedTime: approvedRequestedTime,
+      endDate: requestedEndDate,
+      durationMinutes: Number.isFinite(explicitDuration ?? NaN) ? explicitDuration : service?.durationMinutes ?? null,
+      fallbackDurationMinutes: service?.durationMinutes ?? availabilityContext?.averageDurationMinutes ?? settings.averageDiningDurationMin ?? 90
+    }));
+  } catch (error) {
+    if (error instanceof InvalidBookingDateTimeError) {
+      redirect(
+        withQueryParams(parsed.data.redirectTo, {
+          error: "reservation_request_datetime_invalid"
+        })
+      );
+    }
+    throw error;
+  }
   const conflict = await checkReservationConflict({
     businessId,
     startAt,

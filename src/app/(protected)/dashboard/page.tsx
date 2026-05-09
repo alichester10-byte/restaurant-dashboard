@@ -36,17 +36,61 @@ export default async function DashboardPage() {
       {entitlement.isDemo ? (
         <DemoModeBanner
           title="Demo modunda tüm operasyon görünürlüğü açık."
-          description="Paneli canlı bir servis akışı gibi gezebilirsiniz. Yeni çağrı ekleme, rezervasyon güncelleme ve ayar kaydetme işlemleri Pro planıyla açılır."
+          description="Paneli canlı bir servis akışı gibi gezebilirsiniz. Yeni çağrı ekleme, kayıt güncelleme ve ayar kaydetme işlemleri Pro planıyla açılır."
           href="/billing?upgrade=dashboard"
         />
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatCard label={`Günlük ${industry.reservationLabel}`} value={data.stats.dailyReservations} trend={data.stats.trends.dailyReservations} tone="accent" />
-        <StatCard label={`Toplam ${industry.customerLabel}`} value={data.stats.totalGuests} trend={data.stats.trends.totalGuests} />
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <Panel>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="section-title">Bugün</div>
+              <h2 className="mt-2 text-2xl font-semibold text-ink">Günün operasyon özeti</h2>
+              <p className="mt-2 text-sm leading-6 text-sage">
+                Günlük {industry.requestLabel.toLocaleLowerCase("tr-TR")} akışı, kapasite ve kanal görünürlüğü tek bir başlangıç ekranında toplandı.
+              </p>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <a href="/reservations?compose=1" className="btn-primary">
+                Yeni Talep
+              </a>
+              <a href="/reservations" className="btn-secondary">
+                Rezervasyonları Gör
+              </a>
+              <a href="/integrations" className="btn-secondary">
+                Kanalları Yönet
+              </a>
+              <a href="#restaurant-chat-widget" className="btn-secondary">
+                AI Asistan
+              </a>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel className="bg-[linear-gradient(135deg,#173428_0%,#214c3d_100%)] text-white">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">{entitlement.modeLabel}</div>
+          <h2 className="mt-2 text-2xl font-semibold">Çalışma modu</h2>
+          <p className="mt-2 text-sm leading-6 text-white/78">{entitlement.modeDescription}</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl bg-white/10 px-4 py-4">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/65">Bekleyen AI Talebi</div>
+              <div className="mt-2 text-2xl font-semibold">{data.aiAssistant.pendingCount}</div>
+            </div>
+            <div className="rounded-2xl bg-white/10 px-4 py-4">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/65">Yaklaşan Kayıt</div>
+              <div className="mt-2 text-2xl font-semibold">{data.upcomingReservations.length}</div>
+            </div>
+          </div>
+        </Panel>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard label={`Bugünkü ${industry.reservationLabelPlural}`} value={data.stats.dailyReservations} trend={data.stats.trends.dailyReservations} tone="accent" />
+        <StatCard label={industry.customerLabel} value={data.stats.totalGuests} trend={data.stats.trends.totalGuests} />
         <StatCard label={industry.capacityLabel} value={data.stats.occupancyRate} />
-        <StatCard label="Yanıtlanan Çağrı" value={data.stats.answeredCalls} trend={data.stats.trends.answeredCalls} />
-        <StatCard label="Cevapsız Çağrı" value={data.stats.missedCalls} trend={data.stats.trends.missedCalls} />
+        <StatCard label="Çağrı Performansı" value={`${data.stats.answeredCalls}/${data.stats.missedCalls}`} />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.25fr_0.95fr]">
@@ -54,11 +98,9 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">{industry.reservationLabel} Trendi</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Son 7 gün {industry.reservationLabel.toLocaleLowerCase("tr-TR")} akışı</h2>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Son 7 günlük akış</h2>
             </div>
-            <div className="rounded-full bg-[color:var(--accent-soft)] px-4 py-2 text-sm font-semibold text-moss">
-              Haftalık görünüm
-            </div>
+            <div className="rounded-full bg-[color:var(--accent-soft)] px-4 py-2 text-sm font-semibold text-moss">Haftalık görünüm</div>
           </div>
           <div className="mt-6">
             <MiniBarChart items={data.charts.reservationsByDay} />
@@ -74,25 +116,25 @@ export default async function DashboardPage() {
             {data.charts.reservationsBySource.map((item) => (
               <div key={item.source} className="flex items-center justify-between rounded-2xl bg-white/80 px-4 py-3">
                 <div className="text-sm font-semibold text-ink">{reservationSourceLabels[item.source]}</div>
-                <div className="text-sm text-sage">{item._count._all} rezervasyon</div>
+                <div className="text-sm text-sage">{item._count._all} kayıt</div>
               </div>
             ))}
           </div>
         </Panel>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.12fr_0.88fr]">
         <Panel>
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">Yaklaşan {industry.reservationLabelPlural}</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Onaylanmış ve yaklaşan operasyon akışı</h2>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Onaylı ve yaklaşan kayıtlar</h2>
             </div>
           </div>
           <div className="mt-5 space-y-3">
             {data.upcomingReservations.map((reservation) => (
               <div key={reservation.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <div className="font-semibold text-ink">{reservation.guestName}</div>
                     <div className="mt-1 text-sm text-sage">
@@ -101,7 +143,7 @@ export default async function DashboardPage() {
                   </div>
                   <StatusBadge value={reservation.status} />
                 </div>
-                <div className="mt-4 flex items-center justify-between text-sm text-sage">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-sage">
                   <span>{reservation.assignedTable ? reservation.assignedTable.number : `${industry.primaryResourceLabel} ataması bekliyor`}</span>
                   <span>{reservation.guestPhone}</span>
                 </div>
@@ -109,14 +151,37 @@ export default async function DashboardPage() {
             ))}
           </div>
         </Panel>
+
+        <Panel>
+          <div className="section-title">Çağrılar</div>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Son iletişim akışı</h2>
+          <div className="mt-5 space-y-3">
+            {data.callsToday.map((call) => (
+              <div key={call.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="font-semibold text-ink">{call.callerName ?? "Bilinmeyen Arayan"}</div>
+                    <div className="mt-1 text-sm text-sage">
+                      {formatPhone(call.phone)} • {formatTime(call.startedAt)}
+                    </div>
+                  </div>
+                  <StatusBadge value={call.outcome} />
+                </div>
+                <div className="mt-3 text-sm leading-6 text-sage">
+                  {call.notes ?? (call.outcome === CallOutcome.MISSED ? "Operasyon yoğunluğu nedeniyle cevap verilemedi." : callOutcomeLabels[call.outcome])}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <Panel>
           <div className="flex items-center justify-between">
             <div>
               <div className="section-title">{industry.primaryResourceLabelPlural}</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Canlı kaynak durumu</h2>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Kaynak durumu</h2>
             </div>
             <div className="text-sm text-sage">{data.tables.length} {industry.primaryResourceLabel.toLocaleLowerCase("tr-TR")}</div>
           </div>
@@ -130,8 +195,8 @@ export default async function DashboardPage() {
                   </div>
                   <StatusBadge value={table.status} />
                 </div>
-                <div className="mt-6 flex items-end justify-between">
-                  <div className="font-[family-name:var(--font-display)] text-3xl text-ink">{table.seatCapacity}</div>
+                <div className="mt-5 flex items-end justify-between">
+                  <div className="text-3xl font-semibold text-ink">{table.seatCapacity}</div>
                   <div className="text-sm text-sage">{industry.guestCountLabel.toLocaleLowerCase("tr-TR")}</div>
                 </div>
               </div>
@@ -140,37 +205,10 @@ export default async function DashboardPage() {
         </Panel>
 
         <Panel>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="section-title">Son Çağrılar</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Çağrı performansı ve etiketleme</h2>
-            </div>
-          </div>
-          <div className="mt-5 space-y-3">
-            {data.callsToday.map((call) => (
-              <div key={call.id} className="rounded-[24px] border border-[color:var(--border)] bg-white/90 p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="font-semibold text-ink">{call.callerName ?? "Bilinmeyen Arayan"}</div>
-                    <div className="mt-1 text-sm text-sage">
-                      {formatPhone(call.phone)} • {formatTime(call.startedAt)}
-                    </div>
-                  </div>
-                  <StatusBadge value={call.outcome} />
-                </div>
-                <div className="mt-3 text-sm text-sage">
-                  {call.notes ?? (call.outcome === CallOutcome.MISSED ? "Operasyon yoğunluğu nedeniyle cevap verilemedi." : callOutcomeLabels[call.outcome])}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel>
-          <div className="section-title">Çağrı Kaydı</div>
-          <h2 className="mt-2 text-xl font-semibold text-ink">Yeni çağrı oluştur</h2>
+          <div className="section-title">Yeni Çağrı / Not</div>
+          <h2 className="mt-2 text-xl font-semibold text-ink">Operasyona hızlı kayıt ekleyin</h2>
           <p className="mt-2 text-sm leading-6 text-sage">
-            Dashboard üzerinden yeni çağrıları işaretleyin ve rezervasyon potansiyelini kaybetmeden ekibe aktarın.
+            Ekibinize yeni bir çağrı, bilgi talebi veya operasyon notu bırakmak için bu alanı kullanın.
           </p>
           <div className="mt-6">
             <CallForm locked={entitlement.isDemo} />

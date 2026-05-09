@@ -48,8 +48,8 @@ export default async function SettingsPage({
   return (
     <div className="space-y-6">
       <AppHeader
-        title="Ayarlar"
-        subtitle={`${getIndustryOptionLabel(business.businessType)} profilini, çalışma saatlerini ve ${industry.requestLabel.toLocaleLowerCase("tr-TR")} kurallarını merkezi olarak yönetin.`}
+        title="İşletme Ayarları"
+        subtitle={`${getIndustryOptionLabel(business.businessType)} profilini, kaynak yapısını ve ${industry.requestLabel.toLocaleLowerCase("tr-TR")} kurallarını daha sade bir yapı içinde yönetin.`}
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -110,8 +110,25 @@ export default async function SettingsPage({
         </section>
       ) : null}
 
+      <Panel className="py-4">
+        <div className="flex flex-wrap gap-2 text-sm">
+          {[
+            ["#business-settings", "İşletme Bilgileri"],
+            ["#plan-usage", "Plan ve Kullanım"],
+            ["#services", "Hizmetler"],
+            ["#staff", "Personel"],
+            ["#resources", "Kaynaklar"],
+            ["#security-settings", "Güvenlik"]
+          ].map(([href, label]) => (
+            <a key={href} href={href} className="rounded-full border border-[color:var(--border)] bg-white px-4 py-2 font-medium text-sage transition hover:border-moss hover:text-moss">
+              {label}
+            </a>
+          ))}
+        </div>
+      </Panel>
+
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Panel>
+        <Panel id="business-settings">
           <div className="section-title">İşletme Profili</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">Operasyon ayarları</h2>
           <form action={updateSettingsAction} className="mt-6 space-y-4">
@@ -250,7 +267,7 @@ export default async function SettingsPage({
           </form>
         </Panel>
 
-        <Panel>
+        <Panel id="plan-usage">
           <div className="section-title">Güven ve Otomasyon</div>
           <h2 className="mt-2 text-xl font-semibold text-ink">Hatırlatıcılar ve veri koruma</h2>
           <p className="mt-2 text-sm leading-6 text-sage">
@@ -266,7 +283,7 @@ export default async function SettingsPage({
             </Link>
           </div>
 
-          <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+          <div id="security-settings" className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
             <div className="section-title">Güvenlik</div>
             <h3 className="mt-2 text-lg font-semibold text-ink">E-posta ile iki adımlı doğrulama</h3>
             <p className="mt-2 text-sm leading-6 text-sage">
@@ -334,7 +351,7 @@ export default async function SettingsPage({
             </div>
           </div>
 
-          <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+          <div id="services" className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
             <div className="section-title">Hizmetler</div>
             <h3 className="mt-2 text-lg font-semibold text-ink">Sunulan servis kataloğu</h3>
             <p className="mt-2 text-sm leading-6 text-sage">
@@ -386,7 +403,7 @@ export default async function SettingsPage({
             </form>
           </div>
 
-          <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+          <div id="staff" className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
             <div className="section-title">Ekip</div>
             <h3 className="mt-2 text-lg font-semibold text-ink">Personel ve uzman listesi</h3>
             <p className="mt-2 text-sm leading-6 text-sage">
@@ -437,7 +454,7 @@ export default async function SettingsPage({
             </form>
           </div>
 
-          <div className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
+          <div id="resources" className="mt-6 rounded-[24px] border border-[color:var(--border)] bg-white/90 p-5">
             <div className="section-title">Kaynaklar</div>
             <h3 className="mt-2 text-lg font-semibold text-ink">Bookable kaynaklar</h3>
             <p className="mt-2 text-sm leading-6 text-sage">

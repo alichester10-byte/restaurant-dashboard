@@ -13,7 +13,7 @@ export function PublicFooter({ language }: { language: PublicLanguage }) {
     <footer className="border-t border-black/5 bg-[#f4ecde]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-10 md:flex-row md:items-end md:justify-between md:px-10">
         <div className="max-w-xl">
-          <div className="text-xs font-semibold uppercase tracking-[0.35em] text-sage">Limon Masa</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sage">Limon Masa</div>
           <div className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-moss">
             {copy.footer.marker}
           </div>

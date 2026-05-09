@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:ai-gateway": "tsx scripts/test-ai-gateway.ts",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -17,8 +18,10 @@
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
+    "ai": "^6.0.177",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
+    "dotenv": "^17.4.2",
     "next": "^14.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

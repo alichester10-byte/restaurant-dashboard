@@ -90,56 +90,60 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
     },
     home: {
       eyebrow: "Limon Masa",
-      title: "Rezervasyon ve randevu taleplerini tek merkezde yönetin, son kararı yine siz verin",
+      title: "Rezervasyon, randevu ve talep yönetimini tek merkezden yönetin.",
       description:
-        "Limon Masa; WhatsApp, Instagram, web formu ve AI destekli mesaj akışlarından gelen rezervasyon ve randevu taleplerini tek panelde toplar. İnsan onayı olmadan hiçbir kayıt kesinleşmez.",
+        "WhatsApp, Instagram, web formları ve AI asistanından gelen talepleri tek panelde toplayın, ekibinizle kolayca yönetin. Son onay işletme ekibinde kalır.",
       primary: "Ücretsiz Başla",
-      secondary: "Giriş Yap",
+      secondary: "Demo Paneli Gör",
       cards: [
         {
-          title: "Yapay zeka destekli rezervasyon yönetimi",
-          body: "Rezervasyon taleplerini tek operasyon ekranında toplayın, çıkarılan detayları gözden geçirin ve servis kalitesini insan kontrolüyle koruyun."
+          title: "Çok kanallı talep yönetimi",
+          body: "WhatsApp, Instagram, web ve telefon akışlarını tek operasyon alanında toplayın. Talep kaybolmadan ekibinize yönlensin."
         },
         {
-          title: "WhatsApp, Instagram, web ve AI destekli talepler",
-          body: "Farklı kanallardan gelen müşteri taleplerini tek akışta yönetin. WhatsApp ve Instagram entegrasyonları desteklenen koşullarda ve Meta onayı sonrasında sunulur."
+          title: "AI destekli rezervasyon asistanı",
+          body: "AI asistanı müşteri mesajlarını çözümler, eksik alanları tespit eder ve ekibin değerlendireceği net talepler oluşturur."
         },
         {
-          title: "İnsan onayı olmadan rezervasyon kesinleşmez",
-          body: "İşletme ekibi, talebi inceleyip onaylamadan kayıt oluşturulmaz. Böylece kapasite ve servis kararı işletmede kalır."
+          title: "Hizmet, personel ve kaynak yönetimi",
+          body: "Hizmet kataloğu, ekip üyeleri ve kaynakları aynı panelden yönetin. Farklı sektörlerde aynı altyapıyla ilerleyin."
+        },
+        {
+          title: "Planlara göre ölçeklenebilir kullanım",
+          body: "İşletmeniz büyüdükçe AI, kanal entegrasyonları ve ekip kullanım limitleriyle birlikte daha gelişmiş operasyon akışlarına geçin."
         }
       ],
       stats: [
         {
           title: "Kanallar",
-          value: "4+",
-          body: "Web, WhatsApp, Instagram ve AI destekli talep akışları."
+          value: "5+",
+          body: "Web, widget, AI, WhatsApp, Instagram ve manuel akışlar."
         },
         {
-          title: "Onay modeli",
-          value: "İnsan odaklı",
-          body: "Talepler işletme ekibi tarafından onaylanmadan canlı kayda dönüşmez."
+          title: "Operasyon modeli",
+          value: "Onay kontrollü",
+          body: "Talep önce ekibe düşer, uygunluk kontrolü sonrasında kayıt kesinleşir."
         },
         {
-          title: "Kimler için",
-          value: "İşletmeler",
-          body: "Küçük ve orta ölçekli hizmet işletmeleri için net, sade ve pratik bir operasyon akışı."
+          title: "Dikeyler",
+          value: "Çok sektörlü",
+          body: "Restoran, salon, klinik, otel ve hizmet işletmeleri için uyarlanabilir booking yapısı."
         },
         {
-          title: "Güven",
-          value: "Kontrollü geçiş",
-          body: "Entegrasyonlar desteklenen kanallarda ve gerekli onaylardan sonra aktif edilir."
+          title: "Ölçek",
+          value: "Plan bazlı",
+          body: "Kullanım limitleri, AI özellikleri ve kanal erişimi planınıza göre açılır."
         }
       ],
       howTitle: "Nasıl çalışır",
-      howHeadline: "Müşteri mesajından onaylı rezervasyona giden net akış",
+      howHeadline: "Talep alımından onaylı kayda uzanan sade operasyon akışı",
       howBody:
-        "Limon Masa, farklı kanallardan gelen talebi toplar, çıkarım yapar ve son kararı otomasyona bırakmadan işletme ekibine sunar.",
+        "Limon Masa, farklı kanallardan gelen talebi toplar, gerekli bilgileri çıkarır ve ekip onayını merkeze alan düzenli bir iş akışı sunar.",
       steps: [
-        "Müşteri mesaj veya rezervasyon talebi gönderir.",
-        "Limon Masa tarih, saat, kişi sayısı ve notları çıkarır.",
-        "Talep onay bekleyen istek olarak listelenir.",
-        "İşletme ekibi talebi onaylayarak kaydı kesinleştirir."
+        "Müşteri mesaj veya form üzerinden talep gönderir.",
+        "Sistem tarih, saat, kişi sayısı ve notları düzenler.",
+        "Talep bekleyen istek olarak ekibin önüne gelir.",
+        "İşletme ekibi talebi onaylar, düzenler veya reddeder."
       ],
       trust: [
         {
@@ -245,23 +249,27 @@ export const publicCopy: Record<PublicLanguage, PublicDictionary> = {
     },
     home: {
       eyebrow: "Limon Masa",
-      title: "Manage booking and appointment demand in one place while keeping final approval human",
+      title: "Manage bookings, appointments, and inbound requests from one place.",
       description:
-        "Limon Masa helps businesses manage booking and appointment requests from WhatsApp, Instagram, web forms, and AI-assisted message flows. No request is confirmed without business approval.",
+        "Collect inbound demand from WhatsApp, Instagram, website forms, and AI assistant flows in one workspace. Final approval stays with your team.",
       primary: "Start Free",
-      secondary: "Login",
+      secondary: "View Demo",
       cards: [
         {
-          title: "AI-powered reservation management",
-          body: "Collect reservation demand in one operational workspace, review extracted details, and keep service quality under human control."
+          title: "Multi-channel request management",
+          body: "Bring website, WhatsApp, Instagram, and manual demand into one calm operational workspace."
         },
         {
-          title: "WhatsApp, Instagram, website, and AI-assisted requests",
-          body: "Capture customer intent from multiple channels. WhatsApp and Instagram integrations are available where supported and after Meta approval."
+          title: "AI booking assistant",
+          body: "AI helps collect missing details, summarize intent, and prepare pending requests for team review."
         },
         {
-          title: "Human approval before confirmation",
-          body: "Teams review pending requests before they are confirmed, helping reduce mistakes and stay aligned with capacity."
+          title: "Services, staff, and resources",
+          body: "Manage what you offer, who delivers it, and which resources are bookable in the same system."
+        },
+        {
+          title: "Scales with your plan",
+          body: "Unlock higher usage, AI features, and channel integrations as the business grows."
         }
       ],
       stats: [

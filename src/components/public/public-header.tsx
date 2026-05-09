@@ -7,7 +7,7 @@ export function PublicHeader({ language }: { language: PublicLanguage }) {
   const isEnglish = language === "en";
 
   return (
-    <header className="mb-8 rounded-[30px] border border-white/70 bg-white/85 px-5 py-4 shadow-[0_16px_60px_rgba(44,62,45,0.08)] backdrop-blur md:px-7">
+    <header className="mb-8 rounded-[26px] border border-white/70 bg-white/88 px-5 py-4 shadow-[0_14px_44px_rgba(44,62,45,0.07)] backdrop-blur md:px-7">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-4">
           <Link href={buildPublicHref("/", language) as Route} className="flex items-center gap-3">
@@ -17,7 +17,7 @@ export function PublicHeader({ language }: { language: PublicLanguage }) {
             <div>
               <div className="text-sm font-semibold text-ink">Limon Masa</div>
               <div className="text-xs text-sage">
-                {isEnglish ? "Universal booking operations" : "Çok sektörlü rezervasyon operasyonu"}
+                {isEnglish ? "Universal booking operations" : "Çok sektörlü booking operasyonu"}
               </div>
             </div>
           </Link>

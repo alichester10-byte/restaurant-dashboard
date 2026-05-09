@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { UserRole } from "@prisma/client";
 import { LockedAction } from "@/components/demo/locked-action";
 import { AiAssistantComposer } from "@/components/integrations/ai-assistant-composer";
@@ -228,7 +229,13 @@ export default async function IntegrationsPage() {
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[200px_1fr]">
               <div className="rounded-[24px] border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4">
-                <img src={qrUrl} alt="Rezervasyon bağlantısı QR kodu" className="mx-auto h-[160px] w-[160px] rounded-2xl border border-[color:var(--border)] bg-white p-2" />
+                <Image
+                  src={qrUrl}
+                  alt="Rezervasyon bağlantısı QR kodu"
+                  width={160}
+                  height={160}
+                  className="mx-auto h-[160px] w-[160px] rounded-2xl border border-[color:var(--border)] bg-white p-2"
+                />
                 <div className="mt-3 text-center text-xs uppercase tracking-[0.24em] text-moss">QR ile paylaş</div>
                 <div className="mt-2 text-center text-sm leading-6 text-sage">Bio, profil, masaüstü kartı veya vitrin için hazır.</div>
               </div>

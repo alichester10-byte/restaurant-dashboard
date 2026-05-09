@@ -136,7 +136,7 @@ export function LoginForm() {
       </div>
       <button className="btn-primary w-full gap-2 disabled:cursor-not-allowed disabled:opacity-70" type="submit" disabled={isPending}>
         {isPending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : null}
-        {isPending ? "Giriş yapılıyor..." : challengeMethod ? "Doğrulamayı Tamamla" : "Panele Giriş Yap"}
+        {isPending ? "Giriş yapılıyor..." : challengeMethod ? "Doğrulamayı Tamamla" : "Giriş Yap"}
       </button>
     </form>
   );

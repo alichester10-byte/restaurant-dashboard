@@ -42,38 +42,37 @@ export default async function LoginPage({
   const toast = searchParams?.toast ? loginToasts[searchParams.toast] : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
+    <main className="flex min-h-screen items-center justify-center p-6 md:p-8">
       {toast ? <AuthToast title={toast.title} description={toast.description} tone={toast.tone} /> : null}
-      <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[0.95fr_0.8fr]">
         <section className="glass-panel rounded-[32px] p-8 md:p-10">
-          <div className="text-xs uppercase tracking-[0.34em] text-sage">Booking Operations OS</div>
-          <h1 className="mt-5 max-w-xl font-[family-name:var(--font-display)] text-5xl leading-tight text-ink">
-            Rezervasyon, randevu ve talep operasyonlarını premium bir panelden yönetin.
+          <div className="text-[11px] uppercase tracking-[0.24em] text-sage">Booking Operations</div>
+          <h1 className="mt-4 max-w-lg font-[family-name:var(--font-display)] text-4xl leading-tight text-ink md:text-5xl">
+            Ekibiniz için tek bir booking operasyon paneli.
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-8 text-sage">
-            Limon Masa Ops; talepleri, müşterileri, kaynakları, kanal akışlarını ve günlük operasyon görünürlüğünü tek akışta birleştirir.
+          <p className="mt-4 max-w-xl text-base leading-7 text-sage">
+            Talepleri, müşterileri, kaynakları ve kanal akışlarını daha sakin bir operasyon deneyiminde yönetin.
           </p>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-8 grid gap-3">
             {[
-              { label: "Günlük Rezervasyon", value: "26+" },
-              { label: "Canlı Doluluk", value: "%78" },
-              { label: "Yanıtlanan Çağrı", value: "19" }
+              "WhatsApp, Instagram, web ve AI kaynaklı talepleri tek ekranda toplayın.",
+              "Hizmet, ekip ve kaynak yapınızı işletme türünüze göre yönetin.",
+              "Onay kontrollü akışla uygunluğu ekibinizin kararına bırakın."
             ].map((item) => (
-              <div key={item.label} className="rounded-[28px] bg-white/80 p-5 shadow-soft">
-                <div className="text-3xl font-bold text-ink">{item.value}</div>
-                <div className="mt-2 text-sm text-sage">{item.label}</div>
+              <div key={item} className="rounded-[22px] border border-[color:var(--border)] bg-white/80 px-4 py-4 text-sm leading-6 text-sage">
+                {item}
               </div>
             ))}
           </div>
         </section>
 
         <section className="glass-panel rounded-[32px] p-8 md:p-10">
-          <div className="rounded-[28px] bg-[linear-gradient(135deg,#214c3d_0%,#172f27_100%)] p-6 text-white">
-            <div className="text-xs uppercase tracking-[0.28em] text-white/60">Yönetici Girişi</div>
-            <div className="mt-3 text-2xl font-semibold">Hoş geldiniz</div>
-            <p className="mt-2 text-sm leading-6 text-white/75">
-              Demo giriş deneyimiyle bütün modülleri gerçek işletme akışı hissiyle inceleyin.
+          <div className="rounded-[26px] border border-[color:var(--border)] bg-white/86 p-6">
+            <div className="text-[11px] uppercase tracking-[0.22em] text-sage">Yönetici Girişi</div>
+            <div className="mt-2 text-2xl font-semibold text-ink">Giriş Yap</div>
+            <p className="mt-2 text-sm leading-6 text-sage">
+              Hesabınıza giriş yapın ve günlük operasyon akışınıza devam edin.
             </p>
           </div>
           <div className="mt-8">
@@ -81,11 +80,11 @@ export default async function LoginPage({
           </div>
           <div className="mt-4 grid gap-3">
             <Link href="/register" className="btn-secondary w-full">
-              Ücretsiz Başla
+              Hesap Oluştur
             </Link>
           </div>
-          <div className="mt-6 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4 text-sm text-sage">
-            İlk girişte Demo Modu ile tüm ekranları gezebilir, Pro&apos;ya geçtiğiniz anda tüm kayıt ve yönetim akışlarını açabilirsiniz.
+          <div className="mt-6 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-strong)] p-4 text-sm leading-6 text-sage">
+            Demo veya canlı hesapla giriş yaptığınızda dashboard, talepler, kaynaklar ve kanal yönetimi aynı yapıda açılır.
           </div>
         </section>
       </div>

@@ -9,6 +9,13 @@ const blockingStatuses: ReservationStatus[] = [
   ReservationStatus.SEATED
 ];
 
+export class InvalidBookingDateTimeError extends Error {
+  constructor(message = "Please enter a valid date and time.") {
+    super(message);
+    this.name = "InvalidBookingDateTimeError";
+  }
+}
+
 type AvailabilityContext = {
   businessId: string;
   businessType: BusinessType;
@@ -74,6 +81,66 @@ function getOpeningHoursKey(date: Date) {
 
 function formatSlot(date: Date) {
   return new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+export function normalizeBookingDate(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    const date = new Date(`${normalized}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? null : normalized;
+  }
+
+  const match = normalized.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, dayPart, monthPart, yearPart] = match;
+  const day = Number(dayPart);
+  const month = Number(monthPart);
+  const year = yearPart.length === 2 ? Number(`20${yearPart}`) : Number(yearPart);
+
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) {
+    return null;
+  }
+
+  const iso = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const date = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  if (date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day) {
+    return null;
+  }
+
+  return iso;
+}
+
+export function normalizeBookingTime(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const match = normalized.match(/^([01]?\d|2[0-3])[:.]([0-5]\d)$/);
+  if (!match) {
+    return null;
+  }
+
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
 }
 
 export async function getBusinessAvailabilityContext(businessId: string): Promise<AvailabilityContext | null> {
@@ -316,10 +383,28 @@ export function resolveReservationWindow(input: {
   endDate?: string | null;
   durationMinutes?: number | null;
 }) {
-  const startAt = new Date(`${input.requestedDate}T${input.requestedTime}:00`);
+  const requestedDate = normalizeBookingDate(input.requestedDate);
+  const requestedTime = normalizeBookingTime(input.requestedTime);
 
-  if (input.endDate) {
-    const endAt = new Date(`${input.endDate}T${input.requestedTime}:00`);
+  if (!requestedDate || !requestedTime) {
+    throw new InvalidBookingDateTimeError();
+  }
+
+  const startAt = new Date(`${requestedDate}T${requestedTime}:00`);
+  if (Number.isNaN(startAt.getTime())) {
+    throw new InvalidBookingDateTimeError();
+  }
+
+  const normalizedEndDate = normalizeBookingDate(input.endDate);
+  if (input.endDate && !normalizedEndDate) {
+    throw new InvalidBookingDateTimeError();
+  }
+
+  if (normalizedEndDate) {
+    const endAt = new Date(`${normalizedEndDate}T${requestedTime}:00`);
+    if (Number.isNaN(endAt.getTime())) {
+      throw new InvalidBookingDateTimeError();
+    }
     if (endAt > startAt) {
       return { startAt, endAt, durationMinutes: Math.round((endAt.getTime() - startAt.getTime()) / 60000) };
     }

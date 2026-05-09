@@ -19,7 +19,7 @@ export default async function HomePage({
   const language = getPublicLanguage(searchParams);
   const copy = getPublicCopy(language);
   const primaryHref = session ? "/dashboard" : "/register";
-  const secondaryHref = session ? "/integrations" : "/login";
+  const secondaryHref = session ? "/dashboard" : "/login";
   const primaryLabel = session ? copy.nav.dashboard : copy.home.primary;
   const secondaryLabel = session ? copy.nav.channels : copy.home.secondary;
 
@@ -28,15 +28,15 @@ export default async function HomePage({
       <main className="mx-auto w-full max-w-7xl px-6 py-10 md:px-10 md:py-16">
         <PublicHeader language={language} />
 
-        <section className="overflow-hidden rounded-[36px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(247,240,226,0.96)_100%)] px-6 py-8 shadow-[0_40px_140px_rgba(44,62,45,0.12)] backdrop-blur md:px-10 md:py-12">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <section className="overflow-hidden rounded-[36px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(247,240,226,0.96)_100%)] px-6 py-8 shadow-[0_30px_90px_rgba(44,62,45,0.1)] backdrop-blur md:px-10 md:py-12">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
             <div className="max-w-3xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.35em] text-sage">{copy.home.eyebrow}</div>
-              <h1 className="mt-5 font-[family-name:var(--font-display)] text-5xl leading-[1.02] text-ink md:text-7xl">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sage">{copy.home.eyebrow}</div>
+              <h1 className="mt-4 max-w-3xl font-[family-name:var(--font-display)] text-4xl leading-[1.08] text-ink md:text-5xl">
                 {copy.home.title}
               </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-sage md:text-lg">{copy.home.description}</p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <p className="mt-5 max-w-2xl text-base leading-7 text-sage md:text-lg">{copy.home.description}</p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <a href={primaryHref} className="inline-flex items-center justify-center rounded-full bg-moss px-6 py-3 text-sm font-semibold text-white transition hover:bg-ink">
                   {primaryLabel}
                 </a>
@@ -44,11 +44,30 @@ export default async function HomePage({
                   {secondaryLabel}
                 </a>
               </div>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                {copy.home.stats.slice(0, 3).map((stat) => (
+                  <div key={stat.title} className="rounded-[24px] border border-[color:var(--border)] bg-white/82 px-4 py-4">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sage">{stat.title}</div>
+                    <div className="mt-2 text-xl font-semibold text-ink">{stat.value}</div>
+                    <p className="mt-1 text-sm leading-6 text-sage">{stat.body}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="grid w-full max-w-xl gap-3">
+            <div className="grid gap-3">
+              <div className="rounded-[28px] border border-[color:var(--border)] bg-[#173428] p-6 text-white">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/65">
+                  Booking Operations
+                </div>
+                <h2 className="mt-3 text-2xl font-semibold">Tek panel, net operasyon akışı</h2>
+                <p className="mt-3 text-sm leading-7 text-white/78">
+                  Talep toplama, ekip onayı, müşteri takibi, AI asistan ve kanal yönetimi aynı yapıda buluşur.
+                </p>
+              </div>
               {copy.home.cards.map((card) => (
-                <div key={card.title} className="rounded-[28px] border border-white/70 bg-white/90 p-5 shadow-[0_16px_60px_rgba(44,62,45,0.08)]">
+                <div key={card.title} className="rounded-[24px] border border-white/70 bg-white/92 p-5 shadow-[0_12px_40px_rgba(44,62,45,0.06)]">
                   <div className="text-sm font-semibold text-ink">{card.title}</div>
                   <p className="mt-2 text-sm leading-7 text-sage">{card.body}</p>
                 </div>
@@ -61,7 +80,7 @@ export default async function HomePage({
           {copy.home.stats.map((stat) => (
             <div key={stat.title} className="rounded-[28px] border border-[color:var(--border)] bg-white/90 p-6">
               <div className="section-title">{stat.title}</div>
-              <div className="mt-3 text-2xl font-semibold text-ink">{stat.value}</div>
+              <div className="mt-2 text-2xl font-semibold text-ink">{stat.value}</div>
               <p className="mt-2 text-sm leading-7 text-sage">{stat.body}</p>
             </div>
           ))}
@@ -71,7 +90,7 @@ export default async function HomePage({
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <div className="section-title">{copy.home.howTitle}</div>
-              <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl text-ink md:text-4xl">
+              <h2 className="mt-3 font-[family-name:var(--font-display)] text-2xl text-ink md:text-3xl">
                 {copy.home.howHeadline}
               </h2>
             </div>

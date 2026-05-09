@@ -7,6 +7,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Geçersiz istek." }, { status: 403 });
   }
   const formData = await request.formData();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const intent = String(formData.get("intent") ?? "login");
 
   try {
     const result = await loginWithEmail(formData);
@@ -43,7 +45,11 @@ export async function POST(request: Request) {
     }
 
     console.error("[auth:login-unexpected]", {
-      error: error instanceof Error ? error.message : "unknown_error"
+      email,
+      intent,
+      errorName: error instanceof Error ? error.name : "unknown_error",
+      error: error instanceof Error ? error.message : "unknown_error",
+      stack: error instanceof Error ? error.stack?.split("\n").slice(0, 3).join(" | ") : undefined
     });
 
     return NextResponse.json(

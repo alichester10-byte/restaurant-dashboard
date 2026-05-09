@@ -86,10 +86,110 @@ export function isEmailTwoFactorSchemaError(error: unknown) {
   return (
     message.includes("emailTwoFactorEnabled") ||
     message.includes("EmailTwoFactorCode") ||
+    message.includes("businessType") ||
+    message.includes("subscriptionCurrentPeriodStartsAt") ||
     message.includes("does not exist in the current database") ||
     message.includes("column \"emailTwoFactorEnabled\"") ||
-    message.includes("relation \"EmailTwoFactorCode\"")
+    message.includes("relation \"EmailTwoFactorCode\"") ||
+    message.includes("column \"businessType\"") ||
+    message.includes("column \"subscriptionCurrentPeriodStartsAt\"")
   );
+}
+
+async function fetchLegacyBusinessSnapshot(businessId: string) {
+  const rows = await prisma.$queryRaw<Array<{
+    id: string;
+    name: string;
+    slug: string;
+    ownerName: string;
+    ownerEmail: string;
+    ownerPhone: string;
+    businessPhone: string;
+    businessAddress: string | null;
+    city: string | null;
+    district: string | null;
+    restaurantType: string | null;
+    estimatedTableCount: number | null;
+    status: string;
+    subscriptionPlan: string | null;
+    subscriptionStatus: string;
+    stripeCustomerId: string | null;
+    stripeSubscriptionId: string | null;
+    stripePriceId: string | null;
+    trialStartsAt: Date | null;
+    trialEndsAt: Date | null;
+    subscriptionCurrentPeriodEndsAt: Date | null;
+    lastPaymentFailedAt: Date | null;
+    suspendedAt: Date | null;
+    onboardingCompletedAt: Date | null;
+    notes: string | null;
+    internalNotes: string | null;
+    lastActivityAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>>(
+    Prisma.sql`
+      SELECT
+        id,
+        name,
+        slug,
+        "ownerName",
+        "ownerEmail",
+        "ownerPhone",
+        "businessPhone",
+        "businessAddress",
+        city,
+        district,
+        "restaurantType",
+        "estimatedTableCount",
+        status::text as status,
+        "subscriptionPlan"::text as "subscriptionPlan",
+        "subscriptionStatus"::text as "subscriptionStatus",
+        "stripeCustomerId",
+        "stripeSubscriptionId",
+        "stripePriceId",
+        "trialStartsAt",
+        "trialEndsAt",
+        "subscriptionCurrentPeriodEndsAt",
+        "lastPaymentFailedAt",
+        "suspendedAt",
+        "onboardingCompletedAt",
+        notes,
+        "internalNotes",
+        "lastActivityAt",
+        "createdAt",
+        "updatedAt"
+      FROM "Business"
+      WHERE id = ${businessId}
+      LIMIT 1
+    `
+  );
+
+  const row = rows[0];
+  if (!row) {
+    throw new Error(`Legacy business snapshot not found for ${businessId}`);
+  }
+
+  return {
+    ...row,
+    businessType: BusinessType.RESTAURANT,
+    status: row.status === "SUSPENDED" ? "SUSPENDED" : "ACTIVE",
+    subscriptionPlan:
+      row.subscriptionPlan === "FREE" ||
+      row.subscriptionPlan === "STARTER" ||
+      row.subscriptionPlan === "PRO" ||
+      row.subscriptionPlan === "BUSINESS" ||
+      row.subscriptionPlan === "ENTERPRISE"
+        ? row.subscriptionPlan
+        : SubscriptionPlan.PRO,
+    subscriptionStatus:
+      row.subscriptionStatus === "ACTIVE" ||
+      row.subscriptionStatus === "TRIALING" ||
+      row.subscriptionStatus === "PAST_DUE" ||
+      row.subscriptionStatus === "CANCELED"
+        ? row.subscriptionStatus
+        : SubscriptionStatus.ACTIVE
+  } satisfies BusinessSnapshot;
 }
 
 export async function getEmailTwoFactorSchemaStatus() {
@@ -139,9 +239,22 @@ export async function getEmailTwoFactorSchemaStatus() {
 }
 
 async function fetchBusinessSnapshot(businessId: string) {
-  return prisma.business.findUniqueOrThrow({
-    where: { id: businessId }
-  });
+  try {
+    return await prisma.business.findUniqueOrThrow({
+      where: { id: businessId }
+    });
+  } catch (error) {
+    if (!isEmailTwoFactorSchemaError(error)) {
+      throw error;
+    }
+
+    console.warn("[auth:legacy-business-fallback]", {
+      businessId,
+      reason: error instanceof Error ? error.message : "unknown_error"
+    });
+
+    return fetchLegacyBusinessSnapshot(businessId);
+  }
 }
 
 async function fetchLegacyAuthUser(where: { id?: string; email?: string }) {
@@ -224,9 +337,11 @@ export async function findAuthUserByEmail(email: string): Promise<{ user: AuthUs
       reason: error instanceof Error ? error.message : "unknown_error"
     });
 
+    const emailTwoFactorSchema = await getEmailTwoFactorSchemaStatus();
+
     return {
       user: await fetchLegacyAuthUser({ email }),
-      schemaReady: false
+      schemaReady: emailTwoFactorSchema.ready
     };
   }
 }
@@ -252,9 +367,11 @@ export async function findAuthUserById(userId: string): Promise<{ user: AuthUser
       reason: error instanceof Error ? error.message : "unknown_error"
     });
 
+    const emailTwoFactorSchema = await getEmailTwoFactorSchemaStatus();
+
     return {
       user: await fetchLegacyAuthUser({ id: userId }),
-      schemaReady: false
+      schemaReady: emailTwoFactorSchema.ready
     };
   }
 }
@@ -285,17 +402,19 @@ export async function findSessionWithUser(tokenHash: string): Promise<{ session:
       reason: error instanceof Error ? error.message : "unknown_error"
     });
 
+    const emailTwoFactorSchema = await getEmailTwoFactorSchemaStatus();
+
     const session = await prisma.session.findUnique({
       where: { tokenHash }
     });
 
     if (!session) {
-      return { session: null, schemaReady: false };
+      return { session: null, schemaReady: emailTwoFactorSchema.ready };
     }
 
     const { user } = await findAuthUserById(session.userId);
     if (!user) {
-      return { session: null, schemaReady: false };
+      return { session: null, schemaReady: emailTwoFactorSchema.ready };
     }
 
     return {
@@ -303,7 +422,7 @@ export async function findSessionWithUser(tokenHash: string): Promise<{ session:
         ...session,
         user
       },
-      schemaReady: false
+      schemaReady: emailTwoFactorSchema.ready
     };
   }
 }

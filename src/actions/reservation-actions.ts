@@ -3,7 +3,7 @@
 import { AuditCategory, ReminderStatus, ReservationStatus, TableStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { checkReservationConflict, resolveReservationWindow } from "@/lib/availability";
+import { checkReservationConflict, InvalidBookingDateTimeError, resolveReservationWindow } from "@/lib/availability";
 import { requireBusinessWriteAccess } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
@@ -99,11 +99,20 @@ export async function saveReservationAction(formData: FormData) {
       businessId
     }
   });
-  const { endAt, durationMinutes } = resolveReservationWindow({
-    requestedDate: parsed.data.reservationDate,
-    requestedTime: parsed.data.reservationTime,
-    fallbackDurationMinutes: settings.averageDiningDurationMin
-  });
+  let endAt: Date;
+  let durationMinutes: number;
+  try {
+    ({ endAt, durationMinutes } = resolveReservationWindow({
+      requestedDate: parsed.data.reservationDate,
+      requestedTime: parsed.data.reservationTime,
+      fallbackDurationMinutes: settings.averageDiningDurationMin
+    }));
+  } catch (error) {
+    if (error instanceof InvalidBookingDateTimeError) {
+      redirect(`${redirectTo}?error=reservation_datetime_invalid`);
+    }
+    throw error;
+  }
   const reminderConfig = buildReminderSchedule({
     startAt,
     reminderEnabled: settings.reminderEnabled,

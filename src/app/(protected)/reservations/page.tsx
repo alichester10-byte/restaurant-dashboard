@@ -104,8 +104,8 @@ export default async function ReservationsPage({
   return (
     <div className="space-y-6">
       <AppHeader
-        title={`${industry.reservationLabel} Yönetimi`}
-        subtitle={`${industry.reservationLabelPlural} oluşturun, güncelleyin, onaylayın ve operasyon akışını kontrol altında tutun.`}
+        title={`${industry.reservationLabel} Merkezi`}
+        subtitle={`${industry.reservationLabelPlural}, bekleyen talepler ve kanal akışı tek sayfada yönetilir.`}
         businessName={session.user.business.name}
         role={session.user.role}
         modeLabel={entitlement.modeLabel}
@@ -121,6 +121,28 @@ export default async function ReservationsPage({
         />
       ) : null}
 
+      <section className="grid gap-4 md:grid-cols-3">
+        <Panel>
+          <div className="section-title">Onaylı Kayıtlar</div>
+          <div className="mt-2 text-2xl font-semibold text-ink">{data.reservations.length}</div>
+          <p className="mt-2 text-sm leading-6 text-sage">Takvimde ve operasyon akışında yer alan ana kayıtlar.</p>
+        </Panel>
+        <Panel>
+          <div className="section-title">Bekleyen Kanal Talepleri</div>
+          <div className="mt-2 text-2xl font-semibold text-ink">
+            {data.channelRequests.filter((request) => request.status === ReservationRequestStatus.PENDING).length}
+          </div>
+          <p className="mt-2 text-sm leading-6 text-sage">Dış kanallardan gelen ve ekip onayı bekleyen talepler.</p>
+        </Panel>
+        <Panel>
+          <div className="section-title">Kanal Kaynakları</div>
+          <div className="mt-2 text-2xl font-semibold text-ink">
+            {[...new Set(data.channelRequests.map((request) => reservationSourceLabels[request.source]))].length}
+          </div>
+          <p className="mt-2 text-sm leading-6 text-sage">WhatsApp, Instagram, web ve AI akışları burada birleşir.</p>
+        </Panel>
+      </section>
+
       {feedback ? (
         <Panel className={feedback.tone === "error" ? "border-rose-200 bg-rose-50/80" : "border-emerald-200 bg-emerald-50/80"}>
           <div className={`section-title ${feedback.tone === "error" ? "text-rose-600" : "text-emerald-700"}`}>{feedback.title}</div>
@@ -132,8 +154,8 @@ export default async function ReservationsPage({
         <Panel>
           <div className="flex items-center justify-between">
             <div>
-              <div className="section-title">Onaylı {industry.reservationLabelPlural}</div>
-              <h2 className="mt-2 text-xl font-semibold text-ink">Ana {industry.reservationLabel.toLocaleLowerCase("tr-TR")} listesi</h2>
+              <div className="section-title">Onaylı Kayıtlar</div>
+              <h2 className="mt-2 text-xl font-semibold text-ink">Canlı {industry.reservationLabel.toLocaleLowerCase("tr-TR")} listesi</h2>
             </div>
             <ReservationPrimaryCta locked={entitlement.isDemo} />
           </div>
@@ -225,7 +247,7 @@ export default async function ReservationsPage({
           <div className="mt-8 border-t border-[color:var(--border)] pt-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-              <div className="section-title">{industry.channelRequestsLabel}</div>
+              <div className="section-title">Kanal Talepleri</div>
               <h2 className="mt-2 text-xl font-semibold text-ink">Dış kanallardan gelen {industry.requestLabel.toLocaleLowerCase("tr-TR")} istekleri</h2>
                 <p className="mt-2 text-sm leading-6 text-sage">
                   WhatsApp, Instagram, Google/Web, Website Widget ve AI Assistant kaynaklı talepler burada toplanır. İnsan onayı olmadan {industry.reservationLabel.toLocaleLowerCase("tr-TR")} kesinleşmez.

@@ -6,6 +6,48 @@ import { getIndustryFieldLabel } from "@/lib/industry-config";
 
 type FormState = Record<string, string>;
 
+function normalizeBookingDate(value?: string) {
+  if (!value) {
+    return value;
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return normalized;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return normalized;
+  }
+
+  const match = normalized.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+  if (!match) {
+    return normalized;
+  }
+
+  const [, day, month, year] = match;
+  const fullYear = year.length === 2 ? `20${year}` : year;
+  return `${fullYear.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function normalizeBookingTime(value?: string) {
+  if (!value) {
+    return value;
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return normalized;
+  }
+
+  const match = normalized.match(/^([01]?\d|2[0-3])[:.]([0-5]\d)$/);
+  if (!match) {
+    return normalized;
+  }
+
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
 function getVisibleFields(config: IndustryConfig): IndustryFieldKey[] {
   return [...config.requiredFields, ...config.optionalFields.filter((field) => !config.requiredFields.includes(field))];
 }
@@ -132,6 +174,9 @@ export function PublicReservationRequestForm({
       onSubmit={(event) => {
         event.preventDefault();
         startTransition(async () => {
+          const normalizedRequestedDate = normalizeBookingDate(form.requestedDate);
+          const normalizedRequestedTime = normalizeBookingTime(form.requestedTime);
+          const normalizedEndDate = normalizeBookingDate(form.endDate);
           const response = await fetch("/api/reservation-request", {
             method: "POST",
             headers: {
@@ -143,9 +188,9 @@ export function PublicReservationRequestForm({
               guestName: form.guestName,
               guestPhone: form.guestPhone,
               customerEmail: form.customerEmail,
-              requestedDate: form.requestedDate,
-              requestedTime: form.requestedTime,
-              endDate: form.endDate,
+              requestedDate: normalizedRequestedDate,
+              requestedTime: normalizedRequestedTime,
+              endDate: normalizedEndDate,
               guestCount: form.guestCount ? Number(form.guestCount) : undefined,
               serviceType: form.serviceType,
               serviceId: form.serviceId,

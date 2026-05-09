@@ -43,6 +43,14 @@ type ChatApiResponse = {
   requestCreated?: boolean;
 };
 
+function createAssistantPlaceholder(): ChatMessage {
+  return {
+    id: `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    role: "assistant",
+    content: ""
+  };
+}
+
 const OPERATOR_EXAMPLES = [
   "Müşteriden gelen mesaj: Yarın akşam 20.30 için 4 kişilik rezervasyon talebi bırakmak istiyoruz. Adım Elif, telefonum 0555 222 33 44.",
   "Bu rezervasyon mesajında eksik bilgi var mı? Cumartesi 19.00 için 2 kişiyiz, adım Burak.",
@@ -189,9 +197,8 @@ export function RestaurantChatWidget({
         })
       });
 
-      const payload = (await response.json().catch(() => null)) as ChatApiResponse | null;
-
-      if (!response.ok || !payload?.ok || !payload.reply) {
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as ChatApiResponse | null;
         setError(payload?.error || "AI asistanı şu anda yanıt veremiyor. Dilerseniz form üzerinden talep bırakabilirsiniz.");
         setMessages((current) => [
           ...current,
@@ -200,9 +207,93 @@ export function RestaurantChatWidget({
         return;
       }
 
-      setSessionId(payload.sessionId ?? sessionId);
-      setRequestCreated(Boolean(payload.requestCreated) || requestCreated);
-      setMessages((current) => [...current, assistantMessage(payload.reply!)]);
+      const nextSessionId = response.headers.get("x-chat-session-id");
+      const nextRequestCreated = response.headers.get("x-request-created") === "1";
+
+      if (nextSessionId) {
+        setSessionId(nextSessionId);
+      }
+
+      if (nextRequestCreated) {
+        setRequestCreated(true);
+      }
+
+      if (!response.body) {
+        throw new Error("Yanıt akışı bulunamadı.");
+      }
+
+      const assistantDraft = createAssistantPlaceholder();
+      setMessages((current) => [...current, assistantDraft]);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulated = "";
+
+      const appendAssistantText = (delta: string) => {
+        accumulated += delta;
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === assistantDraft.id
+              ? {
+                  ...message,
+                  content: accumulated
+                }
+              : message
+          )
+        );
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() ?? "";
+
+        for (const event of events) {
+          const line = event
+            .split("\n")
+            .map((item) => item.trim())
+            .find((item) => item.startsWith("data: "));
+
+          if (!line) {
+            continue;
+          }
+
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") {
+            continue;
+          }
+
+          try {
+            const part = JSON.parse(payload) as { type?: string; delta?: string; errorText?: string };
+            if (part.type === "text-delta" && part.delta) {
+              appendAssistantText(part.delta);
+            } else if (part.type === "error") {
+              setError(part.errorText || "AI asistanı şu anda yanıt veremiyor. Dilerseniz form üzerinden talep bırakabilirsiniz.");
+            }
+          } catch {
+            // Ignore malformed stream chunks and continue.
+          }
+        }
+      }
+
+      if (!accumulated.trim()) {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === assistantDraft.id
+              ? {
+                  ...message,
+                  content: "Şu anda yanıt oluşturulamadı. Dilerseniz rezervasyon formunu kullanabilirsiniz."
+                }
+              : message
+          )
+        );
+      }
     } catch {
       setError("Bağlantı kurulamadı. Dilerseniz rezervasyon formunu kullanarak talebinizi iletebilirsiniz.");
       setMessages((current) => [
@@ -217,13 +308,13 @@ export function RestaurantChatWidget({
   const disabledMessage =
     mode === "operator"
       ? "AI operasyon asistanı şu anda aktif değil. Kanal taleplerini manuel akışla yönetmeye devam edebilirsiniz."
-      : "AI asistanı şu anda bu işletme için aktif değil. Yandaki form üzerinden talebinizi bırakabilirsiniz.";
+      : "AI asistan şu anda kullanılamıyor. Lütfen talep formunu kullanın.";
 
-  const panelTitle = mode === "operator" ? "AI Operasyon Asistanı" : "AI Assistant";
+  const panelTitle = mode === "operator" ? "AI Operasyon Asistanı" : "AI Asistan";
   const panelDescription =
     mode === "operator"
-      ? "İşletme sahibinin günlük ihtiyaçları için müşteri mesajlarını talebe dönüştürür, eksik alanları tespit eder ve ekibin onay akışını hızlandırır."
-      : "Talep detaylarını toplayıp ekibe onay için iletirim.";
+      ? "Müşteri mesajlarını düzenler, eksik alanları bulur ve operasyon ekibinin onay akışını hızlandırır."
+      : "Talep detaylarını toplayıp işletme ekibine iletirim.";
   const inputPlaceholder =
     mode === "operator"
       ? "Müşteri mesajını yapıştırın veya yeni rezervasyon talebini tarif edin."
@@ -231,7 +322,7 @@ export function RestaurantChatWidget({
   const helperText =
     mode === "operator"
       ? "Talebi kesinleştirmez; yalnızca toparlayıp onay akışına hazırlar."
-      : "AI asistan talebi toplar; son onay işletme ekibindedir.";
+      : "Talep toplanır, son onay işletme ekibinde kalır.";
 
   const examples = mode === "operator" ? OPERATOR_EXAMPLES : [];
 
@@ -451,13 +542,13 @@ export function RestaurantChatWidget({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-3 rounded-full bg-moss px-4 py-3 text-sm font-semibold text-white shadow-[0_24px_50px_rgba(53,92,62,0.28)] transition hover:bg-ink sm:bottom-6 sm:right-6"
+        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-moss px-3 py-3 text-sm font-semibold text-white shadow-[0_22px_46px_rgba(53,92,62,0.24)] transition hover:bg-ink sm:bottom-6 sm:right-6"
         aria-expanded={open}
         aria-controls="restaurant-chat-widget"
       >
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/14 text-lg">💬</span>
-        <span className="hidden sm:inline">{open ? "Asistanı Kapat" : "AI Asistan"}</span>
-        <span className="sm:hidden">{open ? "Kapat" : "Sohbet"}</span>
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/14 text-base">✦</span>
+        <span className="hidden sm:inline">{open ? "Kapat" : "AI Asistan"}</span>
+        <span className="sm:hidden">{open ? "Kapat" : "AI"}</span>
       </button>
 
       {open ? drawer : null}
